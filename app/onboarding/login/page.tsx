@@ -33,7 +33,7 @@ export default function LoginPage() {
         <h1 className="text-[20px] sm:text-[17px] font-bold text-gray-900">
           Log in to your Account
         </h1>
-        <p className="text-gray-400 text-[12px] mt-1">
+        <p className="text-gray-400 text-[14px] mt-1">
           Welcome back, please enter your details.
         </p>
       </div>
@@ -42,26 +42,26 @@ export default function LoginPage() {
       <div className="px-8 mt-4 sm:mt-3 space-y-2 sm:space-y-2">
         {/* Email or Phone input */}
         {mode === "email" ? (
-          <div className="border border-gray-400 rounded-lg px-4 pt-1.5 pb-2">
-            <label className="text-[10px] text-gray-500">Email Address*</label>
+          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1">
+            <label className="text-[12px] text-gray-500">Email Address*</label>
             <input
               type="email"
-              className="w-full focus:outline-none text-sm text-gray-800 mt-0.5"
+              className="w-full focus:outline-none text-sm text-gray-800"
             />
           </div>
         ) : (
-          <div className="border border-gray-400 rounded-lg px-4 pt-1.5 pb-2">
-            <label className="text-[10px] text-gray-500">Phone Number*</label>
+          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1">
+            <label className="text-[12px] text-gray-500">Phone Number*</label>
             <input
               type="tel"
-              className="w-full focus:outline-none text-sm text-gray-800 mt-0.5"
+              className="w-full focus:outline-none text-sm text-gray-800"
             />
           </div>
         )}
 
         {/* Password */}
-        <div className="border border-gray-400 rounded-lg px-4 pt-1.5 pb-2 relative">
-          <label className="text-[10px] text-gray-400">Password*</label>
+        <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1 relative">
+          <label className="text-[12px] text-gray-400">Password*</label>
           <input
             type={showPassword ? "text" : "password"}
             className="w-full focus:outline-none text-sm text-gray-800 mt-0.5 pr-8"
