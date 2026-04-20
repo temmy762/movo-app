@@ -30,7 +30,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-[420px]">
         {/* Logo */}
         <div className="flex items-center justify-center pt-4 sm:pt-3">
-          <div className="relative w-20 h-20 sm:w-16 sm:h-16">
+          <div className="relative w-52 h-52 sm:w-48 sm:h-48">
             <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>

@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
         <div className="px-8 mt-6">
           <button
             type="button"
-            onClick={() => router.push("/onboarding/login")}
+            onClick={() => router.push("/onboarding/verify-otp")}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >

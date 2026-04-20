@@ -17,7 +17,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[420px]">
       {/* Logo */}
       <div className="flex items-center justify-center pt-6 sm:pt-4">
-        <div className="relative w-32 h-32 sm:w-20 sm:h-20">
+        <div className="relative w-52 h-52 sm:w-48 sm:h-48">
           <Image
             src="/images/image_1.png"
             alt="MOVO PRIVÉ"
@@ -30,10 +30,16 @@ export default function LoginPage() {
 
       {/* Title */}
       <div className="text-center px-8 mt-2 sm:mt-1">
-        <h1 className="text-[20px] sm:text-[17px] font-bold text-gray-900">
+        <p
+          className="text-[18px] font-bold"
+          style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+        >
+          Welcome back!
+        </p>
+        <h1 className="text-[20px] sm:text-[17px] font-bold text-gray-900 mt-0.5">
           Log in to your Account
         </h1>
-        <p className="text-gray-400 text-[14px] mt-1">
+        <p className="text-gray-400 text-[13px] mt-1">
           Welcome back, please enter your details.
         </p>
       </div>
