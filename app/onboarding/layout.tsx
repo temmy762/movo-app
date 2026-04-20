@@ -11,7 +11,7 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen overflow-hidden w-full flex flex-col">
+    <div className="h-screen w-full flex flex-col">
       {children}
     </div>
   );

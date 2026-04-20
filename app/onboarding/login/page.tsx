@@ -11,12 +11,13 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex flex-col h-full bg-white overflow-y-auto"
+      className="h-full bg-white flex flex-col items-center justify-start sm:justify-center overflow-y-auto"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
+      <div className="w-full max-w-[420px]">
       {/* Logo */}
-      <div className="flex items-center justify-center pt-8">
-        <div className="relative w-32 h-32">
+      <div className="flex items-center justify-center pt-6 sm:pt-4">
+        <div className="relative w-32 h-32 sm:w-20 sm:h-20">
           <Image
             src="/images/image_1.png"
             alt="MOVO PRIVÉ"
@@ -28,8 +29,8 @@ export default function LoginPage() {
       </div>
 
       {/* Title */}
-      <div className="text-center px-8 mt-3">
-        <h1 className="text-[20px] font-bold text-gray-900">
+      <div className="text-center px-8 mt-2 sm:mt-1">
+        <h1 className="text-[20px] sm:text-[17px] font-bold text-gray-900">
           Log in to your Account
         </h1>
         <p className="text-gray-400 text-[12px] mt-1">
@@ -38,19 +39,19 @@ export default function LoginPage() {
       </div>
 
       {/* Form */}
-      <div className="px-8 mt-5 space-y-3">
+      <div className="px-8 mt-4 sm:mt-3 space-y-2 sm:space-y-2">
         {/* Email or Phone input */}
         {mode === "email" ? (
-          <div className="border border-gray-300 rounded-lg px-4 pt-2 pb-3">
-            <label className="text-[10px] text-gray-400">Email Address*</label>
+          <div className="border border-gray-400 rounded-lg px-4 pt-1.5 pb-2">
+            <label className="text-[10px] text-gray-500">Email Address*</label>
             <input
               type="email"
               className="w-full focus:outline-none text-sm text-gray-800 mt-0.5"
             />
           </div>
         ) : (
-          <div className="border border-gray-300 rounded-lg px-4 pt-2 pb-3">
-            <label className="text-[10px] text-gray-400">Phone Number*</label>
+          <div className="border border-gray-400 rounded-lg px-4 pt-1.5 pb-2">
+            <label className="text-[10px] text-gray-500">Phone Number*</label>
             <input
               type="tel"
               className="w-full focus:outline-none text-sm text-gray-800 mt-0.5"
@@ -59,7 +60,7 @@ export default function LoginPage() {
         )}
 
         {/* Password */}
-        <div className="border border-gray-300 rounded-lg px-4 pt-2 pb-3 relative">
+        <div className="border border-gray-400 rounded-lg px-4 pt-1.5 pb-2 relative">
           <label className="text-[10px] text-gray-400">Password*</label>
           <input
             type={showPassword ? "text" : "password"}
@@ -120,7 +121,7 @@ export default function LoginPage() {
         {/* Log In button */}
         <button
           type="button"
-          className="w-full py-4 rounded-xl text-white font-bold text-[15px] tracking-wide"
+          className="w-full py-3 sm:py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
           style={{
             background:
               "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
@@ -162,7 +163,7 @@ export default function LoginPage() {
         </div>
 
         {/* Register link */}
-        <p className="text-center text-[12px] text-gray-500 pb-8">
+        <p className="text-center text-[12px] text-gray-500 pb-6 sm:pb-3">
           Don&apos;t have an account?{" "}
           <Link
             href="/onboarding/register"
@@ -171,6 +172,7 @@ export default function LoginPage() {
             Register Now
           </Link>
         </p>
+      </div>
       </div>
     </div>
   );
