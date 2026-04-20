@@ -29,72 +29,50 @@ export default function RegisterPage() {
     >
       <div className="w-full max-w-[420px]">
         {/* Logo */}
-        <div className="flex items-center justify-center pt-6 sm:pt-4">
-          <div className="relative w-24 h-24 sm:w-20 sm:h-20">
+        <div className="flex items-center justify-center pt-4 sm:pt-3">
+          <div className="relative w-20 h-20 sm:w-16 sm:h-16">
             <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
         {/* Title */}
-        <div className="text-center px-8 mt-2">
-          <h1 className="text-[18px] font-bold text-gray-900">Create your account</h1>
-          <p className="text-gray-400 text-[13px] mt-0.5">Sign up to enjoy a seamless booking experience</p>
+        <div className="text-center px-8 mt-1">
+          <h1 className="text-[17px] font-bold text-gray-900">Create your account</h1>
+          <p className="text-gray-400 text-[12px] mt-0.5">Sign up to enjoy a seamless booking experience</p>
         </div>
 
         {/* Form */}
-        <div className="px-8 mt-4 space-y-2">
-          {/* Name */}
-          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1">
-            <label className="text-[12px] text-gray-500">Name</label>
-            <input type="text" className="w-full focus:outline-none text-sm text-gray-800" />
-          </div>
-
-          {/* Last Name */}
-          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1">
-            <label className="text-[12px] text-gray-500">Last Name</label>
-            <input type="text" className="w-full focus:outline-none text-sm text-gray-800" />
-          </div>
-
-          {/* Email */}
-          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1">
-            <label className="text-[12px] text-gray-500">Email</label>
-            <input type="email" className="w-full focus:outline-none text-sm text-gray-800" />
-          </div>
-
-          {/* Phone */}
-          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1">
-            <label className="text-[12px] text-gray-500">Phone</label>
-            <input type="tel" className="w-full focus:outline-none text-sm text-gray-800" />
-          </div>
+        <div className="px-8 mt-3 space-y-1.5">
+          {["Name", "Last Name", "Email", "Phone"].map((field) => (
+            <div key={field} className="border border-gray-400 rounded-lg px-4 py-1">
+              <label className="text-[11px] text-gray-500">{field}</label>
+              <input
+                type={field === "Email" ? "email" : field === "Phone" ? "tel" : "text"}
+                className="w-full focus:outline-none text-sm text-gray-800 leading-tight"
+              />
+            </div>
+          ))}
 
           {/* Password */}
-          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1 relative">
-            <label className="text-[12px] text-gray-500">Password*</label>
+          <div className="border border-gray-400 rounded-lg px-4 py-1 relative">
+            <label className="text-[11px] text-gray-500">Password*</label>
             <input
               type={showPassword ? "text" : "password"}
-              className="w-full focus:outline-none text-sm text-gray-800 pr-8"
+              className="w-full focus:outline-none text-sm text-gray-800 pr-8 leading-tight"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-3.5 text-gray-400"
-            >
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-gray-400">
               <EyeIcon open={showPassword} />
             </button>
           </div>
 
           {/* Confirm Password */}
-          <div className="border border-gray-400 rounded-lg px-4 pt-1 pb-1 relative">
-            <label className="text-[12px] text-gray-500">Confirm Password*</label>
+          <div className="border border-gray-400 rounded-lg px-4 py-1 relative">
+            <label className="text-[11px] text-gray-500">Confirm Password*</label>
             <input
               type={showConfirm ? "text" : "password"}
-              className="w-full focus:outline-none text-sm text-gray-800 pr-8"
+              className="w-full focus:outline-none text-sm text-gray-800 pr-8 leading-tight"
             />
-            <button
-              type="button"
-              onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-4 top-3.5 text-gray-400"
-            >
+            <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-3 text-gray-400">
               <EyeIcon open={showConfirm} />
             </button>
           </div>
@@ -102,7 +80,7 @@ export default function RegisterPage() {
           {/* Sign Up button */}
           <button
             type="button"
-            className="w-full py-3 sm:py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
+            className="w-full py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
             Sign up
