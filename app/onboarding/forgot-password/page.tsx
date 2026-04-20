@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div
-      className="h-full bg-white flex flex-col items-center justify-start sm:justify-center overflow-y-auto"
+      className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
       <div className="w-full max-w-[420px]">
