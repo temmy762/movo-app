@@ -89,6 +89,7 @@ export default function ServiceDetailPage({ title, bannerImg }: Props) {
         <div className="px-4 pb-8">
           <button
             type="button"
+            onClick={() => router.push(`/home/rides/available-cars?tier=${selected}`)}
             className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
           >
