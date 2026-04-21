@@ -12,19 +12,15 @@ export default function RidesPage() {
   const [dropoff, setDropoff] = useState("England");
 
   return (
-    <div className="min-h-screen flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
-      {/* Header */}
-      <div className="px-4 pt-5 pb-2 bg-white z-10">
-        <p className="text-[18px] font-bold text-gray-900">Ride</p>
-      </div>
+    <div className="h-screen overflow-hidden flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
 
-      {/* Map */}
-      <div className="relative flex-1 min-h-[52vh]">
+      {/* Map — fills all remaining space above panel */}
+      <div className="relative flex-1">
         <MapComponent />
       </div>
 
       {/* Pickup panel */}
-      <div className="bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.10)] px-5 pt-5 pb-8 z-10">
+      <div className="shrink-0 bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.10)] px-5 pt-5 pb-8 z-10">
         <p className="text-[13px] font-semibold text-gray-700 mb-4">Set pickup on map</p>
 
         {/* Inputs */}
