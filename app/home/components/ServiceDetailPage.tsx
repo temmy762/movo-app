@@ -25,21 +25,15 @@ const tiers = [
 interface Props {
   title: string;
   bannerImg: string;
-  pageLabel: string;
 }
 
-export default function ServiceDetailPage({ title, bannerImg, pageLabel }: Props) {
+export default function ServiceDetailPage({ title, bannerImg }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState("classic");
 
   return (
-    <div className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
-      <div className="w-full max-w-[480px]">
-        {/* Page label */}
-        <div className="px-4 pt-4 pb-1">
-          <p className="text-[12px] text-gray-400">{pageLabel}</p>
-        </div>
-
+    <div className="min-h-screen bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
+      <div className="w-full max-w-[480px] flex flex-col flex-1 md:pt-10">
         {/* Banner */}
         <div className="relative mx-4 rounded-2xl overflow-hidden h-48">
           <Image src={bannerImg} alt={title} fill className="object-cover" priority />
@@ -68,7 +62,7 @@ export default function ServiceDetailPage({ title, bannerImg, pageLabel }: Props
                 <button
                   type="button"
                   onClick={() => setSelected(tier.id)}
-                  className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5 ${
+                  className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5 overflow-hidden ${
                     selected === tier.id ? "bg-blue-600" : "bg-gray-200"
                   }`}
                 >

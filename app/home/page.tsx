@@ -2,38 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 const services = [
-  {
-    id: 1,
-    title: "By The Hour",
-    desc: "Your next city is just a smooth ride away.",
-    img: "/images/by-the-hour.png",
-    href: "/home/by-the-hour",
-  },
-  {
-    id: 2,
-    title: "In-City Rides",
-    desc: "Cruise the city in comfort and class.",
-    img: "/images/In-City-drive.png",
-    href: "/home/in-city-rides",
-  },
-  {
-    id: 3,
-    title: "Party Bus",
-    desc: "Your party. Our wheels turn every ride into a celebration.",
-    img: "/images/party-bus.png",
-    href: "/home/party-bus",
-  },
-  {
-    id: 4,
-    title: "Airport Transfer",
-    desc: "From doorstep to departure gate—effortlessly.",
-    img: "/images/Airport-Transfer.png",
-    href: "/home/airport-transfer",
-  },
+  { id: 1, title: "By The Hour", desc: "Your next city is just a smooth ride away.", img: "/images/By the hour.png", href: "/home/by-the-hour" },
+  { id: 2, title: "In-City Rides", desc: "Cruise the city in comfort and class.", img: "/images/In-city ride.png", href: "/home/in-city-rides" },
+  { id: 3, title: "Party Bus", desc: "Your party. Our wheels turn every ride into a celebration.", img: "/images/Party bus.png", href: "/home/party-bus" },
+  { id: 4, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.", img: "/images/airport transfer.png", href: "/home/airport-transfer" },
 ];
 
 const navItems = [
@@ -47,7 +22,6 @@ export default function HomePage() {
   const [activeNav, setActiveNav] = useState(0);
   const [destination, setDestination] = useState("");
   const [searching, setSearching] = useState(false);
-  const router = useRouter();
 
   return (
     <div className="h-full flex flex-col bg-gray-100" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -110,10 +84,10 @@ export default function HomePage() {
           <p className="text-[16px] font-bold text-gray-900 mb-3">Our Services</p>
           <div className="grid grid-cols-2 gap-3">
             {services.map((s) => (
-              <div
+              <Link
                 key={s.id}
+                href={s.href}
                 className="bg-white rounded-xl p-3 flex items-start gap-2 shadow-sm cursor-pointer"
-                onClick={() => router.push(s.href)}
               >
                 <div className="relative w-12 h-12 shrink-0">
                   <Image src={s.img} alt={s.title} fill className="object-contain" />
@@ -122,7 +96,7 @@ export default function HomePage() {
                   <p className="text-[12px] font-bold text-gray-900 leading-tight">{s.title}</p>
                   <p className="text-[10px] text-gray-500 mt-0.5 leading-snug line-clamp-3">{s.desc}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -179,10 +153,9 @@ export default function HomePage() {
         style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
       >
         {navItems.map((item, i) => (
-          <button
+          <Link
             key={item.label}
-            type="button"
-            onClick={() => setActiveNav(i)}
+            href={item.href}
             className="flex flex-col items-center gap-1 px-3"
           >
             <div
@@ -198,9 +171,10 @@ export default function HomePage() {
             >
               {item.label}
             </span>
-          </button>
+          </Link>
         ))}
       </div>
+
     </div>
   );
 }
