@@ -9,15 +9,10 @@ export default function PartyBusPage() {
   const [selected, setSelected] = useState(true);
 
   return (
-    <div className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
-      <div className="w-full max-w-[480px]">
-        {/* Page label */}
-        <div className="px-4 pt-4 pb-1">
-          <p className="text-[12px] font-semibold" style={{ color: "#2D0A53" }}>PaRTY BUS</p>
-        </div>
-
+    <div className="min-h-screen bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
+      <div className="w-full max-w-[480px] md:max-w-2xl flex flex-col flex-1 pt-4 md:pt-0">
         {/* Banner */}
-        <div className="relative mx-4 rounded-2xl overflow-hidden h-52">
+        <div className="relative mx-4 md:mx-0 rounded-2xl md:rounded-t-none md:rounded-b-3xl overflow-hidden h-44 md:h-72">
           <Image src="/images/party-bus.png" alt="Party Bus" fill className="object-cover" priority />
           <button
             type="button"
@@ -41,9 +36,9 @@ export default function PartyBusPage() {
             <button
               type="button"
               onClick={() => setSelected(!selected)}
-              className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5 ${selected ? "bg-blue-600" : "bg-gray-200"}`}
+              className={`relative inline-flex h-6 w-11 shrink-0 mt-0.5 items-center rounded-full transition-colors ${selected ? "bg-blue-600" : "bg-gray-200"}`}
             >
-              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${selected ? "translate-x-5" : "translate-x-1"}`} />
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${selected ? "translate-x-6" : "translate-x-1"}`} />
             </button>
             <div>
               <p className="text-[13px] font-bold text-gray-900">Movo Privé Black Charter</p>
@@ -56,9 +51,9 @@ export default function PartyBusPage() {
         </div>
 
         {/* Two promo cards */}
-        <div className="px-4 mt-4 grid grid-cols-2 gap-3">
+        <div className="px-4 mt-3 grid grid-cols-2 gap-3">
           {/* Card 1 */}
-          <div className="relative rounded-xl overflow-hidden h-32">
+          <div className="relative rounded-xl overflow-hidden h-24">
             <Image src="/images/partybus2 card img.png" alt="Party on wheels" fill className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             <div className="absolute bottom-2 left-2 right-1">
@@ -66,7 +61,7 @@ export default function PartyBusPage() {
             </div>
           </div>
           {/* Card 2 */}
-          <div className="relative rounded-xl overflow-hidden h-32">
+          <div className="relative rounded-xl overflow-hidden h-24">
             <Image src="/images/partybus2 card img.png" alt="Party on wheels 2" fill className="object-cover object-right" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             <div className="absolute bottom-2 left-2 right-1">
@@ -77,7 +72,7 @@ export default function PartyBusPage() {
         </div>
 
         {/* Book now */}
-        <div className="px-4 mt-5 pb-8">
+        <div className="px-4 mt-4 pb-6">
           <button
             type="button"
             className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"

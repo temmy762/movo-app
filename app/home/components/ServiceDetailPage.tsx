@@ -33,9 +33,9 @@ export default function ServiceDetailPage({ title, bannerImg }: Props) {
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
-      <div className="w-full max-w-[480px] flex flex-col flex-1 md:pt-10">
+      <div className="w-full max-w-[480px] md:max-w-2xl flex flex-col flex-1 pt-4 md:pt-0">
         {/* Banner */}
-        <div className="relative mx-4 rounded-2xl overflow-hidden h-48">
+        <div className="relative mx-4 md:mx-0 rounded-2xl md:rounded-t-none md:rounded-b-3xl overflow-hidden h-48 md:h-72">
           <Image src={bannerImg} alt={title} fill className="object-cover" priority />
           <button
             type="button"
@@ -62,13 +62,13 @@ export default function ServiceDetailPage({ title, bannerImg }: Props) {
                 <button
                   type="button"
                   onClick={() => setSelected(tier.id)}
-                  className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5 overflow-hidden ${
+                  className={`relative inline-flex h-6 w-11 shrink-0 mt-0.5 items-center rounded-full transition-colors ${
                     selected === tier.id ? "bg-blue-600" : "bg-gray-200"
                   }`}
                 >
                   <span
-                    className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                      selected === tier.id ? "translate-x-5" : "translate-x-1"
+                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                      selected === tier.id ? "translate-x-6" : "translate-x-1"
                     }`}
                   />
                 </button>
