@@ -34,7 +34,7 @@ export default function HomePage() {
             src="/images/home banner.png"
             alt="Banner"
             fill
-            className="object-cover"
+            className="object-cover object-bottom"
             priority
           />
           {/* Overlay gradient */}
@@ -93,8 +93,8 @@ export default function HomePage() {
                   <Image src={s.img} alt={s.title} fill className="object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-bold text-gray-900 leading-tight">{s.title}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 leading-snug line-clamp-3">{s.desc}</p>
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{s.title}</p>
+                  <p className="text-[12px] text-gray-500 mt-0.5 leading-snug line-clamp-3">{s.desc}</p>
                 </div>
               </Link>
             ))}
@@ -111,7 +111,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute bottom-3 left-3 right-2">
                 <p className="text-white text-[13px] font-bold leading-tight">Luxury travel</p>
-                <p className="text-gray-300 text-[10px] mt-0.5 leading-tight">Private, discreet rides in a class of their own.</p>
+                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Private, discreet rides in a class of their own.</p>
               </div>
             </div>
             {/* Card 2 */}
@@ -120,7 +120,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute bottom-3 left-3 right-2">
                 <p className="text-white text-[13px] font-bold leading-tight">The ease of travel</p>
-                <p className="text-gray-300 text-[10px] mt-0.5 leading-tight">Seamless City-to-City, by-the-hour & airport transfer.</p>
+                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Seamless City-to-City, by-the-hour & airport transfer.</p>
               </div>
             </div>
             {/* Card 3 */}
@@ -129,7 +129,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute bottom-3 left-3 right-2">
                 <p className="text-white text-[13px] font-bold leading-tight">In-City Rides</p>
-                <p className="text-gray-300 text-[10px] mt-0.5 leading-tight">Cruise the city in comfort and class.</p>
+                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Cruise the city in comfort and class.</p>
               </div>
             </div>
             {/* Card 4 */}
@@ -138,7 +138,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute bottom-3 left-3 right-2">
                 <p className="text-white text-[13px] font-bold leading-tight">Airport Transfer</p>
-                <p className="text-gray-300 text-[10px] mt-0.5 leading-tight">From doorstep to departure gate—effortlessly.</p>
+                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">From doorstep to departure gate—effortlessly.</p>
               </div>
             </div>
           </div>
@@ -165,7 +165,7 @@ export default function HomePage() {
               <Image src={item.img} alt={item.label} fill className="object-contain" />
             </div>
             <span
-              className={`text-[10px] font-medium ${
+              className={`text-[12px] font-medium ${
                 activeNav === i ? "text-white" : "text-white/50"
               }`}
             >

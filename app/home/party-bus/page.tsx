@@ -41,8 +41,8 @@ export default function PartyBusPage() {
               <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${selected ? "translate-x-6" : "translate-x-1"}`} />
             </button>
             <div>
-              <p className="text-[13px] font-bold text-gray-900">Movo Privé Black Charter</p>
-              <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+              <p className="text-[15px] font-bold text-gray-900">Movo Privé Black Charter</p>
+              <p className="text-[13px] text-gray-500 mt-0.5 leading-snug">
                 Unparalleled luxury. Your personal concierge on wheels. Your private club on the move — where the journey is the party.
               </p>
             </div>
@@ -57,7 +57,7 @@ export default function PartyBusPage() {
             <Image src="/images/partybus2 card img.png" alt="Party on wheels" fill className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             <div className="absolute bottom-2 left-2 right-1">
-              <p className="text-white text-[10px] font-bold leading-tight">exciting as the</p>
+              <p className="text-white text-[12px] font-bold leading-tight">exciting as the</p>
             </div>
           </div>
           {/* Card 2 */}
@@ -65,8 +65,8 @@ export default function PartyBusPage() {
             <Image src="/images/partybus2 card img.png" alt="Party on wheels 2" fill className="object-cover object-right" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             <div className="absolute bottom-2 left-2 right-1">
-              <p className="text-white text-[10px] font-bold leading-tight">Party On Wheels</p>
-              <p className="text-gray-300 text-[9px] mt-0.5 leading-tight">Where the journey is just as exciting as the destination.</p>
+              <p className="text-white text-[12px] font-bold leading-tight">Party On Wheels</p>
+              <p className="text-gray-300 text-[11px] mt-0.5 leading-tight">Where the journey is just as exciting as the destination.</p>
             </div>
           </div>
         </div>

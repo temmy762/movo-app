@@ -73,8 +73,8 @@ export default function ServiceDetailPage({ title, bannerImg }: Props) {
                   />
                 </button>
                 <div>
-                  <p className="text-[13px] font-bold text-gray-900">{tier.name}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">{tier.desc}</p>
+                  <p className="text-[15px] font-bold text-gray-900">{tier.name}</p>
+                  <p className="text-[13px] text-gray-500 mt-0.5 leading-snug">{tier.desc}</p>
                 </div>
               </div>
               {i < tiers.length - 1 && <div className="h-px bg-gray-100" />}
