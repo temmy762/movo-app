@@ -111,8 +111,11 @@ export default function RidesPage() {
               {rides.map((ride, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-2"
-                  style={{ background: "#d6d6d6", border: "1px solid #d6d6d6" }}
+                  className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-3 border border-transparent"
+                  style={{
+                    background:
+                      "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(135deg, #2D0A53 0%, #8B7500 100%) border-box",
+                  }}
                 >
                   {/* Top row: info + image */}
                   <div className="flex items-center gap-3">
@@ -132,15 +135,26 @@ export default function RidesPage() {
                     </div>
                   </div>
 
-                  {/* BOOK NOW button — inside card */}
+                  {/* BOOK NOW button — inside card, gradient border + gradient text */}
                   <button
                     type="button"
                     onClick={() => router.push("/home/pickup")}
-                    className="w-full py-2 rounded-lg border text-[13px] font-bold tracking-widest bg-white"
-                    style={{ borderColor: "#d6d6d6" }}
+                    className="w-full py-2.5 rounded-xl border border-transparent text-[13px] font-bold tracking-widest"
+                    style={{
+                      background:
+                        "linear-gradient(#ffffff, #ffffff) padding-box, linear-gradient(90deg, #2D0A53 0%, #8B7500 100%) border-box",
+                    }}
                   >
-                    <span style={{ color: "#6B7280" }}>BOOK </span>
-                    <span style={{ color: "#8B7500" }}>NOW</span>
+                    <span
+                      style={{
+                        background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)",
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      }}
+                    >
+                      BOOK NOW
+                    </span>
                   </button>
                 </div>
               ))}
