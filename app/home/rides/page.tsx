@@ -39,7 +39,7 @@ export default function RidesPage() {
       style={{ fontFamily: "var(--font-poppins)" }}
     >
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto pb-24 flex flex-col">
+      <div className="flex-1 overflow-y-auto pb-32 md:pb-24 flex flex-col">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto flex-1 flex flex-col px-5 md:px-10 pt-6 md:pt-10">
           {/* Title */}
           <h1 className="text-[26px] md:text-[34px] font-bold text-gray-900 leading-tight">Rides</h1>
@@ -69,23 +69,11 @@ export default function RidesPage() {
             })}
           </div>
 
-          {/* Book a ride — MOBILE ONLY: above empty state to avoid bottom-nav overlap */}
-          <div className="md:hidden mt-6">
-            <button
-              type="button"
-              onClick={() => router.push("/home/pickup")}
-              className="w-full py-3.5 rounded-full border-[1.5px] text-[14px] font-semibold"
-              style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
-            >
-              Book a ride
-            </button>
-          </div>
-
           {/* Empty state */}
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-16">
             <div className="relative w-14 h-14 md:w-20 md:h-20 mb-3 md:mb-5 opacity-70">
               <Image
-                src="/images/Car.png"
+                src="/images/EMPTYCar.png"
                 alt="Car"
                 fill
                 sizes="(max-width: 768px) 56px, 80px"
@@ -98,12 +86,12 @@ export default function RidesPage() {
             </p>
           </div>
 
-          {/* Book a ride — DESKTOP ONLY: at the bottom */}
-          <div className="hidden md:block pb-6">
+          {/* Book a ride */}
+          <div className="pb-4 md:pb-6">
             <button
               type="button"
               onClick={() => router.push("/home/pickup")}
-              className="w-full max-w-md mx-auto block py-4 rounded-full border-[1.5px] text-[15px] font-semibold"
+              className="w-full md:max-w-md md:mx-auto md:block py-3.5 md:py-4 rounded-full border-[1.5px] text-[14px] md:text-[15px] font-semibold"
               style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
             >
               Book a ride
