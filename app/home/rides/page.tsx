@@ -111,8 +111,8 @@ export default function RidesPage() {
               {rides.map((ride, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-2 bg-white"
-                  style={{ border: "1px solid #d6d6d6" }}
+                  className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-2"
+                  style={{ background: "#d6d6d6", border: "1px solid #d6d6d6" }}
                 >
                   {/* Top row: info + image */}
                   <div className="flex items-center gap-3">
