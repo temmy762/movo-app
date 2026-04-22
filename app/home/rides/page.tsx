@@ -121,13 +121,13 @@ export default function RidesPage() {
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-[15px] font-bold text-gray-900">{ride.name}</p>
-                      <p className="text-[12px] text-gray-400 mt-0.5">{ride.specs}</p>
+                      <p className="text-[12px] text-gray-700 mt-0.5">{ride.specs}</p>
                       <div className="flex items-center gap-1 mt-1">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
                           <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
                           <circle cx="12" cy="10" r="3" />
                         </svg>
-                        <p className="text-[12px] text-gray-500">{ride.distance}</p>
+                        <p className="text-[12px] text-gray-800">{ride.distance}</p>
                       </div>
                     </div>
                     <div className="relative w-24 h-16 md:w-28 md:h-20 shrink-0">
