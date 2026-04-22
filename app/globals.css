@@ -73,3 +73,11 @@ a:focus-visible,
   outline: 2px solid #2D0A53;
   outline-offset: 2px;
 }
+
+/* Opt-out of global hover/active effects for flat elements like tab buttons. */
+.no-hover-fx:hover,
+.no-hover-fx:active {
+  filter: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}

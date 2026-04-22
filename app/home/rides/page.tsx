@@ -89,7 +89,7 @@ export default function RidesPage() {
                   key={t.id}
                   type="button"
                   onClick={() => setTab(t.id)}
-                  className={`relative pb-2.5 md:pb-3 text-[14px] md:text-[16px] font-medium transition-colors ${
+                  className={`no-hover-fx relative pb-2.5 md:pb-3 text-[14px] md:text-[16px] font-medium transition-colors ${
                     active ? "text-gray-900" : "text-gray-400"
                   }`}
                 >
@@ -112,7 +112,7 @@ export default function RidesPage() {
                 <div
                   key={i}
                   className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-2 bg-white"
-                  style={{ border: "1px solid #E8E3D5" }}
+                  style={{ border: "1px solid #d6d6d6" }}
                 >
                   {/* Top row: info + image */}
                   <div className="flex items-center gap-3">
@@ -137,7 +137,7 @@ export default function RidesPage() {
                     type="button"
                     onClick={() => router.push("/home/pickup")}
                     className="w-full py-2 rounded-lg border text-[13px] font-bold tracking-widest bg-white"
-                    style={{ borderColor: "#E8E3D5" }}
+                    style={{ borderColor: "#d6d6d6" }}
                   >
                     <span style={{ color: "#6B7280" }}>BOOK </span>
                     <span style={{ color: "#8B7500" }}>NOW</span>
@@ -169,7 +169,7 @@ export default function RidesPage() {
             <button
               type="button"
               onClick={() => router.push("/home/pickup")}
-              className="w-full md:max-w-md md:mx-auto md:block py-3.5 md:py-4 rounded-full border-[1.5px] text-[14px] md:text-[15px] font-semibold"
+              className="w-full py-3.5 md:py-4 rounded-full border-[1.5px] text-[14px] md:text-[15px] font-semibold"
               style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
             >
               Book a ride
