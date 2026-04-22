@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import BottomNav from "../components/BottomNav";
@@ -39,12 +40,12 @@ export default function RidesPage() {
     >
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto pb-24 flex flex-col">
-        <div className="w-full max-w-lg mx-auto flex-1 flex flex-col px-5 pt-6">
+        <div className="w-full max-w-lg md:max-w-2xl mx-auto flex-1 flex flex-col px-5 md:px-10 pt-6 md:pt-10">
           {/* Title */}
-          <h1 className="text-[26px] font-bold text-gray-900 leading-tight">Rides</h1>
+          <h1 className="text-[26px] md:text-[34px] font-bold text-gray-900 leading-tight">Rides</h1>
 
           {/* Tabs */}
-          <div className="mt-4 flex items-center gap-6 border-b border-gray-200">
+          <div className="mt-4 md:mt-6 flex items-center gap-6 md:gap-10 border-b border-gray-200">
             {tabs.map((t) => {
               const active = tab === t.id;
               return (
@@ -52,14 +53,14 @@ export default function RidesPage() {
                   key={t.id}
                   type="button"
                   onClick={() => setTab(t.id)}
-                  className={`relative pb-2.5 text-[14px] font-medium transition-colors ${
+                  className={`relative pb-2.5 md:pb-3 text-[14px] md:text-[16px] font-medium transition-colors ${
                     active ? "text-gray-900" : "text-gray-400"
                   }`}
                 >
                   {t.label}
                   {active && (
                     <span
-                      className="absolute left-0 right-0 -bottom-[1px] h-[2px] rounded-full"
+                      className="absolute left-0 right-0 -bottom-[1px] h-[2px] md:h-[3px] rounded-full"
                       style={{ background: "#8B7500" }}
                     />
                   )}
@@ -69,24 +70,22 @@ export default function RidesPage() {
           </div>
 
           {/* Empty state */}
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10">
-            <div className="w-16 h-16 mb-4 text-gray-300">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 17h14M5 17l-2-5 2-5h14l2 5-2 5M5 17a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0zM7 12h10" />
-              </svg>
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-16">
+            <div className="relative w-20 h-20 md:w-28 md:h-28 mb-4 md:mb-6 opacity-70">
+              <Image src="/images/Car.png" alt="Car" fill className="object-contain" />
             </div>
-            <p className="text-[15px] font-bold text-gray-900">{empty.title}</p>
-            <p className="text-[12px] text-gray-500 mt-1 whitespace-pre-line leading-snug">
+            <p className="text-[15px] md:text-[18px] font-bold text-gray-900">{empty.title}</p>
+            <p className="text-[12px] md:text-[14px] text-gray-500 mt-1 md:mt-2 whitespace-pre-line leading-snug md:leading-relaxed max-w-md">
               {empty.desc}
             </p>
           </div>
 
           {/* Book a ride button */}
-          <div className="pb-4">
+          <div className="pb-4 md:pb-6">
             <button
               type="button"
               onClick={() => router.push("/home/pickup")}
-              className="w-full py-3.5 rounded-full border-[1.5px] text-[14px] font-semibold"
+              className="w-full md:max-w-md md:mx-auto md:block py-3.5 md:py-4 rounded-full border-[1.5px] text-[14px] md:text-[15px] font-semibold"
               style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
             >
               Book a ride
