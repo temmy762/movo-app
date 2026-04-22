@@ -142,7 +142,7 @@ export default function RidesPage() {
                     className="w-full py-2.5 rounded-xl border border-transparent text-[13px] font-bold tracking-widest"
                     style={{
                       background:
-                        "linear-gradient(#ffffff, #ffffff) padding-box, linear-gradient(90deg, #2D0A53 0%, #8B7500 100%) border-box",
+                        "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(90deg, #2D0A53 0%, #8B7500 100%) border-box",
                     }}
                   >
                     <span
