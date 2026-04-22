@@ -1,107 +1,101 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
+import BottomNav from "../components/BottomNav";
 
-const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
+type TabId = "upcoming" | "past" | "canceled";
+
+const tabs: { id: TabId; label: string }[] = [
+  { id: "upcoming", label: "Upcoming" },
+  { id: "past", label: "Past" },
+  { id: "canceled", label: "Canceled" },
+];
+
+const emptyStates: Record<TabId, { title: string; desc: string }> = {
+  upcoming: {
+    title: "You have no upcoming rides",
+    desc: "As soon as you book a ride, all of your relevant\nDetails will be shown here.",
+  },
+  past: {
+    title: "You have no past rides",
+    desc: "As soon as you book a ride, all of your relevant\nDetails will be shown here.",
+  },
+  canceled: {
+    title: "No canceled rides",
+    desc: "Rides that have been canceled will be\nshown here.",
+  },
+};
 
 export default function RidesPage() {
   const router = useRouter();
-  const [pickup, setPickup] = useState("");
-  const [dropoff, setDropoff] = useState("England");
-  const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
-  const [lookingUp, setLookingUp] = useState(false);
-  const reqRef = useRef(0);
-
-  const handleLocationSelect = async (lat: number, lng: number) => {
-    setSelectedPoint({ lat, lng });
-    setLookingUp(true);
-    const reqId = ++reqRef.current;
-    // Temporary value while geocoding resolves
-    setPickup(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-        { headers: { "Accept-Language": "en" } }
-      );
-      const data = await res.json();
-      if (reqId === reqRef.current && data?.display_name) {
-        setPickup(data.display_name);
-      }
-    } catch {
-      /* keep coordinates as fallback */
-    } finally {
-      if (reqId === reqRef.current) setLookingUp(false);
-    }
-  };
+  const [tab, setTab] = useState<TabId>("upcoming");
+  const empty = emptyStates[tab];
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div
+      className="h-screen flex flex-col bg-white"
+      style={{ fontFamily: "var(--font-poppins)" }}
+    >
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto pb-24 flex flex-col">
+        <div className="w-full max-w-lg mx-auto flex-1 flex flex-col px-5 pt-6">
+          {/* Title */}
+          <h1 className="text-[26px] font-bold text-gray-900 leading-tight">Rides</h1>
 
-      {/* Map — fills all remaining space above panel */}
-      <div className="relative flex-1">
-        <MapComponent selectedPoint={selectedPoint} onLocationSelect={handleLocationSelect} />
-        {lookingUp && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-white rounded-full px-3 py-1.5 shadow-md text-[12px] text-gray-600 font-medium flex items-center gap-2">
-            <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" />
-            Finding address…
+          {/* Tabs */}
+          <div className="mt-4 flex items-center gap-6 border-b border-gray-200">
+            {tabs.map((t) => {
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
+                  className={`relative pb-2.5 text-[14px] font-medium transition-colors ${
+                    active ? "text-gray-900" : "text-gray-400"
+                  }`}
+                >
+                  {t.label}
+                  {active && (
+                    <span
+                      className="absolute left-0 right-0 -bottom-[1px] h-[2px] rounded-full"
+                      style={{ background: "#8B7500" }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
-        )}
-      </div>
 
-      {/* Pickup panel */}
-      <div className="shrink-0 bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.10)] px-5 pt-5 pb-8 z-10">
-        <p className="text-[13px] font-semibold text-gray-700 mb-4">Set pickup on map</p>
+          {/* Empty state */}
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10">
+            <div className="w-16 h-16 mb-4 text-gray-300">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 17h14M5 17l-2-5 2-5h14l2 5-2 5M5 17a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0zM7 12h10" />
+              </svg>
+            </div>
+            <p className="text-[15px] font-bold text-gray-900">{empty.title}</p>
+            <p className="text-[12px] text-gray-500 mt-1 whitespace-pre-line leading-snug">
+              {empty.desc}
+            </p>
+          </div>
 
-        {/* Inputs */}
-        <div className="relative flex flex-col gap-3 mb-5">
-          {/* Vertical connector line */}
-          <div className="absolute left-[9px] top-[22px] bottom-[22px] w-px bg-gray-300" />
-
-          {/* Pickup */}
-          <div className="flex items-center gap-3">
-            <div className="w-[10px] h-[10px] rounded-full bg-gray-900 shrink-0 z-10" />
-            <div
-              className="flex-1 rounded-lg px-3 py-2.5 border-[1.5px] text-[13px]"
-              style={{ borderColor: "#2D0A53" }}
+          {/* Book a ride button */}
+          <div className="pb-4">
+            <button
+              type="button"
+              onClick={() => router.push("/home/pickup")}
+              className="w-full py-3.5 rounded-full border-[1.5px] text-[14px] font-semibold"
+              style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
             >
-              <input
-                type="text"
-                value={pickup}
-                onChange={(e) => setPickup(e.target.value)}
-                placeholder="Enter Location"
-                className="w-full bg-transparent text-gray-800 placeholder-gray-400 focus:outline-none text-[13px]"
-              />
-            </div>
-          </div>
-
-          {/* Dropoff */}
-          <div className="flex items-center gap-3">
-            <div className="w-[10px] h-[10px] rounded-full bg-gray-300 border border-gray-400 shrink-0 z-10" />
-            <div className="flex-1 rounded-lg px-3 py-2.5 bg-gray-100 border border-gray-200">
-              <input
-                type="text"
-                value={dropoff}
-                onChange={(e) => setDropoff(e.target.value)}
-                placeholder="Destination"
-                className="w-full bg-transparent text-gray-600 placeholder-gray-400 focus:outline-none text-[13px]"
-              />
-            </div>
+              Book a ride
+            </button>
           </div>
         </div>
-
-        {/* Confirm button */}
-        <button
-          type="button"
-          disabled={!pickup}
-          onClick={() => router.push("/home/rides/available-cars?tier=all")}
-          className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
-          style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
-        >
-          Confirm pickup
-        </button>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

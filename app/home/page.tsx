@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import BottomNav from "./components/BottomNav";
 
 const services = [
   { id: 1, title: "By The Hour", desc: "Your next city is just a smooth ride away.", img: "/images/By the hour.png", href: "/home/by-the-hour" },
@@ -11,17 +13,9 @@ const services = [
   { id: 4, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.", img: "/images/airport transfer.png", href: "/home/airport-transfer" },
 ];
 
-const navItems = [
-  { label: "Dashboard", img: "/images/Home.png", href: "/home", active: true },
-  { label: "Rides", img: "/images/EMPTYCar.png", href: "/home/rides", active: false },
-  { label: "Help", img: "/images/Help.png", href: "/home/help", active: false },
-  { label: "My Profile", img: "/images/Male User.png", href: "/home/profile", active: false },
-];
-
 export default function HomePage() {
-  const [activeNav, setActiveNav] = useState(0);
+  const router = useRouter();
   const [destination, setDestination] = useState("");
-  const [searching, setSearching] = useState(false);
 
   return (
     <div className="h-full flex flex-col bg-gray-100" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -49,7 +43,9 @@ export default function HomePage() {
           {/* Where to bar */}
           <div className="absolute bottom-3 left-4 right-4">
             <div
-              className="flex items-center px-4 py-2.5 rounded-full gap-2"
+              onClick={() => router.push("/home/pickup")}
+              role="button"
+              className="flex items-center px-4 py-2.5 rounded-full gap-2 cursor-pointer"
               style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
             >
               <svg className="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -59,10 +55,10 @@ export default function HomePage() {
                 type="text"
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
-                onFocus={() => setSearching(true)}
-                onBlur={() => setSearching(false)}
+                onFocus={() => router.push("/home/pickup")}
+                readOnly
                 placeholder="Where to?"
-                className="flex-1 bg-transparent text-white text-[13px] font-medium placeholder-white/70 focus:outline-none"
+                className="flex-1 bg-transparent text-white text-[13px] font-medium placeholder-white/70 focus:outline-none cursor-pointer"
               />
               {destination && (
                 <button
@@ -147,33 +143,7 @@ export default function HomePage() {
         <div className="h-4" />
       </div>
 
-      {/* Bottom Nav */}
-      <div
-        className="fixed bottom-0 left-0 right-0 flex items-center justify-around px-2 py-3 z-50"
-        style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
-      >
-        {navItems.map((item, i) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="flex flex-col items-center gap-1 px-3"
-          >
-            <div
-              className="relative w-6 h-6"
-              style={{ filter: activeNav === i ? "brightness(0) invert(1)" : "brightness(0) invert(0.6)" }}
-            >
-              <Image src={item.img} alt={item.label} fill className="object-contain" />
-            </div>
-            <span
-              className={`text-[12px] font-medium ${
-                activeNav === i ? "text-white" : "text-white/50"
-              }`}
-            >
-              {item.label}
-            </span>
-          </Link>
-        ))}
-      </div>
+      <BottomNav />
 
     </div>
   );
