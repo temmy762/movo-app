@@ -90,6 +90,7 @@ function AvailableCarsContent() {
               {/* BOOK NOW button */}
               <button
                 type="button"
+                onClick={() => router.push("/home/ride")}
                 className="w-full py-2.5 rounded-lg text-white font-bold text-[13px] tracking-widest"
                 style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
               >
