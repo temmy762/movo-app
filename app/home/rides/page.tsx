@@ -28,10 +28,46 @@ const emptyStates: Record<TabId, { title: string; desc: string }> = {
   },
 };
 
+interface Ride {
+  name: string;
+  specs: string;
+  distance: string;
+  img: string;
+}
+
+// Mock ride data — in production this would come from the API.
+const ridesByTab: Record<TabId, Ride[]> = {
+  upcoming: [
+    {
+      name: "Movo Classic",
+      specs: "Automatic  |  3 seats  |  Octane",
+      distance: "800m (5mins away)",
+      img: "/images/movo classic.png",
+    },
+  ],
+  past: [
+    {
+      name: "Movo Privé Black",
+      specs: "Automatic  |  3 seats  |  Octane",
+      distance: "800m (5mins away)",
+      img: "/images/prive black.png",
+    },
+  ],
+  canceled: [
+    {
+      name: "Movo Premium",
+      specs: "Automatic  |  3 seats  |  Octane",
+      distance: "800m (5mins away)",
+      img: "/images/movo premium.png",
+    },
+  ],
+};
+
 export default function RidesPage() {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("upcoming");
   const empty = emptyStates[tab];
+  const rides = ridesByTab[tab];
 
   return (
     <div
@@ -69,22 +105,64 @@ export default function RidesPage() {
             })}
           </div>
 
-          {/* Empty state */}
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-16">
-            <div className="relative w-14 h-14 md:w-20 md:h-20 mb-3 md:mb-5 opacity-70">
-              <Image
-                src="/images/EMPTYCar.png"
-                alt="Car"
-                fill
-                sizes="(max-width: 768px) 56px, 80px"
-                className="object-contain"
-              />
+          {rides.length > 0 ? (
+            /* Ride list */
+            <div className="flex-1 pt-4 md:pt-6 space-y-3">
+              {rides.map((ride, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-2 bg-white"
+                  style={{ border: "1px solid #E8E3D5" }}
+                >
+                  {/* Top row: info + image */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-bold text-gray-900">{ride.name}</p>
+                      <p className="text-[12px] text-gray-400 mt-0.5">{ride.specs}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
+                          <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        <p className="text-[12px] text-gray-500">{ride.distance}</p>
+                      </div>
+                    </div>
+                    <div className="relative w-24 h-16 md:w-28 md:h-20 shrink-0">
+                      <Image src={ride.img} alt={ride.name} fill sizes="(max-width: 768px) 96px, 112px" className="object-contain" />
+                    </div>
+                  </div>
+
+                  {/* BOOK NOW button — inside card */}
+                  <button
+                    type="button"
+                    onClick={() => router.push("/home/pickup")}
+                    className="w-full py-2 rounded-lg border text-[13px] font-bold tracking-widest bg-white"
+                    style={{ borderColor: "#E8E3D5" }}
+                  >
+                    <span style={{ color: "#6B7280" }}>BOOK </span>
+                    <span style={{ color: "#8B7500" }}>NOW</span>
+                  </button>
+                </div>
+              ))}
             </div>
-            <p className="text-[15px] md:text-[18px] font-bold text-gray-900">{empty.title}</p>
-            <p className="text-[12px] md:text-[14px] text-gray-500 mt-1 md:mt-2 whitespace-pre-line leading-snug md:leading-relaxed max-w-md">
-              {empty.desc}
-            </p>
-          </div>
+          ) : (
+            /* Empty state */
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-16">
+              <div className="relative w-14 h-14 md:w-20 md:h-20 mb-3 md:mb-5 opacity-70">
+                <Image
+                  src="/images/EMPTYCar.png"
+                  alt="Car"
+                  fill
+                  sizes="(max-width: 768px) 56px, 80px"
+                  className="object-contain"
+                />
+              </div>
+              <p className="text-[15px] md:text-[18px] font-bold text-gray-900">{empty.title}</p>
+              <p className="text-[12px] md:text-[14px] text-gray-500 mt-1 md:mt-2 whitespace-pre-line leading-snug md:leading-relaxed max-w-md">
+                {empty.desc}
+              </p>
+            </div>
+          )}
 
           {/* Book a ride */}
           <div className="pb-4 md:pb-6">
