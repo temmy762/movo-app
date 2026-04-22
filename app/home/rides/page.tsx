@@ -69,10 +69,28 @@ export default function RidesPage() {
             })}
           </div>
 
+          {/* Book a ride — MOBILE ONLY: above empty state to avoid bottom-nav overlap */}
+          <div className="md:hidden mt-6">
+            <button
+              type="button"
+              onClick={() => router.push("/home/pickup")}
+              className="w-full py-3.5 rounded-full border-[1.5px] text-[14px] font-semibold"
+              style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
+            >
+              Book a ride
+            </button>
+          </div>
+
           {/* Empty state */}
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-16">
-            <div className="relative w-20 h-20 md:w-28 md:h-28 mb-4 md:mb-6 opacity-70">
-              <Image src="/images/Car.png" alt="Car" fill className="object-contain" />
+            <div className="relative w-14 h-14 md:w-20 md:h-20 mb-3 md:mb-5 opacity-70">
+              <Image
+                src="/images/Car.png"
+                alt="Car"
+                fill
+                sizes="(max-width: 768px) 56px, 80px"
+                className="object-contain"
+              />
             </div>
             <p className="text-[15px] md:text-[18px] font-bold text-gray-900">{empty.title}</p>
             <p className="text-[12px] md:text-[14px] text-gray-500 mt-1 md:mt-2 whitespace-pre-line leading-snug md:leading-relaxed max-w-md">
@@ -80,12 +98,12 @@ export default function RidesPage() {
             </p>
           </div>
 
-          {/* Book a ride button */}
-          <div className="pb-4 md:pb-6">
+          {/* Book a ride — DESKTOP ONLY: at the bottom */}
+          <div className="hidden md:block pb-6">
             <button
               type="button"
               onClick={() => router.push("/home/pickup")}
-              className="w-full md:max-w-md md:mx-auto md:block py-3.5 md:py-4 rounded-full border-[1.5px] text-[14px] md:text-[15px] font-semibold"
+              className="w-full max-w-md mx-auto block py-4 rounded-full border-[1.5px] text-[15px] font-semibold"
               style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
             >
               Book a ride
