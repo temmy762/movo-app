@@ -1,15 +1,18 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useRef, useState, Suspense } from "react";
 
 const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
 
-export default function RidesPage() {
+function PickupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tier = searchParams.get("tier") ?? "all";
+
   const [pickup, setPickup] = useState("");
-  const [dropoff, setDropoff] = useState("England");
+  const [dropoff, setDropoff] = useState("");
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
   const reqRef = useRef(0);
@@ -34,6 +37,11 @@ export default function RidesPage() {
     } finally {
       if (reqId === reqRef.current) setLookingUp(false);
     }
+  };
+
+  const handleConfirm = () => {
+    const params = new URLSearchParams({ tier, pickup, dropoff });
+    router.push(`/home/pickup/available-cars?${params.toString()}`);
   };
 
   return (
@@ -95,7 +103,7 @@ export default function RidesPage() {
         <button
           type="button"
           disabled={!pickup}
-          onClick={() => router.push("/home/pickup/available-cars?tier=all")}
+          onClick={handleConfirm}
           className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
           style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
         >
@@ -103,5 +111,13 @@ export default function RidesPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function PickupPage() {
+  return (
+    <Suspense>
+      <PickupContent />
+    </Suspense>
   );
 }

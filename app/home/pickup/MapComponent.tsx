@@ -5,11 +5,11 @@ import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from "r
 import L from "leaflet";
 
 const CAR_POSITIONS: [number, number][] = [
-  [51.522, -0.108],
-  [51.519, -0.099],
-  [51.525, -0.102],
-  [51.517, -0.112],
-  [51.523, -0.095],
+  [43.6560, -79.3802],
+  [43.6510, -79.3860],
+  [43.6548, -79.3775],
+  [43.6498, -79.3905],
+  [43.6578, -79.3750],
 ];
 
 const carIcon = L.divIcon({
@@ -44,7 +44,7 @@ const pinIcon = L.divIcon({
 function InitialView() {
   const map = useMap();
   useEffect(() => {
-    map.setView([51.52, -0.103], 14);
+    map.setView([43.6532, -79.3832], 14);
     // Invalidate size after mount — fixes grey tiles when container size settles late
     const t = setTimeout(() => map.invalidateSize(), 100);
     return () => clearTimeout(t);
@@ -69,7 +69,7 @@ interface Props {
 export default function MapComponent({ selectedPoint, onLocationSelect }: Props) {
   return (
     <MapContainer
-      center={[51.52, -0.103]}
+      center={[43.6532, -79.3832]}
       zoom={14}
       scrollWheelZoom={true}
       zoomControl={true}
@@ -80,11 +80,11 @@ export default function MapComponent({ selectedPoint, onLocationSelect }: Props)
       <InitialView />
       {onLocationSelect && <ClickHandler onPick={onLocationSelect} />}
       <Circle
-        center={[51.52, -0.103]}
+        center={[43.6532, -79.3832]}
         radius={400}
         pathOptions={{ color: "#4f46e5", fillColor: "#4f46e5", fillOpacity: 0.08, weight: 1.5 }}
       />
-      <Marker position={[51.52, -0.103]} icon={userIcon} />
+      <Marker position={[43.6532, -79.3832]} icon={userIcon} />
       {CAR_POSITIONS.map((pos, i) => (
         <Marker key={i} position={pos} icon={carIcon} />
       ))}

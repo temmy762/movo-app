@@ -1,12 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 
 type PayMethod = "visa" | "paypal";
 
-export default function ConfirmPayPage() {
+function ConfirmPayContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pickup = searchParams.get("pickup") || "Pickup address";
+  const dropoff = searchParams.get("dropoff") || "Destination";
+  const carName = searchParams.get("car") || "Standard Ride";
   const [payment, setPayment] = useState<PayMethod>("visa");
 
   return (
@@ -34,7 +38,7 @@ export default function ConfirmPayPage() {
 
           {/* Ride Summary */}
           <div className="mt-6">
-            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">Standard Ride</p>
+            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">{carName}</p>
 
             <div className="relative flex flex-col gap-3">
               {/* Vertical connector */}
@@ -45,9 +49,8 @@ export default function ConfirmPayPage() {
                 <div className="w-[18px] h-[18px] rounded-full shrink-0 z-10 mt-0.5 flex items-center justify-center" style={{ background: "#2D0A53" }}>
                   <div className="w-2 h-2 bg-white rounded-full" />
                 </div>
-                <div>
-                  <p className="text-[13px] md:text-[14px] font-semibold text-gray-900">123 Main Street</p>
-                  <p className="text-[12px] text-gray-400">USA</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] md:text-[14px] font-semibold text-gray-900 break-words">{pickup}</p>
                 </div>
               </div>
 
@@ -56,9 +59,8 @@ export default function ConfirmPayPage() {
                 <div className="w-[18px] h-[18px] rounded-full shrink-0 z-10 mt-0.5 flex items-center justify-center bg-red-500">
                   <div className="w-2 h-2 bg-white rounded-full" />
                 </div>
-                <div>
-                  <p className="text-[13px] md:text-[14px] font-semibold text-gray-900">123 Main Street</p>
-                  <p className="text-[12px] text-gray-400">USA</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] md:text-[14px] font-semibold text-gray-900 break-words">{dropoff}</p>
                 </div>
               </div>
             </div>
@@ -166,11 +168,11 @@ export default function ConfirmPayPage() {
           >
             <div className="flex justify-between items-center">
               <span className="text-[13px] md:text-[14px] text-gray-600">Ride Fare</span>
-              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">$35.50</span>
+              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">$30.00</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
-              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">$35.50</span>
+              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">$5.50</span>
             </div>
             <div className="h-px bg-gray-100 my-1" />
             <div className="flex justify-between items-center">
@@ -196,5 +198,13 @@ export default function ConfirmPayPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ConfirmPayPage() {
+  return (
+    <Suspense>
+      <ConfirmPayContent />
+    </Suspense>
   );
 }

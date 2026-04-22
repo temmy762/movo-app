@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { label: "Dashboard", img: "/images/Home.png", href: "/home", match: (p: string) => p === "/home" },
-  { label: "Rides", img: "/images/EMPTYCar.png", href: "/home/rides", match: (p: string) => p.startsWith("/home/rides") || p.startsWith("/home/pickup") },
+  { label: "Rides", img: "/images/EMPTYCar.png", href: "/home/rides", match: (p: string) => p.startsWith("/home/rides") || p.startsWith("/home/pickup") || p === "/home/ride" || p.startsWith("/home/ride/") },
   { label: "Help", img: "/images/Help.png", href: "/home/help", match: (p: string) => p.startsWith("/home/help") },
   { label: "My Luxe ID", img: "/images/Male User.png", href: "/home/profile", match: (p: string) => p.startsWith("/home/profile") },
 ];

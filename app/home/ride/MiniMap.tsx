@@ -24,7 +24,7 @@ function Resizer() {
   return null;
 }
 
-export default function MiniMap({ lat = 51.52, lng = -0.103 }: { lat?: number; lng?: number }) {
+export default function MiniMap({ lat = 43.6532, lng = -79.3832 }: { lat?: number; lng?: number }) {
   return (
     <MapContainer
       center={[lat, lng]}

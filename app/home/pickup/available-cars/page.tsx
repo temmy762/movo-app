@@ -35,6 +35,8 @@ function AvailableCarsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams.get("tier") ?? "all";
+  const pickup = searchParams.get("pickup") ?? "";
+  const dropoff = searchParams.get("dropoff") ?? "";
 
   const filtered =
     tier === "all"
@@ -90,7 +92,10 @@ function AvailableCarsContent() {
               {/* BOOK NOW button */}
               <button
                 type="button"
-                onClick={() => router.push("/home/ride")}
+                onClick={() => {
+                  const params = new URLSearchParams({ pickup, dropoff, car: car.name });
+                  router.push(`/home/ride?${params.toString()}`);
+                }}
                 className="w-full py-2.5 rounded-lg text-white font-bold text-[13px] tracking-widest"
                 style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
               >

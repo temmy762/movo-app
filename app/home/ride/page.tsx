@@ -1,15 +1,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
 
-export default function YourRidesPage() {
+function YourRidesContent() {
   const router = useRouter();
-  const [pickup, setPickup] = useState("");
-  const [dropoff, setDropoff] = useState("");
+  const searchParams = useSearchParams();
+  const carName = searchParams.get("car") ?? "";
+  const [pickup, setPickup] = useState(searchParams.get("pickup") ?? "");
+  const [dropoff, setDropoff] = useState(searchParams.get("dropoff") ?? "");
 
   return (
     <div
@@ -87,7 +89,10 @@ export default function YourRidesPage() {
           {/* Select on map */}
           <button
             type="button"
-            onClick={() => router.push("/home/pickup")}
+            onClick={() => {
+              const params = new URLSearchParams({ tier: "all", pickup, dropoff });
+              router.push(`/home/pickup?${params.toString()}`);
+            }}
             className="mt-5 flex items-center gap-2"
           >
             <div
@@ -124,7 +129,10 @@ export default function YourRidesPage() {
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
           <button
             type="button"
-            onClick={() => router.push("/home/ride/confirm")}
+            onClick={() => {
+              const params = new URLSearchParams({ pickup, dropoff, car: carName });
+              router.push(`/home/ride/confirm?${params.toString()}`);
+            }}
             className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
@@ -133,5 +141,13 @@ export default function YourRidesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function YourRidesPage() {
+  return (
+    <Suspense>
+      <YourRidesContent />
+    </Suspense>
   );
 }
