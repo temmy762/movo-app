@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
 
@@ -10,13 +10,44 @@ export default function RidesPage() {
   const router = useRouter();
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("England");
+  const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const reqRef = useRef(0);
+
+  const handleLocationSelect = async (lat: number, lng: number) => {
+    setSelectedPoint({ lat, lng });
+    setLookingUp(true);
+    const reqId = ++reqRef.current;
+    // Temporary value while geocoding resolves
+    setPickup(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const data = await res.json();
+      if (reqId === reqRef.current && data?.display_name) {
+        setPickup(data.display_name);
+      }
+    } catch {
+      /* keep coordinates as fallback */
+    } finally {
+      if (reqId === reqRef.current) setLookingUp(false);
+    }
+  };
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
 
       {/* Map — fills all remaining space above panel */}
       <div className="relative flex-1">
-        <MapComponent />
+        <MapComponent selectedPoint={selectedPoint} onLocationSelect={handleLocationSelect} />
+        {lookingUp && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-white rounded-full px-3 py-1.5 shadow-md text-[12px] text-gray-600 font-medium flex items-center gap-2">
+            <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" />
+            Finding address…
+          </div>
+        )}
       </div>
 
       {/* Pickup panel */}
@@ -63,6 +94,7 @@ export default function RidesPage() {
         {/* Confirm button */}
         <button
           type="button"
+          disabled={!pickup}
           onClick={() => router.push("/home/rides/available-cars?tier=all")}
           className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
           style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}

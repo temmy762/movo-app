@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Circle, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 
 const CAR_POSITIONS: [number, number][] = [
@@ -30,26 +30,55 @@ const userIcon = L.divIcon({
   iconAnchor: [8, 8],
 });
 
-function FitBounds() {
+const pinIcon = L.divIcon({
+  className: "",
+  html: `<div style="display:flex;flex-direction:column;align-items:center">
+    <div style="width:32px;height:32px;background:#2D0A53;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 3px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
+      <div style="width:10px;height:10px;background:white;border-radius:50%;transform:rotate(45deg)"></div>
+    </div>
+  </div>`,
+  iconSize: [32, 40],
+  iconAnchor: [16, 36],
+});
+
+function InitialView() {
   const map = useMap();
   useEffect(() => {
     map.setView([51.52, -0.103], 14);
+    // Invalidate size after mount — fixes grey tiles when container size settles late
+    const t = setTimeout(() => map.invalidateSize(), 100);
+    return () => clearTimeout(t);
   }, [map]);
   return null;
 }
 
-export default function MapComponent() {
+function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onPick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
+
+interface Props {
+  selectedPoint?: { lat: number; lng: number } | null;
+  onLocationSelect?: (lat: number, lng: number) => void;
+}
+
+export default function MapComponent({ selectedPoint, onLocationSelect }: Props) {
   return (
     <MapContainer
       center={[51.52, -0.103]}
       zoom={14}
-      scrollWheelZoom={false}
-      zoomControl={false}
+      scrollWheelZoom={true}
+      zoomControl={true}
       style={{ width: "100%", height: "100%" }}
       attributionControl={false}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <FitBounds />
+      <InitialView />
+      {onLocationSelect && <ClickHandler onPick={onLocationSelect} />}
       <Circle
         center={[51.52, -0.103]}
         radius={400}
@@ -59,6 +88,9 @@ export default function MapComponent() {
       {CAR_POSITIONS.map((pos, i) => (
         <Marker key={i} position={pos} icon={carIcon} />
       ))}
+      {selectedPoint && (
+        <Marker position={[selectedPoint.lat, selectedPoint.lng]} icon={pinIcon} />
+      )}
     </MapContainer>
   );
 }
