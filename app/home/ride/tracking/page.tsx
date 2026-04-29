@@ -40,7 +40,7 @@ function RideTrackingContent() {
       </div>
 
       {/* White bottom panel — overlaps map slightly */}
-      <div className="flex-1 overflow-y-auto bg-white rounded-t-3xl -mt-5 z-10 shadow-2xl">
+      <div className="relative flex-1 overflow-y-auto bg-white rounded-t-3xl -mt-5 z-10 shadow-2xl">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 pt-5 pb-8">
 
           {/* ETA row */}
