@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 
 const carIcon = L.divIcon({
@@ -59,15 +59,9 @@ export default function RideMap() {
       style={{ width: "100%", height: "100%" }}
     >
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}.png"
-        subdomains="abcd"
-        maxZoom={19}
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <Resizer />
-      <Polyline
-        positions={[PICKUP, CAR, DEST]}
-        pathOptions={{ color: "#8B7500", weight: 3, opacity: 0.85, dashArray: "8 5" }}
-      />
       <Marker position={PICKUP} icon={pickupIcon} />
       <Marker position={CAR} icon={carIcon} />
       <Marker position={DEST} icon={destIcon} />
