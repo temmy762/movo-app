@@ -65,61 +65,61 @@ export default function NotificationsPage() {
           <h1 className="flex-1 text-center text-[18px] font-bold text-gray-900">Notifications</h1>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col items-center px-5 pt-4 pb-6">
-          <div className="w-full flex flex-col gap-5">
-          {/* Hint */}
-          <p className="text-[12px] text-gray-500 leading-relaxed">
-            Please select at least one notification channel for your rides
-          </p>
+        {/* 3-card grid */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 px-3 py-5">
 
-          {/* Push notifications */}
-          <div>
-            <p className="text-[14px] font-bold text-gray-900 mb-4">Push notification</p>
+          {/* Left card */}
+          <div className="hidden md:block rounded-2xl bg-white" />
 
-            <div className="flex items-start justify-between mb-5">
-              <div className="flex-1 pr-4">
-                <p className="text-[14px] font-semibold text-gray-900">Rides</p>
-                <p className="text-[12px] text-gray-400 mt-0.5">Ride status, rate the ride</p>
+          {/* Center card */}
+          <div className="rounded-2xl bg-white border border-gray-100 shadow-sm px-5 py-5 flex flex-col gap-5">
+            <p className="text-[12px] text-gray-500 leading-relaxed">
+              Please select at least one notification channel for your rides
+            </p>
+
+            <div>
+              <p className="text-[14px] font-bold text-gray-900 mb-4">Push notification</p>
+              <div className="flex items-start justify-between mb-5">
+                <div className="flex-1 pr-4">
+                  <p className="text-[14px] font-semibold text-gray-900">Rides</p>
+                  <p className="text-[12px] text-gray-400 mt-0.5">Ride status, rate the ride</p>
+                </div>
+                <GradientToggle checked={settings.pushRides} onChange={() => toggle("pushRides")} />
               </div>
-              <GradientToggle checked={settings.pushRides} onChange={() => toggle("pushRides")} />
+              <div className="flex items-start justify-between">
+                <div className="flex-1 pr-4">
+                  <p className="text-[14px] font-semibold text-gray-900">Marketing</p>
+                  <p className="text-[12px] text-gray-400 mt-0.5 leading-relaxed">
+                    Personalized updates and offers, curated travel tips, feedback requests
+                  </p>
+                </div>
+                <GradientToggle checked={settings.pushMarketing} onChange={() => toggle("pushMarketing")} />
+              </div>
             </div>
 
-            <div className="flex items-start justify-between">
-              <div className="flex-1 pr-4">
-                <p className="text-[14px] font-semibold text-gray-900">Marketing</p>
-                <p className="text-[12px] text-gray-400 mt-0.5 leading-relaxed">
-                  Personalized updates and offers, curated travel tips, feedback requests
-                </p>
+            <div className="h-px bg-gray-100" />
+
+            <div>
+              <p className="text-[14px] font-bold text-gray-900 mb-4">Text messages</p>
+              <div className="flex items-start justify-between">
+                <div className="flex-1 pr-4">
+                  <p className="text-[14px] font-semibold text-gray-900">Rides</p>
+                  <p className="text-[12px] text-gray-400 mt-0.5">Ride status.</p>
+                </div>
+                <GradientToggle checked={settings.smsRides} onChange={() => toggle("smsRides")} />
               </div>
-              <GradientToggle checked={settings.pushMarketing} onChange={() => toggle("pushMarketing")} />
             </div>
+
+            <div className="h-px bg-gray-100" />
+
+            <p className="text-[12px] text-gray-400 text-center leading-relaxed">
+              Ride status updates are also always sent via email
+            </p>
           </div>
 
-          {/* Divider */}
-          <div className="h-px bg-gray-100" />
+          {/* Right card */}
+          <div className="hidden md:block rounded-2xl bg-white" />
 
-          {/* Text messages */}
-          <div>
-            <p className="text-[14px] font-bold text-gray-900 mb-4">Text messages</p>
-
-            <div className="flex items-start justify-between">
-              <div className="flex-1 pr-4">
-                <p className="text-[14px] font-semibold text-gray-900">Rides</p>
-                <p className="text-[12px] text-gray-400 mt-0.5">Ride status.</p>
-              </div>
-              <GradientToggle checked={settings.smsRides} onChange={() => toggle("smsRides")} />
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-gray-100" />
-
-          {/* Footer note */}
-          <p className="text-[12px] text-gray-400 text-center leading-relaxed">
-            Ride status updates are also always sent via email
-          </p>
-          </div>
         </div>
       </div>
     </div>

@@ -31,42 +31,49 @@ export default function PersonalInfoPage() {
         />
       </div>
 
-      {/* Contact details */}
-      <div className="px-5 pt-5 flex-1">
-        <div className="flex items-start gap-3">
-          {/* Person icon */}
-          <div className="mt-0.5 shrink-0 text-gray-500">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
-          </div>
-          <div className="flex flex-col gap-3">
-            <p className="text-[14px] font-bold text-gray-900">Contact details</p>
-            <div>
-              <p className="text-[15px] font-semibold text-gray-900">Adams W</p>
-            </div>
-            <div>
-              <p className="text-[12px] text-gray-400">Mobile Number</p>
-              <p className="text-[14px] font-medium text-gray-800">+1874*******34</p>
-            </div>
-            <div>
-              <p className="text-[12px] text-gray-400">Email</p>
-              <p className="text-[14px] font-medium text-gray-800">Example@gmail.com</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 3-card grid */}
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 px-3 py-5">
 
-      {/* CTA */}
-      <div className="px-5 pb-10 pt-6">
-        <button
-          type="button"
-          className="w-full py-4 rounded-xl text-white font-bold text-[15px]"
-          style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
-        >
-          Change information
-        </button>
+        {/* Left card */}
+        <div className="hidden md:block rounded-2xl bg-white" />
+
+        {/* Center card */}
+        <div className="rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col justify-between px-5 py-6">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 shrink-0 text-gray-500">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+            </div>
+            <div className="flex flex-col gap-3">
+              <p className="text-[14px] font-bold text-gray-900">Contact details</p>
+              <div>
+                <p className="text-[15px] font-semibold text-gray-900">Adams W</p>
+              </div>
+              <div>
+                <p className="text-[12px] text-gray-400">Mobile Number</p>
+                <p className="text-[14px] font-medium text-gray-800">+1874*******34</p>
+              </div>
+              <div>
+                <p className="text-[12px] text-gray-400">Email</p>
+                <p className="text-[14px] font-medium text-gray-800">Example@gmail.com</p>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mt-8"
+            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+          >
+            Change information
+          </button>
+        </div>
+
+        {/* Right card */}
+        <div className="hidden md:block rounded-2xl bg-white" />
+
       </div>
     </div>
   );
