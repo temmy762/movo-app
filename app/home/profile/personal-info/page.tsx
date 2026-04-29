@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 export default function PersonalInfoPage() {
   const router = useRouter();
 
+
   return (
     <div
       className="min-h-screen bg-white flex flex-col"
@@ -64,6 +65,7 @@ export default function PersonalInfoPage() {
 
           <button
             type="button"
+            onClick={() => router.push("/home/profile/personal-info/edit")}
             className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mt-8"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
