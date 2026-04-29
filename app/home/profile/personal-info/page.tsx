@@ -24,7 +24,7 @@ export default function PersonalInfoPage() {
             <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
-        <h1 className="text-[22px] font-bold text-gray-900">Personal information</h1>
+        <h1 className="text-[22px] font-bold text-gray-900 text-center">Personal information</h1>
         {/* Gradient underline */}
         <div
           className="mt-2 h-[2px]"
