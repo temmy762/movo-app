@@ -83,50 +83,58 @@ export default function AddCardPage() {
           <h1 className="flex-1 text-center text-[18px] font-bold text-gray-900">Add credit card</h1>
         </div>
 
-        {/* Form */}
-        <div className="flex-1 flex flex-col items-center px-5 py-6">
-          <div className="w-full flex flex-col gap-4">
-          <CardField
-            label="Full Name"
-            value={fullName}
-            onChange={setFullName}
-            placeholder="CARDHOLDER"
-          />
-          <CardField
-            label="Number"
-            value={number}
-            onChange={(v) => setNumber(formatCardNumber(v))}
-            placeholder="•••• •••• •••• ••••"
-            maxLength={19}
-          />
-          <CardField
-            label="Expiration Date"
-            value={expiry}
-            onChange={(v) => setExpiry(formatExpiry(v))}
-            placeholder="MM/YY"
-            maxLength={5}
-          />
-          <CardField
-            label="CVV"
-            value={cvv}
-            onChange={setCvv}
-            placeholder="•••"
-            type="password"
-            maxLength={4}
-          />
-          </div>
-        </div>
+        {/* 3-card grid */}
+        <div className="flex-1 grid grid-cols-3 gap-3 px-3 py-5">
 
-        {/* CTA */}
-        <div className="px-5 pb-7">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="w-full py-3.5 rounded-xl text-white font-bold text-[15px]"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
-          >
-            Add credit card
-          </button>
+          {/* Left decorative card */}
+          <div className="rounded-2xl bg-gray-50 border border-gray-100" />
+
+          {/* Center card — form + button */}
+          <div className="rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col justify-between px-4 py-5 gap-4">
+            <div className="flex flex-col gap-4">
+              <CardField
+                label="Full Name"
+                value={fullName}
+                onChange={setFullName}
+                placeholder="CARDHOLDER"
+              />
+              <CardField
+                label="Number"
+                value={number}
+                onChange={(v) => setNumber(formatCardNumber(v))}
+                placeholder="•••• •••• ••••"
+                maxLength={19}
+              />
+              <CardField
+                label="Expiration Date"
+                value={expiry}
+                onChange={(v) => setExpiry(formatExpiry(v))}
+                placeholder="MM/YY"
+                maxLength={5}
+              />
+              <CardField
+                label="CVV"
+                value={cvv}
+                onChange={setCvv}
+                placeholder="•••"
+                type="password"
+                maxLength={4}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="w-full py-3 rounded-xl text-white font-bold text-[13px]"
+              style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            >
+              Add credit card
+            </button>
+          </div>
+
+          {/* Right decorative card */}
+          <div className="rounded-2xl bg-gray-50 border border-gray-100" />
+
         </div>
       </div>
     </div>
