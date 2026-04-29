@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
+import Image from "next/image";
 
 const RideMap = dynamic(() => import("./RideMap"), { ssr: false });
 
@@ -14,6 +15,13 @@ function RideTrackingContent() {
   const car = searchParams.get("car") || "Sedan (White)";
 
   const [view, setView] = useState<"route" | "actions">("route");
+
+  const carImageMap: Record<string, string> = {
+    "Movo Classic": "/images/movo classic.png",
+    "Movo Premium": "/images/movo premium.png",
+    "Movo Privé Black": "/images/prive black.png",
+  };
+  const carImg = carImageMap[car] ?? "/images/Car.png";
 
   const dropoffCity = dropoff.split(",").slice(1, 3).join(",").trim() || "";
 
@@ -66,17 +74,14 @@ function RideTrackingContent() {
 
             {/* Car */}
             <div className="flex flex-col items-end">
-              <div className="w-[100px] h-[56px] rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100">
-                <svg viewBox="0 0 120 55" width="96" height="44" fill="none">
-                  <path
-                    d="M18 33 C18 33 28 12 48 11 L74 11 C92 11 108 27 110 33"
-                    fill="#e5e7eb" stroke="#d1d5db" strokeWidth="1.5"
-                  />
-                  <rect x="6" y="31" width="108" height="18" rx="5" fill="#e5e7eb" stroke="#d1d5db" strokeWidth="1.5" />
-                  <rect x="14" y="49" width="22" height="5" rx="2.5" fill="#9ca3af" />
-                  <rect x="84" y="49" width="22" height="5" rx="2.5" fill="#9ca3af" />
-                  <rect x="28" y="13" width="64" height="17" rx="3" fill="#bfdbfe" opacity="0.55" />
-                </svg>
+              <div className="w-[110px] h-[60px] rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100">
+                <Image
+                  src={carImg}
+                  alt={car}
+                  width={100}
+                  height={54}
+                  className="object-contain"
+                />
               </div>
               <p className="text-[12px] md:text-[13px] font-semibold text-gray-700 mt-1">{car}</p>
               <p className="text-[11px] text-gray-400">4 Seats</p>

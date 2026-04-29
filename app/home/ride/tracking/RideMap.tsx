@@ -6,16 +6,11 @@ import L from "leaflet";
 
 const carIcon = L.divIcon({
   className: "",
-  html: `<div style="background:#1a1a2e;border:2px solid white;border-radius:8px;width:38px;height:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,0.6)">
-    <svg width="28" height="14" viewBox="0 0 28 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M2 8 C2 8 5 2 9 2 L19 2 C23 2 26 8 26 8" stroke="white" strokeWidth="1.5" fill="none"/>
-      <rect x="1" y="7" width="26" height="6" rx="2" fill="white"/>
-      <circle cx="6" cy="13" r="1.5" fill="#555"/>
-      <circle cx="22" cy="13" r="1.5" fill="#555"/>
-    </svg>
+  html: `<div style="display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.7))">
+    <img src="/images/Car.png" style="width:52px;height:auto;" alt="car" />
   </div>`,
-  iconSize: [38, 24],
-  iconAnchor: [19, 12],
+  iconSize: [52, 30],
+  iconAnchor: [26, 15],
 });
 
 const pickupIcon = L.divIcon({
@@ -54,17 +49,19 @@ export default function RideMap() {
     <MapContainer
       center={[43.653, -79.382]}
       zoom={13}
-      zoomControl={false}
+      zoomControl={true}
       scrollWheelZoom={false}
-      dragging={false}
-      touchZoom={false}
+      dragging={true}
+      touchZoom={true}
       doubleClickZoom={false}
       keyboard={false}
       attributionControl={false}
       style={{ width: "100%", height: "100%" }}
     >
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}{r}.png"
+        url="https://{s}.basemaps.cartocdn.com/dark_matter/{z}/{x}/{y}.png"
+        subdomains="abcd"
+        maxZoom={19}
       />
       <Resizer />
       <Polyline
