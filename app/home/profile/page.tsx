@@ -71,10 +71,10 @@ export default function ProfilePage() {
   const router = useRouter();
 
   return (
-    <div className="h-screen relative overflow-hidden" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-screen overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
 
-      {/* Fixed banner — stays in place while content scrolls over it */}
-      <div className="absolute top-0 left-0 right-0 z-0" style={{ height: 260 }}>
+      {/* Banner — sticky at top, stays behind as white section scrolls over */}
+      <div className="sticky top-0 z-0 w-full" style={{ height: 260 }}>
         <Image
           src="/images/account banner.png"
           alt="Account banner"
@@ -84,11 +84,9 @@ export default function ProfilePage() {
         />
       </div>
 
-      {/* Scrollable white panel — slides over the banner */}
-      <div
-        className="absolute left-0 right-0 bottom-0 overflow-y-auto z-10 bg-white rounded-t-3xl"
-        style={{ top: 210 }}
-      >
+      {/* White section — normal flow, slides over the sticky banner */}
+      <div className="relative z-10 bg-white rounded-t-3xl -mt-10 min-h-screen pb-24">
+
         {/* Welcome */}
         <div className="px-5 pt-5 pb-3">
           <p className="text-[13px] text-gray-500">Welcome</p>
@@ -120,9 +118,6 @@ export default function ProfilePage() {
             </button>
           ))}
         </nav>
-
-        {/* Bottom nav spacer */}
-        <div className="h-24" />
       </div>
 
       <BottomNav />
