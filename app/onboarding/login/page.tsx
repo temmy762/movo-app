@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<"email" | "phone">("email");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -127,6 +129,7 @@ export default function LoginPage() {
         {/* Log In button */}
         <button
           type="button"
+          onClick={() => router.push("/home")}
           className="w-full py-3 sm:py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
           style={{
             background:

@@ -189,7 +189,10 @@ function ConfirmPayContent() {
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
           <button
             type="button"
-            onClick={() => router.push("/home")}
+            onClick={() => {
+              const params = new URLSearchParams({ pickup, dropoff, car: carName });
+              router.push(`/home/ride/tracking?${params.toString()}`);
+            }}
             className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >

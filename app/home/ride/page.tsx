@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useRef, Suspense } from "react";
 
 const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
 
@@ -12,6 +12,30 @@ function YourRidesContent() {
   const carName = searchParams.get("car") ?? "";
   const [pickup, setPickup] = useState(searchParams.get("pickup") ?? "");
   const [dropoff, setDropoff] = useState(searchParams.get("dropoff") ?? "");
+  const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const reqRef = useRef(0);
+
+  const handleLocationSelect = async (lat: number, lng: number) => {
+    setSelectedPoint({ lat, lng });
+    setLookingUp(true);
+    const reqId = ++reqRef.current;
+    setDropoff(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const data = await res.json();
+      if (reqId === reqRef.current && data?.display_name) {
+        setDropoff(data.display_name);
+      }
+    } catch {
+      /* keep coordinates as fallback */
+    } finally {
+      if (reqId === reqRef.current) setLookingUp(false);
+    }
+  };
 
   return (
     <div
@@ -52,7 +76,7 @@ function YourRidesContent() {
 
           {/* Inputs */}
           <div className="relative mt-5 flex flex-col gap-3">
-            <div className="absolute left-[9px] top-[22px] bottom-[22px] w-px bg-gray-300" />
+            <div className="absolute left-[4px] top-[22px] bottom-[22px] w-px bg-gray-300" />
 
             {/* Pickup */}
             <div className="flex items-center gap-3">
@@ -109,15 +133,27 @@ function YourRidesContent() {
 
           {/* My Current Location card */}
           <div className="mt-5 rounded-2xl border border-gray-200 p-3 bg-white shadow-sm">
-            <p className="text-[13px] md:text-[14px] font-semibold text-gray-900">
-              My Current{" "}
-              <span style={{ color: "#8B7500" }}>Location</span>
-            </p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[13px] md:text-[14px] font-semibold text-gray-900">
+                My Current{" "}
+                <span style={{ color: "#8B7500" }}>Location</span>
+              </p>
+              {lookingUp && (
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                  <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" />
+                  Finding address…
+                </div>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-400 mb-2">Tap the map to set your destination</p>
             <div
-              className="mt-3 rounded-xl overflow-hidden border-[2px]"
-              style={{ borderColor: "#2D0A53", height: "160px" }}
+              className="rounded-xl overflow-hidden border-[2px]"
+              style={{ borderColor: selectedPoint ? "#8B7500" : "#2D0A53", height: "200px" }}
             >
-              <MiniMap />
+              <MiniMap
+                selectedPoint={selectedPoint}
+                onLocationSelect={handleLocationSelect}
+              />
             </div>
           </div>
 
@@ -125,7 +161,7 @@ function YourRidesContent() {
       </div>
 
       {/* Confirm Ride button */}
-      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100">
+      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100 z-[1001]">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
           <button
             type="button"

@@ -28,7 +28,7 @@ export default function HomePage() {
             src="/images/home banner.png"
             alt="Banner"
             fill
-            className="object-cover object-bottom"
+            className="object-cover object-top"
             priority
           />
           {/* Overlay gradient */}

@@ -95,7 +95,7 @@ export default function WelcomePage() {
             type="button"
             onClick={handleNext}
             aria-label="Next"
-            className="relative flex items-center justify-center w-[108px] h-[108px] cursor-pointer hover:scale-105 active:scale-95 transition-transform focus:outline-none"
+            className="no-hover-fx relative flex items-center justify-center w-[108px] h-[108px] cursor-pointer hover:scale-105 active:scale-95 transition-transform focus:outline-none"
           >
             <div className="absolute inset-0 rounded-full border-[1.5px] border-gray-200" />
             <div

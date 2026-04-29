@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const EyeIcon = ({ open }: { open: boolean }) =>
   open ? (
@@ -19,6 +20,7 @@ const EyeIcon = ({ open }: { open: boolean }) =>
   );
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -80,6 +82,7 @@ export default function RegisterPage() {
           {/* Sign Up button */}
           <button
             type="button"
+            onClick={() => router.push("/home")}
             className="w-full py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
