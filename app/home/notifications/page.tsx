@@ -67,7 +67,7 @@ export default function NotificationsPage() {
 
         {/* Content */}
         <div className="flex-1 flex flex-col items-center px-5 pt-4 pb-6">
-          <div className="w-full max-w-xs flex flex-col gap-5">
+          <div className="w-full flex flex-col gap-5">
           {/* Hint */}
           <p className="text-[12px] text-gray-500 leading-relaxed">
             Please select at least one notification channel for your rides

@@ -85,7 +85,7 @@ export default function AddCardPage() {
 
         {/* Form */}
         <div className="flex-1 flex flex-col items-center px-5 py-6">
-          <div className="w-full max-w-xs flex flex-col gap-4">
+          <div className="w-full flex flex-col gap-4">
           <CardField
             label="Full Name"
             value={fullName}
@@ -118,11 +118,11 @@ export default function AddCardPage() {
         </div>
 
         {/* CTA */}
-        <div className="flex justify-center px-5 pb-7">
+        <div className="px-5 pb-7">
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-full max-w-xs py-3 rounded-xl text-white font-bold text-[14px]"
+            className="w-full py-3.5 rounded-xl text-white font-bold text-[15px]"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
             Add credit card
