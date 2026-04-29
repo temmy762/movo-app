@@ -5,7 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import Image from "next/image";
 
-const RideMap = dynamic(() => import("./RideMap"), { ssr: false });
+const RideMap = dynamic(() => import("./RideMap"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ width: "100%", height: "100%", background: "#1a1a2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <span style={{ color: "white", fontSize: "13px" }}>Loading map…</span>
+    </div>
+  ),
+});
 
 function RideTrackingContent() {
   const router = useRouter();
