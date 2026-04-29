@@ -8,11 +8,11 @@ export default function PromotionsPage() {
 
   return (
     <div
-      className="min-h-screen bg-gray-100 flex flex-col"
+      className="min-h-screen bg-white flex flex-col"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
       {/* White card */}
-      <div className="mx-4 mt-4 mb-6 flex-1 bg-white rounded-2xl shadow-sm flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="flex items-center px-5 py-4 border-b border-gray-100 relative">
           <button
