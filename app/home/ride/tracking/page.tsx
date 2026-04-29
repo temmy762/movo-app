@@ -34,11 +34,11 @@ function RideTrackingContent() {
 
   return (
     <div
-      className="h-screen overflow-hidden flex flex-col"
+      className="h-screen overflow-hidden flex flex-col bg-gray-900"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
       {/* Dark map area */}
-      <div className="relative flex-shrink-0" style={{ height: "44vh", minHeight: "220px" }}>
+      <div className="relative flex-shrink-0 overflow-hidden" style={{ height: "44vh", minHeight: "220px" }}>
         {/* "Ride" label */}
         <div className="absolute top-4 left-5 z-[999]">
           <span className="text-white text-[16px] font-semibold drop-shadow-md">Ride</span>
@@ -48,7 +48,7 @@ function RideTrackingContent() {
 
       {/* White bottom panel — overlaps map slightly */}
       <div
-        className="relative flex-1 overflow-y-auto bg-white rounded-t-3xl -mt-5 z-10"
+        className="relative flex-1 overflow-y-auto bg-white rounded-t-3xl z-10"
         style={{ boxShadow: "0 -8px 24px rgba(0,0,0,0.18)" }}
       >
         <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 pt-8 pb-28">
