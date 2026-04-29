@@ -248,7 +248,7 @@ function RideTrackingContent() {
           {view === "route" ? (
             <button
               type="button"
-              onClick={() => router.push("/home")}
+              onClick={() => router.push(`/home/ride/completed?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&car=${encodeURIComponent(car)}`)}
               className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
               style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
             >
