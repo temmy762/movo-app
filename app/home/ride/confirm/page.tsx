@@ -143,6 +143,7 @@ function ConfirmPayContent() {
               {/* Add payment method */}
               <button
                 type="button"
+                onClick={() => router.push("/home/payment")}
                 className="flex items-center gap-1.5 text-[13px] font-medium mt-1"
                 style={{ color: "#2D0A53" }}
               >
