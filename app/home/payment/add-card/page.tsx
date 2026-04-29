@@ -35,7 +35,7 @@ function CardField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full px-4 py-3.5 rounded-xl text-[14px] text-gray-800 placeholder-gray-300 focus:outline-none"
+        className="w-full px-3 py-2.5 rounded-lg text-[13px] text-gray-800 placeholder-gray-300 focus:outline-none"
         style={gradientBorder}
       />
     </div>
@@ -84,7 +84,8 @@ export default function AddCardPage() {
         </div>
 
         {/* Form */}
-        <div className="flex-1 px-5 py-6 flex flex-col gap-5">
+        <div className="flex-1 flex flex-col items-center px-5 py-6">
+          <div className="w-full max-w-xs flex flex-col gap-4">
           <CardField
             label="Full Name"
             value={fullName}
@@ -113,14 +114,15 @@ export default function AddCardPage() {
             type="password"
             maxLength={4}
           />
+          </div>
         </div>
 
         {/* CTA */}
-        <div className="px-5 pb-7">
+        <div className="flex justify-center px-5 pb-7">
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-full py-3.5 rounded-xl text-white font-bold text-[15px]"
+            className="w-full max-w-xs py-3 rounded-xl text-white font-bold text-[14px]"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
             Add credit card
