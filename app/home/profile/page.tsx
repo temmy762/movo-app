@@ -71,23 +71,26 @@ export default function ProfilePage() {
   const router = useRouter();
 
   return (
-    <div className="h-screen flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto pb-20">
+    <div className="h-screen relative overflow-hidden" style={{ fontFamily: "var(--font-poppins)" }}>
 
-        {/* Banner */}
-        <div className="relative w-full" style={{ height: "42vw", maxHeight: 220, minHeight: 160 }}>
-          <Image
-            src="/images/account banner.png"
-            alt="Account banner"
-            fill
-            className="object-cover object-top"
-            priority
-          />
-        </div>
+      {/* Fixed banner — stays in place while content scrolls over it */}
+      <div className="absolute top-0 left-0 right-0 z-0" style={{ height: 260 }}>
+        <Image
+          src="/images/account banner.png"
+          alt="Account banner"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+      </div>
 
+      {/* Scrollable white panel — slides over the banner */}
+      <div
+        className="absolute left-0 right-0 bottom-0 overflow-y-auto z-10 bg-white rounded-t-3xl"
+        style={{ top: 210 }}
+      >
         {/* Welcome */}
-        <div className="px-5 pt-4 pb-3">
+        <div className="px-5 pt-5 pb-3">
           <p className="text-[13px] text-gray-500">Welcome</p>
           <p className="text-[22px] font-bold text-gray-900 leading-tight">Laura</p>
         </div>
@@ -100,7 +103,7 @@ export default function ProfilePage() {
 
         {/* Menu */}
         <nav className="flex flex-col">
-          {menuItems.map((item, i) => (
+          {menuItems.map((item) => (
             <button
               key={item.label}
               type="button"
@@ -118,6 +121,8 @@ export default function ProfilePage() {
           ))}
         </nav>
 
+        {/* Bottom nav spacer */}
+        <div className="h-24" />
       </div>
 
       <BottomNav />

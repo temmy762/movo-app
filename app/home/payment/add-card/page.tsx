@@ -84,10 +84,10 @@ export default function AddCardPage() {
         </div>
 
         {/* 3-card grid */}
-        <div className="flex-1 grid grid-cols-3 gap-3 px-3 py-5">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 px-3 py-5">
 
           {/* Left decorative card */}
-          <div className="rounded-2xl bg-gray-50 border border-gray-100" />
+          <div className="hidden md:block rounded-2xl bg-white" />
 
           {/* Center card — form + button */}
           <div className="rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col justify-between px-4 py-5 gap-4">
@@ -133,7 +133,7 @@ export default function AddCardPage() {
           </div>
 
           {/* Right decorative card */}
-          <div className="rounded-2xl bg-gray-50 border border-gray-100" />
+          <div className="hidden md:block rounded-2xl bg-white" />
 
         </div>
       </div>
