@@ -11,13 +11,8 @@ export default function PromotionsPage() {
       className="min-h-screen bg-gray-100 flex flex-col"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
-      {/* Section label */}
-      <div className="px-5 pt-5 pb-2">
-        <span className="text-gray-400 text-[12px] font-medium">payment</span>
-      </div>
-
       {/* White card */}
-      <div className="mx-4 mb-6 flex-1 bg-white rounded-2xl shadow-sm flex flex-col overflow-hidden">
+      <div className="mx-4 mt-4 mb-6 flex-1 bg-white rounded-2xl shadow-sm flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center px-5 py-4 border-b border-gray-100 relative">
           <button
