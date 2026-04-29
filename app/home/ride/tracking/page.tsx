@@ -47,8 +47,11 @@ function RideTrackingContent() {
       </div>
 
       {/* White bottom panel — overlaps map slightly */}
-      <div className="relative flex-1 overflow-y-auto bg-white rounded-t-3xl -mt-5 z-10 shadow-2xl">
-        <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 pt-5 pb-28">
+      <div
+        className="relative flex-1 overflow-y-auto bg-white rounded-t-3xl -mt-5 z-10"
+        style={{ boxShadow: "0 -8px 24px rgba(0,0,0,0.18)" }}
+      >
+        <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 pt-8 pb-28">
 
           {/* ETA row */}
           <div className="mb-3">
