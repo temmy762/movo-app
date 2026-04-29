@@ -48,7 +48,7 @@ function RideTrackingContent() {
 
       {/* White bottom panel — overlaps map slightly */}
       <div className="relative flex-1 overflow-y-auto bg-white rounded-t-3xl -mt-5 z-10 shadow-2xl">
-        <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 pt-5 pb-8">
+        <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 pt-5 pb-28">
 
           {/* ETA row */}
           <div className="mb-3">
@@ -163,15 +163,6 @@ function RideTrackingContent() {
                 </div>
               </div>
 
-              {/* Cancel Ride */}
-              <button
-                type="button"
-                onClick={() => router.push("/home")}
-                className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
-                style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
-              >
-                Cancel Ride
-              </button>
             </>
           )}
 
@@ -242,16 +233,32 @@ function RideTrackingContent() {
                 ))}
               </div>
 
-              {/* Emergency */}
-              <button
-                type="button"
-                className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide bg-red-500"
-              >
-                Emergency
-              </button>
             </>
           )}
 
+        </div>
+      </div>
+
+      {/* Fixed action footer */}
+      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100 z-[1001]">
+        <div className="w-full max-w-lg md:max-w-2xl mx-auto">
+          {view === "route" ? (
+            <button
+              type="button"
+              onClick={() => router.push("/home")}
+              className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
+              style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            >
+              Cancel Ride
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide bg-red-500"
+            >
+              Emergency
+            </button>
+          )}
         </div>
       </div>
     </div>
