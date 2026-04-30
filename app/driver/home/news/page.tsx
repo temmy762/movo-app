@@ -10,7 +10,7 @@ export default function DriverNewsPage() {
 
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
-        <button className="no-hover-fx p-1 md:hidden" onClick={() => router.back()}>
+        <button className="no-hover-fx p-1" onClick={() => router.back()}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5">
             <circle cx="12" cy="12" r="10" fill="#f3f4f6" stroke="none" />
             <polyline points="14 8 10 12 14 16" stroke="#374151" strokeWidth="2.5" />

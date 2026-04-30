@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const rideRequest = {
   name: "Nicholas Jackson",
@@ -208,15 +209,8 @@ export default function DriverHomePage() {
           style={{ background: "rgba(0,0,0,0.45)" }}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
             <p className="text-[16px] font-bold text-gray-900 mb-4">Decline Ride</p>
-            <div className="w-20 h-20 mb-4 flex items-center justify-center bg-yellow-50 rounded-full">
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
-                <rect x="2" y="10" width="20" height="9" rx="2" fill="#f59e0b" />
-                <rect x="6" y="6" width="12" height="5" rx="1" fill="#fbbf24" />
-                <circle cx="7" cy="19" r="2" fill="#374151" />
-                <circle cx="17" cy="19" r="2" fill="#374151" />
-                <circle cx="12" cy="13" r="3.5" fill="none" stroke="#e74c3c" strokeWidth="2" />
-                <line x1="10" y1="11" x2="14" y2="15" stroke="#e74c3c" strokeWidth="2" />
-              </svg>
+            <div className="relative w-28 h-28 mb-4">
+              <Image src="/images/Rectangle 77.png" alt="Decline ride" fill className="object-contain" />
             </div>
             <p className="text-[13px] text-gray-500 text-center mb-5">
               Are you sure you want to decline the ride

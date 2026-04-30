@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Message = {
   id: number;
@@ -16,6 +17,7 @@ const initialMessages: Message[] = [
 ];
 
 export default function ChatPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
 
@@ -34,7 +36,7 @@ export default function ChatPage() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
-          <button className="no-hover-fx">
+          <button className="no-hover-fx" onClick={() => router.back()}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" fill="#f3f4f6" />
               <polyline points="14 8 10 12 14 16" stroke="#374151" strokeWidth="2.5" fill="none" />
