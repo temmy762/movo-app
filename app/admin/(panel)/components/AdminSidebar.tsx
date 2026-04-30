@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 type NavItem = {
@@ -12,8 +13,18 @@ type NavItem = {
   icon: (active: boolean) => React.ReactNode;
 };
 
-const navItems: NavItem[] = [
+type NavGroup = {
+  label: string;
+  groupMatch: (p: string) => boolean;
+  icon: (active: boolean) => React.ReactNode;
+  children: { label: string; href: string }[];
+};
+
+type NavEntry = ({ kind: "item" } & NavItem) | ({ kind: "group" } & NavGroup);
+
+const navItems: NavEntry[] = [
   {
+    kind: "item",
     label: "Dashboard", href: "/admin",
     match: (p) => p === "/admin",
     icon: (a) => (
@@ -24,6 +35,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    kind: "item",
     label: "Bookings", href: "/admin/bookings",
     match: (p) => p.startsWith("/admin/bookings"),
     icon: (a) => (
@@ -35,6 +47,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    kind: "item",
     label: "Units", href: "/admin/units",
     match: (p) => p.startsWith("/admin/units"),
     icon: (a) => (
@@ -45,6 +58,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    kind: "item",
     label: "Calendar", href: "/admin/calendar",
     match: (p) => p.startsWith("/admin/calendar"),
     icon: (a) => (
@@ -58,6 +72,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    kind: "item",
     label: "Clients", href: "/admin/clients",
     match: (p) => p.startsWith("/admin/clients"),
     icon: (a) => (
@@ -68,6 +83,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    kind: "item",
     label: "Drivers", href: "/admin/drivers",
     match: (p) => p.startsWith("/admin/drivers"),
     icon: (a) => (
@@ -77,15 +93,21 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    label: "Financials", href: "/admin/financials",
-    match: (p) => p.startsWith("/admin/financials"),
+    kind: "group",
+    label: "Financials",
+    groupMatch: (p) => p.startsWith("/admin/financials"),
     icon: (a) => (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
         <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
       </svg>
     ),
+    children: [
+      { label: "Payments", href: "/admin/financials/payments" },
+      { label: "Expenses", href: "/admin/financials/expenses" },
+    ],
   },
   {
+    kind: "item",
     label: "Tracking", href: "/admin/tracking",
     match: (p) => p.startsWith("/admin/tracking"),
     icon: (a) => (
@@ -97,6 +119,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    kind: "item",
     label: "Messages", href: "/admin/messages", badge: 1,
     match: (p) => p.startsWith("/admin/messages"),
     icon: (a) => (
@@ -110,6 +133,9 @@ const navItems: NavItem[] = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ Financials: pathname.startsWith("/admin/financials") });
+
+  const toggleGroup = (label: string) => setExpanded(p => ({ ...p, [label]: !p[label] }));
 
   return (
     <aside className="w-[220px] h-full flex flex-col shrink-0 bg-white border-r border-gray-100 py-5">
@@ -121,12 +147,56 @@ export default function AdminSidebar() {
 
       {/* Nav */}
       <nav className="flex flex-col gap-0.5 px-3 flex-1">
-        {navItems.map((item) => {
-          const active = item.match(pathname);
+        {navItems.map((entry) => {
+          if (entry.kind === "group") {
+            const groupActive = entry.groupMatch(pathname);
+            const open = expanded[entry.label] ?? groupActive;
+            return (
+              <div key={entry.label}>
+                <button
+                  onClick={() => toggleGroup(entry.label)}
+                  className="no-hover-fx flex items-center gap-3 px-3 py-2.5 rounded-xl w-full relative"
+                  style={{ background: groupActive ? "linear-gradient(90deg,rgba(45,10,83,0.08),rgba(139,117,0,0.06))" : "transparent" }}
+                >
+                  {groupActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full"
+                      style={{ background: "linear-gradient(180deg,#2D0A53,#8B7500)" }}/>
+                  )}
+                  {entry.icon(groupActive)}
+                  <span className="text-[13px] font-medium flex-1 text-left" style={{ color: groupActive ? "#2D0A53" : "#6b7280" }}>
+                    {entry.label}
+                  </span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={groupActive ? "#2D0A53" : "#9ca3af"} strokeWidth="2.5"
+                    style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </button>
+                {open && (
+                  <div className="ml-4 mt-0.5 flex flex-col gap-0.5">
+                    {entry.children.map(child => {
+                      const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
+                      return (
+                        <Link key={child.href} href={child.href}
+                          className="no-hover-fx flex items-center gap-2.5 px-3 py-2 rounded-xl relative"
+                          style={{ background: childActive ? "rgba(45,10,83,0.06)" : "transparent" }}>
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ background: childActive ? "#2D0A53" : "#d1d5db" }}/>
+                          <span className="text-[12px] font-medium" style={{ color: childActive ? "#2D0A53" : "#6b7280" }}>
+                            {child.label}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          const active = entry.match(pathname);
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={entry.href}
+              href={entry.href}
               className="no-hover-fx flex items-center gap-3 px-3 py-2.5 rounded-xl relative"
               style={{ background: active ? "linear-gradient(90deg,rgba(45,10,83,0.08),rgba(139,117,0,0.06))" : "transparent" }}
             >
@@ -136,16 +206,16 @@ export default function AdminSidebar() {
                   style={{ background: "linear-gradient(180deg,#2D0A53,#8B7500)" }}
                 />
               )}
-              {item.icon(active)}
+              {entry.icon(active)}
               <span
                 className="text-[13px] font-medium flex-1"
                 style={{ color: active ? "#2D0A53" : "#6b7280" }}
               >
-                {item.label}
+                {entry.label}
               </span>
-              {item.badge && (
+              {entry.badge && (
                 <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                  {item.badge}
+                  {entry.badge}
                 </span>
               )}
             </Link>

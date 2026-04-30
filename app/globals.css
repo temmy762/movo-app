@@ -74,6 +74,18 @@ a:focus-visible,
   outline-offset: 2px;
 }
 
+/* Global form field text color — ensures all inputs/selects are always readable */
+input,
+select,
+textarea {
+  color: #111827;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+}
+
 /* Opt-out of global hover/active effects for flat elements like tab buttons. */
 .no-hover-fx:hover,
 .no-hover-fx:active {

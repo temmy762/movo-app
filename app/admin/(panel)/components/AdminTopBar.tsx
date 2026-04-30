@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -15,9 +16,15 @@ const titles: Record<string, string> = {
   "/admin/messages": "Messages",
 };
 
+function resolveTitle(pathname: string): { title: string; parent?: { label: string; href: string } } {
+  if (pathname.startsWith("/admin/units/") && pathname !== "/admin/units")
+    return { title: "Unit Details", parent: { label: "Units", href: "/admin/units" } };
+  return { title: titles[pathname] ?? "Admin" };
+}
+
 export default function AdminTopBar() {
   const pathname = usePathname();
-  const title = titles[pathname] ?? "Admin";
+  const { title, parent } = resolveTitle(pathname);
 
   const [showSearch, setShowSearch]   = useState(false);
   const [searchVal, setSearchVal]     = useState("");
@@ -34,8 +41,27 @@ export default function AdminTopBar() {
   }, [showSettings]);
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0">
-      <h1 className="text-[17px] font-bold text-gray-900">{title}</h1>
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0 z-10">
+      <div className="flex flex-col gap-0.5">
+        {parent && (
+          <div className="flex items-center gap-1.5">
+            <Link href={parent.href} className="no-hover-fx text-[10px] text-gray-400 hover:text-gray-600">{parent.label}</Link>
+            <span className="text-[10px] text-gray-300">›</span>
+            <span className="text-[10px] text-gray-400">{title}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          {parent && (
+            <Link href={parent.href}
+              className="no-hover-fx w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+            </Link>
+          )}
+          <h1 className="text-[17px] font-bold text-gray-900">{title}</h1>
+        </div>
+      </div>
       <div className="flex items-center gap-3">
 
         {/* Inline search bar (shown when toggled) */}

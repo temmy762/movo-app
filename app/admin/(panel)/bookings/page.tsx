@@ -413,7 +413,7 @@ function FullBookingsTable() {
 // ── Page ───────────────────────────────────────────────────────────────────
 export default function BookingsPage() {
   return (
-    <div className="p-5 flex flex-col gap-5">
+    <div className="h-full overflow-y-auto p-5 flex flex-col gap-5">
       {/* Top: mini stats + bar chart */}
       <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4">
         <div className="grid grid-cols-2 gap-3 min-w-[340px]">
