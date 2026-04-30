@@ -63,7 +63,7 @@ export default function DriverSidebar() {
       style={{ background: "linear-gradient(180deg, #1a1a2e 0%, #2D0A53 60%, #8B7500 100%)" }}
     >
       {/* Logo */}
-      <div className="relative w-32 h-16 mx-auto mb-8">
+      <div className="relative w-48 h-24 mx-auto mb-8">
         <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" />
       </div>
 
