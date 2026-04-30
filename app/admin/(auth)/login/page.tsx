@@ -21,26 +21,11 @@ export default function AdminLoginPage() {
     >
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm px-8 py-10">
 
-        {/* Illustration + Logo */}
+        {/* Logo */}
         <div className="flex flex-col items-center mb-7">
-          <div
-            className="w-28 h-28 rounded-full flex items-center justify-center mb-4 overflow-hidden"
-            style={{ background: "linear-gradient(135deg,#e8d0ff 0%,#b89af0 50%,#7c4db5 100%)" }}
-          >
-            <svg width="68" height="76" viewBox="0 0 68 76" fill="none">
-              <circle cx="34" cy="18" r="14" fill="#f5e6d3" />
-              <path d="M24 14 Q34 6 44 14 Q44 9 34 7 Q24 9 24 14z" fill="#1a1a1a" />
-              <path d="M18 75 Q18 48 34 44 Q50 48 50 75Z" fill="#1a1a2e" />
-              <path d="M32 44 L34 56 L36 44" fill="white" />
-              <path d="M33.5 48 L34 60 L34.5 48" fill="#8B7500" strokeWidth="1" />
-            </svg>
-          </div>
-          <div className="relative w-36 h-10">
+          <div className="relative" style={{ width: "300px", height: "96px" }}>
             <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
-          <p className="text-[9px] tracking-[0.18em] text-gray-400 uppercase mt-1.5">
-            The Art of Sophisticated Travel
-          </p>
         </div>
 
         <h2 className="text-[16px] font-bold text-gray-900 mb-5">Log In to Admin Panel</h2>
