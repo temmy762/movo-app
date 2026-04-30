@@ -168,7 +168,7 @@ export default function OffersPage() {
           <button
             className="no-hover-fx text-[13px] font-semibold"
             style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-            onClick={() => {}}
+            onClick={() => router.refresh()}
           >
             Refresh
           </button>
