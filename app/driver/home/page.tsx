@@ -48,15 +48,18 @@ function MapBackground() {
 
 export default function DriverHomePage() {
   const router = useRouter();
+  type RidePhase = "idle" | "requesting" | "accepted" | "started";
   const [isOnline, setIsOnline] = useState(false);
-  const [showRideRequest, setShowRideRequest] = useState(false);
+  const [ridePhase, setRidePhase] = useState<RidePhase>("idle");
   const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [showTripComplete, setShowTripComplete] = useState(false);
+  const [tripRating, setTripRating] = useState(4);
 
   function handleToggleOnline() {
     const next = !isOnline;
     setIsOnline(next);
-    if (next) setTimeout(() => setShowRideRequest(true), 1200);
-    else { setShowRideRequest(false); setShowDeclineModal(false); }
+    if (next) setTimeout(() => setRidePhase("requesting"), 1200);
+    else { setRidePhase("idle"); setShowDeclineModal(false); }
   }
 
   return (
@@ -130,32 +133,40 @@ export default function DriverHomePage() {
 
         <div className="flex-1" />
 
-        {/* Ride Request Bottom Sheet */}
-        {showRideRequest && (
+        {/* ── Bottom sheet — phase aware ── */}
+        {ridePhase !== "idle" && (
           <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[15px] font-bold text-gray-900">Ride Request</p>
-              <span className="text-[12px] text-gray-400">{rideRequest.timeLeft}</span>
-            </div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
-                    <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                  </svg>
+
+            {/* Rider info row — requesting + accepted */}
+            {(ridePhase === "requesting" || ridePhase === "accepted") && (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[15px] font-bold text-gray-900">Ride Request</p>
+                  {ridePhase === "requesting" && <span className="text-[12px] text-gray-400">{rideRequest.timeLeft}</span>}
                 </div>
-                <div>
-                  <p className="text-[14px] font-semibold" style={{ color: "#2D0A53" }}>{rideRequest.name}</p>
-                  <p className="text-[12px] text-gray-500">📞 {rideRequest.phone}</p>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                        <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[14px] font-semibold" style={{ color: "#2D0A53" }}>{rideRequest.name}</p>
+                      <p className="text-[12px] text-gray-500">📞 {rideRequest.phone}</p>
+                    </div>
+                  </div>
+                  <button className="no-hover-fx w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center"
+                    onClick={() => router.push("/driver/home/finish/chat")}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </button>
                 </div>
-              </div>
-              <button className="no-hover-fx w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center"
-                onClick={() => router.push("/driver/home/finish/chat")}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </button>
-            </div>
+              </>
+            )}
+
+            {/* Route — all phases */}
             <div className="flex items-center justify-between mb-2">
               <p className="text-[12px] font-semibold text-gray-700">Trip Route</p>
               <p className="text-[12px] text-gray-400">{rideRequest.distance}</p>
@@ -170,35 +181,60 @@ export default function DriverHomePage() {
                 <p className="text-[13px] text-gray-600">{rideRequest.to}</p>
               </div>
             </div>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[12px] font-semibold text-gray-700">Payment</p>
-              <p className="text-[13px] font-bold" style={{ color: "#8B7500" }}>{rideRequest.amount}</p>
-            </div>
-            <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="flex">
-                  <div className="w-5 h-5 rounded-full bg-red-500" />
-                  <div className="w-5 h-5 rounded-full bg-yellow-400 -ml-2" />
+
+            {/* Payment — requesting only */}
+            {ridePhase === "requesting" && (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[12px] font-semibold text-gray-700">Payment</p>
+                  <p className="text-[13px] font-bold" style={{ color: "#8B7500" }}>{rideRequest.amount}</p>
                 </div>
-                <p className="text-[13px] font-medium text-gray-700">{rideRequest.payment}</p>
+                <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex">
+                      <div className="w-5 h-5 rounded-full bg-red-500" />
+                      <div className="w-5 h-5 rounded-full bg-yellow-400 -ml-2" />
+                    </div>
+                    <p className="text-[13px] font-medium text-gray-700">{rideRequest.payment}</p>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B7500" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+              </>
+            )}
+
+            {/* CTA buttons */}
+            {ridePhase === "requesting" && (
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowDeclineModal(true)}
+                  className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-700">
+                  Decline
+                </button>
+                <button type="button" onClick={() => setRidePhase("accepted")}
+                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
+                  style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                  Accept
+                </button>
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B7500" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div className="flex gap-3">
-              <button type="button"
-                onClick={() => setShowDeclineModal(true)}
-                className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-700">
-                Decline
-              </button>
-              <button type="button"
-                onClick={() => { setShowRideRequest(false); router.push("/driver/home/finish"); }}
-                className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
+            )}
+
+            {ridePhase === "accepted" && (
+              <button type="button" onClick={() => setRidePhase("started")}
+                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
                 style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
-                Accept
+                Start Ride
               </button>
-            </div>
+            )}
+
+            {ridePhase === "started" && (
+              <button type="button" onClick={() => setShowTripComplete(true)}
+                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                End Ride
+              </button>
+            )}
+
           </div>
         )}
       </div>
@@ -216,18 +252,54 @@ export default function DriverHomePage() {
               Are you sure you want to decline the ride
             </p>
             <div className="flex gap-3 w-full">
-              <button type="button"
-                onClick={() => setShowDeclineModal(false)}
+              <button type="button" onClick={() => setShowDeclineModal(false)}
                 className="no-hover-fx flex-1 py-2.5 rounded-xl font-semibold text-[14px] border border-gray-300 text-gray-700">
                 Cancel
               </button>
               <button type="button"
-                onClick={() => { setShowDeclineModal(false); setShowRideRequest(false); setIsOnline(false); }}
+                onClick={() => { setShowDeclineModal(false); setRidePhase("idle"); setIsOnline(false); }}
                 className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[14px]"
                 style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
                 Sure
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trip Complete modal */}
+      {showTripComplete && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
+            <p className="text-[16px] font-bold text-gray-900 mb-3">Trip Complete</p>
+            <div className="w-16 h-16 mb-3 flex items-center justify-center rounded-full bg-yellow-50">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                  fill="#fef3c7" stroke="#f59e0b" strokeWidth="1.5" />
+              </svg>
+            </div>
+            {/* Star rating */}
+            <div className="flex gap-1 mb-2">
+              {[1,2,3,4,5].map((s) => (
+                <button key={s} className="no-hover-fx" onClick={() => setTripRating(s)}>
+                  <svg width="28" height="28" viewBox="0 0 24 24"
+                    fill={s <= tripRating ? "#f59e0b" : "none"}
+                    stroke={s <= tripRating ? "#f59e0b" : "#d1d5db"} strokeWidth="1.5">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+            <p className="text-[12px] text-gray-500 text-center mb-5">
+              Trip completed review your trip now.
+            </p>
+            <button type="button"
+              onClick={() => { setShowTripComplete(false); setRidePhase("idle"); setIsOnline(false); router.push("/driver/home/finish"); }}
+              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+              Ok
+            </button>
           </div>
         </div>
       )}
