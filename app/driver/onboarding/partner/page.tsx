@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 9;
 
 function ProgressBar({ step }: { step: number }) {
   return (

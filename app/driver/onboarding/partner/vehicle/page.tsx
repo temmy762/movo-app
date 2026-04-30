@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 9;
 
 function ProgressBar({ step }: { step: number }) {
   return (

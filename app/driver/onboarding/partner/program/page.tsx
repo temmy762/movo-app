@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 9;
 
 function ProgressBar({ step }: { step: number }) {
   return (
@@ -123,7 +123,7 @@ export default function OnboardingProgramPage() {
 
           {/* Upload link */}
           <Link
-            href="#"
+            href="/driver/onboarding/partner/documents"
             className="block text-center text-[13px] font-bold underline mb-5"
             style={{ color: "#2D0A53" }}
           >
