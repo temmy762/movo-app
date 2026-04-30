@@ -61,14 +61,15 @@ function TextInput({ placeholder = "" }: { placeholder?: string }) {
       type="text"
       placeholder={placeholder}
       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none placeholder-gray-300"
+      suppressHydrationWarning
     />
   );
 }
 
 function SelectInput({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative">
-      <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white">
+    <div className="relative" suppressHydrationWarning>
+      <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white" suppressHydrationWarning>
         {children}
       </select>
       <svg className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5">
@@ -99,7 +100,7 @@ export default function PartnerOnboardingStep1() {
           </div>
 
           {/* Heading */}
-          <h1 className="text-[20px] font-bold text-gray-900 mt-1">Partner Onboarding</h1>
+          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Partner Onboarding</h1>
 
           {/* Progress bar */}
           <ProgressBar step={1} />
