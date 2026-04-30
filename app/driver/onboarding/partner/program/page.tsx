@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 7;
 
 function ProgressBar({ step }: { step: number }) {
   return (
@@ -133,7 +133,7 @@ export default function OnboardingProgramPage() {
           {/* Next button */}
           <button
             type="button"
-            onClick={() => router.push("/driver/home")}
+            onClick={() => router.push("/driver/onboarding/partner/documents")}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide mb-8"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
