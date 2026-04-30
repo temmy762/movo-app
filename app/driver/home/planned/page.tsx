@@ -14,7 +14,7 @@ export default function PlannedPage() {
         <button
           className="no-hover-fx text-[13px] font-semibold"
           style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-          onClick={() => {}}
+          onClick={() => router.push("/driver/home/finish/my-rides")}
         >
           My rides
         </button>
