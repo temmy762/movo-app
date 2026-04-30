@@ -40,7 +40,7 @@ export default function DriverHomePage() {
       </header>
 
       {/* Body */}
-      <div className="flex-1 px-4 pt-5 pb-4 flex flex-col max-w-[480px] mx-auto w-full">
+      <div className="flex-1 px-4 pt-5 pb-4 flex flex-col w-full max-w-[480px] mx-auto md:max-w-none md:grid md:grid-cols-2 md:gap-6 md:px-8 lg:grid-cols-3">
 
         {/* Greeting */}
         <div className="mb-5">
