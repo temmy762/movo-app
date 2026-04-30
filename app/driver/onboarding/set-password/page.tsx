@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -61,10 +62,17 @@ export default function DriverSetPasswordPage() {
 
   return (
     <div
-      className="min-h-screen bg-white flex flex-col items-center justify-start px-8 pt-10"
+      className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto px-8 pt-6"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
       <div className="w-full max-w-[420px]">
+
+        {/* Logo */}
+        <div className="flex items-center justify-center mb-3">
+          <div className="relative w-36 h-36">
+            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+          </div>
+        </div>
 
         {/* Title */}
         <h1 className="text-[20px] font-bold text-gray-900 text-center mb-1">
@@ -88,7 +96,7 @@ export default function DriverSetPasswordPage() {
         </p>
 
         {/* Requirements */}
-        <ul className="text-[12px] text-gray-600 mb-6 space-y-1 pl-2">
+        <ul className="text-[12px] text-gray-600 mb-4 space-y-0.5 pl-2">
           {["8 characters", "1 letter", "1 number", "1 special character"].map((req) => (
             <li key={req} className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-gray-800 shrink-0" />
@@ -98,7 +106,7 @@ export default function DriverSetPasswordPage() {
         </ul>
 
         {/* Password fields */}
-        <div className="flex flex-col gap-4 mb-2">
+        <div className="flex flex-col gap-3 mb-1">
           <PasswordField
             label="*New Password"
             indicator="Good"
@@ -111,7 +119,7 @@ export default function DriverSetPasswordPage() {
           />
         </div>
 
-        <p className="text-[11px] text-gray-400 mb-6">*required</p>
+        <p className="text-[11px] text-gray-400 mb-4">*required</p>
 
         {/* Change Password button */}
         <button
