@@ -10,6 +10,30 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"email" | "phone">("email");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mode === "email" ? { email, password } : { phone, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Login failed"); return; }
+      router.push("/home");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -54,6 +78,8 @@ export default function LoginPage() {
             <label className="text-[12px] text-gray-500">Email Address*</label>
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full focus:outline-none text-sm text-gray-800"
             />
           </div>
@@ -62,6 +88,8 @@ export default function LoginPage() {
             <label className="text-[12px] text-gray-500">Phone Number*</label>
             <input
               type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="w-full focus:outline-none text-sm text-gray-800"
             />
           </div>
@@ -72,6 +100,8 @@ export default function LoginPage() {
           <label className="text-[12px] text-gray-400">Password*</label>
           <input
             type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full focus:outline-none text-sm text-gray-800 mt-0.5 pr-8"
           />
           <button
@@ -126,11 +156,17 @@ export default function LoginPage() {
           </button>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <p className="text-[12px] text-red-500 text-center">{error}</p>
+        )}
+
         {/* Log In button */}
         <button
           type="button"
-          onClick={() => router.push("/home")}
-          className="w-full py-3 sm:py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full py-3 sm:py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
           style={{
             background:
               "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",

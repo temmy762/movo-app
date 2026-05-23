@@ -107,7 +107,12 @@ function EvtBlock({ evt, sel, onClick }: { evt: Evt; sel: boolean; onClick: () =
 // ── Schedule Detail panel ─────────────────────────────────────────────────────
 function ScheduleDetail({ evt, onClose }: { evt: Evt; onClose: () => void }) {
   return (
-    <div className="w-[272px] shrink-0 border-l border-gray-100 bg-white flex flex-col overflow-y-auto">
+    <div className="fixed inset-0 z-40 lg:static lg:w-[272px] lg:shrink-0 bg-white flex flex-col overflow-y-auto border-l border-gray-100">
+      {/* Mobile back button */}
+      <button onClick={onClose} className="lg:hidden flex items-center gap-2 px-4 py-3 border-b border-gray-100 text-[12px] text-gray-500 shrink-0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Calendar
+      </button>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
         <p className="text-[14px] font-bold text-gray-900">Schedule Detail</p>
@@ -292,7 +297,7 @@ export default function CalendarPage() {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* ── Toolbar ── */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-white shrink-0 flex-wrap gap-y-2">
           <button onClick={goToday}
             className="no-hover-fx px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-600 border border-gray-200">
             Today

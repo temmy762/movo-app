@@ -23,6 +23,34 @@ export default function RegisterPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleRegister() {
+    setError("");
+    if (password !== confirm) { setError("Passwords do not match"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, email, phone: phone || undefined, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Registration failed"); return; }
+      router.push("/home");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -45,21 +73,34 @@ export default function RegisterPage() {
 
         {/* Form */}
         <div className="px-8 mt-3 space-y-1.5">
-          {["Name", "Last Name", "Email", "Phone"].map((field) => (
-            <div key={field} className="border border-gray-400 rounded-lg px-4 py-1">
-              <label className="text-[11px] text-gray-500">{field}</label>
-              <input
-                type={field === "Email" ? "email" : field === "Phone" ? "tel" : "text"}
-                className="w-full focus:outline-none text-sm text-gray-800 leading-tight"
-              />
-            </div>
-          ))}
+          <div className="border border-gray-400 rounded-lg px-4 py-1">
+            <label className="text-[11px] text-gray-500">Name</label>
+            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)}
+              className="w-full focus:outline-none text-sm text-gray-800 leading-tight" />
+          </div>
+          <div className="border border-gray-400 rounded-lg px-4 py-1">
+            <label className="text-[11px] text-gray-500">Last Name</label>
+            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)}
+              className="w-full focus:outline-none text-sm text-gray-800 leading-tight" />
+          </div>
+          <div className="border border-gray-400 rounded-lg px-4 py-1">
+            <label className="text-[11px] text-gray-500">Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              className="w-full focus:outline-none text-sm text-gray-800 leading-tight" />
+          </div>
+          <div className="border border-gray-400 rounded-lg px-4 py-1">
+            <label className="text-[11px] text-gray-500">Phone</label>
+            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+              className="w-full focus:outline-none text-sm text-gray-800 leading-tight" />
+          </div>
 
           {/* Password */}
           <div className="border border-gray-400 rounded-lg px-4 py-1 relative">
             <label className="text-[11px] text-gray-500">Password*</label>
             <input
               type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full focus:outline-none text-sm text-gray-800 pr-8 leading-tight"
             />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 text-gray-400">
@@ -72,6 +113,8 @@ export default function RegisterPage() {
             <label className="text-[11px] text-gray-500">Confirm Password*</label>
             <input
               type={showConfirm ? "text" : "password"}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
               className="w-full focus:outline-none text-sm text-gray-800 pr-8 leading-tight"
             />
             <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-3 text-gray-400">
@@ -79,11 +122,15 @@ export default function RegisterPage() {
             </button>
           </div>
 
+          {/* Error */}
+          {error && <p className="text-[12px] text-red-500 text-center">{error}</p>}
+
           {/* Sign Up button */}
           <button
             type="button"
-            onClick={() => router.push("/home")}
-            className="w-full py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
+            onClick={handleRegister}
+            disabled={loading}
+            className="w-full py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
             Sign up

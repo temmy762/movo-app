@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 function SectionRow({ label, onClick }: { label: string; onClick?: () => void }) {
   return (
@@ -32,6 +33,12 @@ function SectionGroup({ title, children }: { title: string; children: React.Reac
 export default function DriverProfilePage() {
   const router = useRouter();
   const [photo, setPhoto] = useState<string | null>(null);
+  const { user } = useCurrentUser();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/driver/onboarding/login");
+  }
 
   return (
     <div className="min-h-full bg-gray-50" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -45,7 +52,7 @@ export default function DriverProfilePage() {
           </svg>
         </button>
         <div className="flex-1">
-          <p className="text-[18px] font-bold text-gray-900 leading-tight">Ali</p>
+          <p className="text-[18px] font-bold text-gray-900 leading-tight">{user?.firstName ?? "Driver"}</p>
           <p className="text-[12px] text-gray-400">Profile details</p>
         </div>
         <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden">
@@ -117,7 +124,7 @@ export default function DriverProfilePage() {
         <div className="md:col-span-2">
           <button
             type="button"
-            onClick={() => router.push("/driver/onboarding/login")}
+            onClick={handleLogout}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px]"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >

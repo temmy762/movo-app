@@ -8,6 +8,29 @@ import { useRouter } from "next/navigation";
 export default function DriverLoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/driver/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Login failed"); return; }
+      router.push("/driver/home");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -51,6 +74,8 @@ export default function DriverLoginPage() {
               <label className="block text-[11px] text-gray-400">Email address*</label>
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full focus:outline-none text-[14px] text-gray-800 mt-0.5"
               />
             </div>
@@ -60,6 +85,8 @@ export default function DriverLoginPage() {
               <label className="block text-[11px] text-gray-400">Password*</label>
               <input
                 type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full focus:outline-none text-[14px] text-gray-800 mt-0.5 pr-8"
               />
               <button
@@ -93,11 +120,15 @@ export default function DriverLoginPage() {
               </Link>
             </div>
 
+            {/* Error */}
+            {error && <p className="text-[12px] text-red-500 text-center">{error}</p>}
+
             {/* Log In button */}
             <button
               type="button"
-              onClick={() => router.push("/driver/home")}
-              className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide"
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
               style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
             >
               Log In

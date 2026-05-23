@@ -1,9 +1,100 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-type PayMethod = "visa" | "paypal";
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+const FARE = 30.00;
+const SERVICE_FEE = 5.50;
+const TOTAL = 35.50;
+
+const carTierMap: Record<string, string> = {
+  "Movo Classic": "classic",
+  "Movo Premium": "premium",
+  "Movo Privé Black": "black",
+};
+
+function CheckoutForm({ pickup, dropoff, carName, clientName }: { pickup: string; dropoff: string; carName: string; clientName: string }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConfirm = async () => {
+    if (!stripe || !elements) return;
+    setSubmitting(true);
+    setError(null);
+
+    const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      redirect: "if_required",
+    });
+
+    if (stripeError) {
+      setError(stripeError.message ?? "Payment failed. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName,
+          pickup,
+          dropoff,
+          carTier: carTierMap[carName] ?? "classic",
+          carName,
+          fare: FARE,
+          serviceFee: SERVICE_FEE,
+          total: TOTAL,
+          paymentStatus: "PAID",
+          stripePaymentIntentId: paymentIntent?.id ?? null,
+        }),
+      });
+      const booking = await res.json();
+      const params = new URLSearchParams({ pickup, dropoff, car: carName, bookingId: booking.id });
+      router.push(`/home/ride/tracking?${params.toString()}`);
+    } catch {
+      setError("Booking could not be saved. Please contact support.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="rounded-xl overflow-hidden border border-gray-200 p-4 mb-4">
+        <PaymentElement />
+      </div>
+      {error && (
+        <p className="text-[12px] text-red-500 mb-3">{error}</p>
+      )}
+      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100">
+        <div className="w-full max-w-lg md:max-w-2xl mx-auto">
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={!stripe || submitting}
+            className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
+            style={{
+              background: !stripe || submitting
+                ? "#9ca3af"
+                : "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
+            }}
+          >
+            {submitting ? "Processing…" : "Confirm Booking"}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
 
 function ConfirmPayContent() {
   const router = useRouter();
@@ -11,7 +102,24 @@ function ConfirmPayContent() {
   const pickup = searchParams.get("pickup") || "Pickup address";
   const dropoff = searchParams.get("dropoff") || "Destination";
   const carName = searchParams.get("car") || "Standard Ride";
-  const [payment, setPayment] = useState<PayMethod>("visa");
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [intentError, setIntentError] = useState<string | null>(null);
+  const { user } = useCurrentUser();
+  const clientName = user ? `${user.firstName} ${user.lastName}`.trim() : "Guest";
+
+  useEffect(() => {
+    fetch("/api/stripe/create-payment-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: TOTAL }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.clientSecret) setClientSecret(d.clientSecret);
+        else setIntentError("Could not initialise payment. Please try again.");
+      })
+      .catch(() => setIntentError("Could not initialise payment. Please try again."));
+  }, []);
 
   return (
     <div
@@ -74,86 +182,20 @@ function ConfirmPayContent() {
           {/* Payment Method */}
           <div>
             <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">Payment Method</p>
-
-            <div className="flex flex-col gap-3">
-
-              {/* Visa */}
-              <button
-                type="button"
-                onClick={() => setPayment("visa")}
-                className="no-hover-fx flex items-center gap-3 px-4 py-3 rounded-xl border"
-                style={{
-                  background:
-                    payment === "visa"
-                      ? "linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #2D0A53 0%, #8B7500 100%) border-box"
-                      : undefined,
-                  borderColor: payment === "visa" ? "transparent" : "#e5e7eb",
-                }}
-              >
-                {/* Visa logo placeholder */}
-                <div className="w-10 h-6 rounded flex items-center justify-center shrink-0" style={{ background: "#1a1f71" }}>
-                  <span className="text-white text-[10px] font-extrabold tracking-tighter">VISA</span>
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[13px] md:text-[14px] font-semibold text-gray-900">&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;7373</p>
-                  <p className="text-[11px] text-gray-400">Visa</p>
-                </div>
-                <div
-                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
-                  style={{ borderColor: payment === "visa" ? "#2D0A53" : "#d1d5db" }}
-                >
-                  {payment === "visa" && (
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#2D0A53" }} />
-                  )}
-                </div>
-              </button>
-
-              {/* PayPal */}
-              <button
-                type="button"
-                onClick={() => setPayment("paypal")}
-                className="no-hover-fx flex items-center gap-3 px-4 py-3 rounded-xl border"
-                style={{
-                  background:
-                    payment === "paypal"
-                      ? "linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #2D0A53 0%, #8B7500 100%) border-box"
-                      : undefined,
-                  borderColor: payment === "paypal" ? "transparent" : "#e5e7eb",
-                }}
-              >
-                {/* PayPal logo */}
-                <div className="w-10 h-6 rounded flex items-center justify-center shrink-0" style={{ background: "#003087" }}>
-                  <span className="text-[#009cde] text-[10px] font-extrabold">Pay</span>
-                  <span className="text-white text-[10px] font-extrabold">Pal</span>
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[13px] md:text-[14px] font-semibold text-gray-900">Paypal</p>
-                  <p className="text-[11px] text-gray-400">Connected</p>
-                </div>
-                <div
-                  className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
-                  style={{ borderColor: payment === "paypal" ? "#2D0A53" : "#d1d5db" }}
-                >
-                  {payment === "paypal" && (
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#2D0A53" }} />
-                  )}
-                </div>
-              </button>
-
-              {/* Add payment method */}
-              <button
-                type="button"
-                onClick={() => router.push("/home/payment")}
-                className="flex items-center gap-1.5 text-[13px] font-medium mt-1"
-                style={{ color: "#2D0A53" }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add Payment Method
-              </button>
-            </div>
+            {intentError && (
+              <p className="text-[12px] text-red-500 mb-3">{intentError}</p>
+            )}
+            {!clientSecret && !intentError && (
+              <div className="flex items-center gap-2 text-[13px] text-gray-400 py-4">
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin shrink-0" />
+                Loading payment…
+              </div>
+            )}
+            {clientSecret && (
+              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <CheckoutForm pickup={pickup} dropoff={dropoff} carName={carName} clientName={clientName} />
+              </Elements>
+            )}
           </div>
 
           {/* Divider */}
@@ -169,38 +211,22 @@ function ConfirmPayContent() {
           >
             <div className="flex justify-between items-center">
               <span className="text-[13px] md:text-[14px] text-gray-600">Ride Fare</span>
-              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">$30.00</span>
+              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">${FARE.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
-              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">$5.50</span>
+              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">${SERVICE_FEE.toFixed(2)}</span>
             </div>
             <div className="h-px bg-gray-100 my-1" />
             <div className="flex justify-between items-center">
               <span className="text-[14px] md:text-[15px] font-bold text-gray-900">Total</span>
-              <span className="text-[14px] md:text-[15px] font-bold text-gray-900">$35.50</span>
+              <span className="text-[14px] md:text-[15px] font-bold text-gray-900">${TOTAL.toFixed(2)}</span>
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* Confirm Booking button */}
-      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100">
-        <div className="w-full max-w-lg md:max-w-2xl mx-auto">
-          <button
-            type="button"
-            onClick={() => {
-              const params = new URLSearchParams({ pickup, dropoff, car: carName });
-              router.push(`/home/ride/tracking?${params.toString()}`);
-            }}
-            className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
-          >
-            Confirm Booking
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

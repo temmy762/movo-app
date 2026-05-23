@@ -116,6 +116,7 @@ export default function TrackingPage() {
   const[activeId,setActiveId]=useState(3);
   const[search,setSearch]=useState("");
   const[addOpen,setAddOpen]=useState(false);
+  const[mobileView,setMobileView]=useState<"list"|"map">("map");
 
   const filtered=vehicles.filter(v=>
     v.client.toLowerCase().includes(search.toLowerCase())||
@@ -134,7 +135,7 @@ export default function TrackingPage() {
     <div className="flex h-full overflow-hidden">
 
       {/* ── Left panel ── */}
-      <div className="w-[270px] shrink-0 border-r border-gray-100 flex flex-col bg-white overflow-hidden">
+      <div className={`${mobileView==="list"?"flex":"hidden"} lg:flex flex-col w-full lg:w-[270px] lg:shrink-0 border-r border-gray-100 bg-white overflow-hidden`}>
         {/* Search */}
         <div className="px-3 pt-3 pb-2 shrink-0">
           <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2">
@@ -175,20 +176,32 @@ export default function TrackingPage() {
         </div>
 
         {/* Add Car */}
-        <div className="px-3 pb-3 shrink-0">
+        <div className="px-3 pb-3 shrink-0 flex flex-col gap-2">
           <button onClick={()=>setAddOpen(true)}
             className="no-hover-fx w-full py-2.5 rounded-xl text-white text-[13px] font-semibold"
             style={{background:"#ef4444"}}>
             + Add Car
+          </button>
+          <button onClick={()=>setMobileView("map")}
+            className="no-hover-fx lg:hidden w-full py-2.5 rounded-xl text-[13px] font-semibold border border-gray-200 text-gray-600">
+            View Map
           </button>
         </div>
       </div>
 
       {/* ── Right panel ── */}
       {active?(
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <div className={`${mobileView==="map"?"flex":"hidden"} lg:flex flex-1 flex-col overflow-hidden min-w-0`}>
+          {/* Mobile: back to list button */}
+          <div className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-100 bg-white shrink-0">
+            <button onClick={()=>setMobileView("list")} className="no-hover-fx flex items-center gap-2 text-[12px] text-gray-500">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              Vehicles
+            </button>
+          </div>
           {/* Info bar */}
-          <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-3 flex items-stretch gap-5">
+          <div className="shrink-0 border-b border-gray-100 bg-white overflow-x-auto">
+          <div className="px-5 py-3 flex items-stretch gap-5 min-w-max">
             {/* Driver */}
             <div className="flex items-center gap-3 pr-5 border-r border-gray-100">
               <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-[15px] font-bold shrink-0"
@@ -238,6 +251,7 @@ export default function TrackingPage() {
                 ))}
               </div>
             </div>
+          </div>
           </div>
 
           {/* Map */}

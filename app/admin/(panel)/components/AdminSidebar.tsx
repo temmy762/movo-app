@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 type NavItem = {
@@ -130,15 +130,24 @@ const navItems: NavEntry[] = [
   },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ Financials: pathname.startsWith("/admin/financials") });
+  const prevPath = useRef(pathname);
+  useEffect(() => {
+    if (prevPath.current !== pathname) {
+      prevPath.current = pathname;
+      onClose();
+    }
+  }, [pathname, onClose]);
 
   const toggleGroup = (label: string) => setExpanded(p => ({ ...p, [label]: !p[label] }));
 
   return (
-    <aside className="w-[220px] h-full flex flex-col shrink-0 bg-white border-r border-gray-100 py-5">
+    <aside className={`fixed inset-y-0 left-0 z-40 flex flex-col w-[220px] shrink-0 bg-white border-r border-gray-100 py-5 transition-transform duration-300 ${
+      open ? "translate-x-0" : "-translate-x-full"
+    } md:static md:translate-x-0 md:h-full`}>
 
       {/* Logo */}
       <div className="relative w-36 h-10 mx-auto mb-6">

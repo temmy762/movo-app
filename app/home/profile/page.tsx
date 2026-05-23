@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const menuItems = [
   {
@@ -69,6 +70,12 @@ const menuItems = [
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { user } = useCurrentUser();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/onboarding/login");
+  }
 
   return (
     <div className="h-screen overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -90,7 +97,7 @@ export default function ProfilePage() {
         {/* Welcome */}
         <div className="px-5 pt-5 pb-3">
           <p className="text-[13px] text-gray-500">Welcome</p>
-          <p className="text-[22px] font-bold text-gray-900 leading-tight">Laura</p>
+          <p className="text-[22px] font-bold text-gray-900 leading-tight">{user?.firstName ?? ""}</p>
         </div>
 
         {/* Gradient divider */}
@@ -105,7 +112,7 @@ export default function ProfilePage() {
             <button
               key={item.label}
               type="button"
-              onClick={() => router.push(item.href)}
+              onClick={() => item.label === "Log out" ? handleLogout() : router.push(item.href)}
               className="no-hover-fx flex items-center justify-between px-5 py-4 border-b border-gray-100"
             >
               <div className="flex items-center gap-3 text-gray-700">

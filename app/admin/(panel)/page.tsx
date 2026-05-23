@@ -17,20 +17,20 @@ const stats = [
 
 function StatCard({ stat }: { stat: typeof stats[0] }) {
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm flex items-center gap-4">
-      <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
+    <div className="bg-white rounded-2xl p-3 sm:p-5 shadow-sm flex items-center gap-3 sm:gap-4">
+      <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shrink-0"
         style={{ background: "#f3f0ff" }}>
         {stat.icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-gray-400 font-medium mb-0.5">{stat.label}</p>
-        <p className="text-[22px] font-bold text-gray-900 leading-tight">{stat.value}</p>
-        <div className="flex items-center gap-1.5 mt-1">
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+        <p className="text-[10px] sm:text-[11px] text-gray-400 font-medium mb-0.5 truncate">{stat.label}</p>
+        <p className="text-[15px] sm:text-[22px] font-bold text-gray-900 leading-tight truncate">{stat.value}</p>
+        <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1">
+          <span className="text-[10px] sm:text-[11px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full"
             style={{ background: stat.up ? "#dcfce7" : "#fee2e2", color: stat.up ? "#16a34a" : "#dc2626" }}>
             {stat.up ? "↑" : "↓"} {stat.pct}
           </span>
-          <span className="text-[11px] text-gray-400">from last week</span>
+          <span className="hidden sm:inline text-[11px] text-gray-400">from last week</span>
         </div>
       </div>
     </div>
@@ -177,7 +177,8 @@ function BookingsBarChart() {
           <option>This Year</option><option>Last Year</option>
         </select>
       </div>
-      <div className="flex gap-2">
+      <div className="overflow-x-auto -mx-1">
+      <div className="flex gap-2 min-w-[360px]">
         {/* Y-axis */}
         <div className="flex flex-col justify-between text-right shrink-0 pr-1" style={{ height: `${BAR_H}px` }}>
           {["900","600","300","0"].map((l,i) => <span key={i} className="text-[9px] text-gray-400 leading-none">{l}</span>)}
@@ -211,6 +212,7 @@ function BookingsBarChart() {
             {barData.map(d => <div key={d.m} className="flex-1 text-center"><span className="text-[9px] text-gray-400">{d.m}</span></div>)}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -320,17 +322,17 @@ function BookingsTable() {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100">
         <p className="text-[14px] font-bold text-gray-900">Car Bookings</p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Live search */}
-          <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+          <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 flex-1 sm:flex-none min-w-0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" className="shrink-0">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input type="text" placeholder="Search client name, car, etc"
               value={search} onChange={e => setSearch(e.target.value)}
-              className="text-[12px] text-gray-600 focus:outline-none w-40 placeholder-gray-300"
+              className="text-[12px] text-gray-600 focus:outline-none flex-1 min-w-0 placeholder-gray-300"
               suppressHydrationWarning />
             {search && (
               <button onClick={() => setSearch("")}
@@ -379,7 +381,8 @@ function BookingsTable() {
           </div>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-[12px]">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -419,6 +422,45 @@ function BookingsTable() {
           </tbody>
         </table>
       </div>
+
+      {/* ── Mobile booking cards ── */}
+      <div className="md:hidden divide-y divide-gray-50">
+        {filtered.map(b => {
+          const sc = dbStatusCfg[b.status];
+          return (
+            <div key={b.id} className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-semibold text-gray-400">{b.id}</p>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+                  style={{ background: sc.bg, color: sc.color }}>{b.status}</span>
+              </div>
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="text-[14px] font-bold text-gray-900">{b.client}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <p className="text-[12px] text-gray-500">{b.car}</p>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                      style={{ background: ctBg[b.carType] ?? "#f1f5f9", color: ctCol[b.carType] ?? "#64748b" }}>{b.carType}</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 ml-3">
+                  <p className="text-[15px] font-bold text-gray-900">{b.amount}</p>
+                  {b.paid
+                    ? <p className="text-[10px] text-gray-400 mt-0.5">Paid</p>
+                    : <p className="text-[10px] font-semibold text-amber-600 mt-0.5">Unpaid</p>}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-400">
+                <span>{b.from} → {b.to}</span>
+                <span className="font-medium text-gray-500">{b.plan}</span>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p className="px-4 py-10 text-center text-[13px] text-gray-400">No bookings found.</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -448,7 +490,7 @@ function CarAvailabilityPanel() {
   const [date, setDate] = useState("2028-08-17");
   const [time, setTime] = useState("10:00");
   return (
-    <aside className="w-[270px] h-full flex flex-col shrink-0 bg-white border-l border-gray-100 overflow-y-auto">
+    <aside className="hidden xl:flex flex-col w-[270px] h-full shrink-0 bg-white border-l border-gray-100 overflow-y-auto">
       <div className="px-4 py-4 border-b border-gray-100">
         <p className="text-[13px] font-bold text-gray-900 mb-3">Car Availability</p>
         <div className="flex flex-col gap-2 mb-3">
@@ -532,21 +574,21 @@ export default function AdminDashboard() {
     <div className="flex h-full overflow-hidden">
 
       {/* Scrollable main content */}
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5">
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-4 mb-4 sm:mb-5">
           {stats.map(s => <StatCard key={s.label} stat={s} />)}
         </div>
 
         {/* Earnings + Rent Status */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 mb-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 sm:gap-4 mb-4 sm:mb-5">
           <EarningsChart />
           <RentStatusChart />
         </div>
 
         {/* Bookings Overview + Reminders */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 mb-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 sm:gap-4 mb-4 sm:mb-5">
           <BookingsBarChart />
           <RemindersPanel />
         </div>

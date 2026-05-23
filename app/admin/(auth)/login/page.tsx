@@ -8,10 +8,27 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    router.push("/admin");
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Login failed"); return; }
+      router.push("/admin");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -57,24 +74,21 @@ export default function AdminLoginPage() {
               suppressHydrationWarning
             />
           </div>
+          {error && (
+            <p className="text-[12px] text-red-500 text-center">{error}</p>
+          )}
           <button
             type="submit"
-            className="w-full py-3.5 rounded-xl text-white font-semibold text-[14px] mt-1"
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl text-white font-semibold text-[14px] mt-1 disabled:opacity-60"
             style={{ background: "#1a1a2e" }}
           >
             Log In
           </button>
         </form>
 
-        <div className="flex items-center justify-between mt-5">
+        <div className="flex items-center justify-center mt-5">
           <button className="no-hover-fx text-[12px] text-gray-400">Forgot Password?</button>
-          <button
-            className="no-hover-fx text-[12px] font-semibold"
-            style={{ color: "#2D0A53" }}
-            onClick={() => router.push("/onboarding/register")}
-          >
-            Sign up
-          </button>
         </div>
 
       </div>

@@ -1,0 +1,60 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import { PaymentStatus } from "@prisma/client";
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get("status");
+
+    const bookings = await prisma.booking.findMany({
+      where: status ? { status: status as never } : undefined,
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(bookings);
+  } catch {
+    return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
+  }
+}
+
+const VALID_PAYMENT_STATUSES: PaymentStatus[] = ["UNPAID", "PAID", "FAILED", "REFUNDED"];
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, total, paymentStatus, stripePaymentIntentId } = body;
+
+    if (!clientName || !pickup || !dropoff || !carTier || !carName) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const resolvedPaymentStatus: PaymentStatus =
+      paymentStatus && VALID_PAYMENT_STATUSES.includes(paymentStatus)
+        ? paymentStatus
+        : "UNPAID";
+
+    const session = await getSession(req);
+    const userId = session?.userId ?? null;
+
+    const booking = await prisma.booking.create({
+      data: {
+        clientName,
+        pickup,
+        dropoff,
+        carTier,
+        carName,
+        fare: Number(fare),
+        serviceFee: Number(serviceFee),
+        total: Number(total),
+        paymentStatus: resolvedPaymentStatus,
+        stripePaymentIntentId: stripePaymentIntentId ?? null,
+        ...(userId ? { userId } : {}),
+      },
+    });
+
+    return NextResponse.json(booking, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
+  }
+}

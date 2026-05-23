@@ -100,8 +100,13 @@ export default function DriverRegisterStep1Page() {
           {/* Next button */}
           <button
             type="button"
-            onClick={() => router.push("/driver/onboarding/register/step2")}
-            className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide"
+            onClick={() => {
+              if (!city) return;
+              const params = new URLSearchParams({ country, city });
+              router.push(`/driver/onboarding/register/step2?${params.toString()}`);
+            }}
+            disabled={!city}
+            className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
             Next

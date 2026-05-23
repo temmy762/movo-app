@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-const rideRequest = {
-  name: "Nicholas Jackson",
-  phone: "+447819484920",
-  distance: "10 km (15 min)",
-  from: "Memphis, Tennessee (3 P)",
-  to: "Nashville, Tennessee (5 P)",
-  amount: "$100.00",
-  payment: "Master Card",
-  timeLeft: "5 mins left",
+type Booking = {
+  id: string;
+  clientName: string;
+  pickup: string;
+  dropoff: string;
+  carName: string;
+  total: number;
+  paymentStatus: string;
+  status: string;
 };
 
 function MapBackground() {
@@ -48,18 +48,74 @@ function MapBackground() {
 
 export default function DriverHomePage() {
   const router = useRouter();
-  type RidePhase = "idle" | "requesting" | "accepted" | "started";
+  type RidePhase = "idle" | "searching" | "requesting" | "accepted" | "started";
   const [isOnline, setIsOnline] = useState(false);
   const [ridePhase, setRidePhase] = useState<RidePhase>("idle");
+  const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [showTripComplete, setShowTripComplete] = useState(false);
   const [tripRating, setTripRating] = useState(4);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  function handleToggleOnline() {
+  const patchStatus = useCallback(async (id: string, status: string) => {
+    await fetch(`/api/bookings/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+  }, []);
+
+  const fetchNextPending = useCallback(async () => {
+    setRidePhase("searching");
+    try {
+      const res = await fetch("/api/bookings?status=PENDING");
+      const data = await res.json();
+      const bookings: Booking[] = Array.isArray(data) ? data : [];
+      const next = bookings[0] ?? null;
+      if (next) {
+        setActiveBooking(next);
+        setRidePhase("requesting");
+      } else {
+        setRidePhase("idle");
+      }
+    } catch {
+      setRidePhase("idle");
+    }
+  }, []);
+
+  async function handleToggleOnline() {
     const next = !isOnline;
     setIsOnline(next);
-    if (next) setTimeout(() => setRidePhase("requesting"), 1200);
-    else { setRidePhase("idle"); setShowDeclineModal(false); }
+    if (next) {
+      await fetchNextPending();
+    } else {
+      setRidePhase("idle");
+      setActiveBooking(null);
+      setShowDeclineModal(false);
+    }
+  }
+
+  async function handleAccept() {
+    if (!activeBooking) return;
+    setActionLoading(true);
+    await patchStatus(activeBooking.id, "CONFIRMED");
+    setActionLoading(false);
+    setRidePhase("accepted");
+  }
+
+  async function handleDecline() {
+    setShowDeclineModal(false);
+    setRidePhase("idle");
+    setIsOnline(false);
+    setActiveBooking(null);
+  }
+
+  async function handleEndRide() {
+    if (!activeBooking) return;
+    setActionLoading(true);
+    await patchStatus(activeBooking.id, "COMPLETED");
+    setActionLoading(false);
+    setShowTripComplete(true);
   }
 
   return (
@@ -133,8 +189,29 @@ export default function DriverHomePage() {
 
         <div className="flex-1" />
 
+        {/* Searching spinner */}
+        {ridePhase === "searching" && (
+          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-5 pb-6 flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-4 border-gray-200 border-t-[#2D0A53] rounded-full animate-spin" />
+            <p className="text-[14px] font-semibold text-gray-700">Looking for ride requests…</p>
+          </div>
+        )}
+
+        {/* No rides available */}
+        {ridePhase === "idle" && isOnline && (
+          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-5 pb-6 flex flex-col items-center gap-2">
+            <p className="text-[14px] font-semibold text-gray-700">No pending rides right now</p>
+            <p className="text-[12px] text-gray-400">Stay online — new requests will appear here</p>
+            <button onClick={fetchNextPending}
+              className="no-hover-fx mt-2 px-6 py-2 rounded-xl text-white text-[13px] font-semibold"
+              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
+              Check Again
+            </button>
+          </div>
+        )}
+
         {/* ── Bottom sheet — phase aware ── */}
-        {ridePhase !== "idle" && (
+        {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "started") && activeBooking && (
           <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6">
 
             {/* Rider info row — requesting + accepted */}
@@ -142,7 +219,10 @@ export default function DriverHomePage() {
               <>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[15px] font-bold text-gray-900">Ride Request</p>
-                  {ridePhase === "requesting" && <span className="text-[12px] text-gray-400">{rideRequest.timeLeft}</span>}
+                  <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+                    style={{ background: "#fef3c7", color: "#d97706" }}>
+                    {activeBooking.carName}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -152,8 +232,8 @@ export default function DriverHomePage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-[14px] font-semibold" style={{ color: "#2D0A53" }}>{rideRequest.name}</p>
-                      <p className="text-[12px] text-gray-500">📞 {rideRequest.phone}</p>
+                      <p className="text-[14px] font-semibold" style={{ color: "#2D0A53" }}>{activeBooking.clientName}</p>
+                      <p className="text-[11px] text-gray-400">Booking #{activeBooking.id.slice(0, 8)}</p>
                     </div>
                   </div>
                   <button className="no-hover-fx w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center"
@@ -166,19 +246,18 @@ export default function DriverHomePage() {
               </>
             )}
 
-            {/* Route — all phases */}
+            {/* Route */}
             <div className="flex items-center justify-between mb-2">
               <p className="text-[12px] font-semibold text-gray-700">Trip Route</p>
-              <p className="text-[12px] text-gray-400">{rideRequest.distance}</p>
             </div>
             <div className="flex flex-col gap-1.5 mb-3 pl-1">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#2D0A53] shrink-0" />
-                <p className="text-[13px] text-gray-600">{rideRequest.from}</p>
+              <div className="flex items-start gap-2">
+                <span className="w-3 h-3 rounded-full bg-[#2D0A53] shrink-0 mt-0.5" />
+                <p className="text-[12px] text-gray-600 leading-tight">{activeBooking.pickup}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
-                <p className="text-[13px] text-gray-600">{rideRequest.to}</p>
+              <div className="flex items-start gap-2">
+                <span className="w-3 h-3 rounded-full bg-red-500 shrink-0 mt-0.5" />
+                <p className="text-[12px] text-gray-600 leading-tight">{activeBooking.dropoff}</p>
               </div>
             </div>
 
@@ -187,19 +266,23 @@ export default function DriverHomePage() {
               <>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[12px] font-semibold text-gray-700">Payment</p>
-                  <p className="text-[13px] font-bold" style={{ color: "#8B7500" }}>{rideRequest.amount}</p>
+                  <p className="text-[13px] font-bold" style={{ color: "#8B7500" }}>${activeBooking.total.toFixed(2)}</p>
                 </div>
                 <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 mb-4">
                   <div className="flex items-center gap-2">
                     <div className="flex">
-                      <div className="w-5 h-5 rounded-full bg-red-500" />
+                      <div className="w-5 h-5 rounded-full bg-green-500" />
                       <div className="w-5 h-5 rounded-full bg-yellow-400 -ml-2" />
                     </div>
-                    <p className="text-[13px] font-medium text-gray-700">{rideRequest.payment}</p>
+                    <p className="text-[13px] font-medium text-gray-700">
+                      {activeBooking.paymentStatus === "PAID" ? "Paid via Stripe" : "Pending Payment"}
+                    </p>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8B7500" strokeWidth="2.5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+                  {activeBooking.paymentStatus === "PAID" && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
                 </div>
               </>
             )}
@@ -208,13 +291,15 @@ export default function DriverHomePage() {
             {ridePhase === "requesting" && (
               <div className="flex gap-3">
                 <button type="button" onClick={() => setShowDeclineModal(true)}
+                  disabled={actionLoading}
                   className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-700">
                   Decline
                 </button>
-                <button type="button" onClick={() => setRidePhase("accepted")}
+                <button type="button" onClick={handleAccept}
+                  disabled={actionLoading}
                   className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
-                  style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
-                  Accept
+                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                  {actionLoading ? "…" : "Accept"}
                 </button>
               </div>
             )}
@@ -228,10 +313,11 @@ export default function DriverHomePage() {
             )}
 
             {ridePhase === "started" && (
-              <button type="button" onClick={() => setShowTripComplete(true)}
+              <button type="button" onClick={handleEndRide}
+                disabled={actionLoading}
                 className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
-                End Ride
+                style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                {actionLoading ? "Saving…" : "End Ride"}
               </button>
             )}
 
@@ -257,7 +343,7 @@ export default function DriverHomePage() {
                 Cancel
               </button>
               <button type="button"
-                onClick={() => { setShowDeclineModal(false); setRidePhase("idle"); setIsOnline(false); }}
+                onClick={handleDecline}
                 className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[14px]"
                 style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
                 Sure
@@ -295,7 +381,13 @@ export default function DriverHomePage() {
               Trip completed review your trip now.
             </p>
             <button type="button"
-              onClick={() => { setShowTripComplete(false); setRidePhase("idle"); setIsOnline(false); router.push("/driver/home/finish"); }}
+              onClick={() => {
+                setShowTripComplete(false);
+                setRidePhase("idle");
+                setIsOnline(false);
+                setActiveBooking(null);
+                router.push("/driver/home/finish");
+              }}
               className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
               style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
               Ok

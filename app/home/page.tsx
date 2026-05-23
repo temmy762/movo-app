@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import BottomNav from "./components/BottomNav";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const services = [
   { id: 1, title: "By The Hour", desc: "Your next city is just a smooth ride away.", img: "/images/By the hour.png", href: "/home/by-the-hour" },
@@ -16,6 +17,7 @@ const services = [
 export default function HomePage() {
   const router = useRouter();
   const [destination, setDestination] = useState("");
+  const { user } = useCurrentUser();
 
   return (
     <div className="h-full flex flex-col bg-gray-100" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -38,7 +40,9 @@ export default function HomePage() {
           />
           {/* Greeting */}
           <div className="absolute bottom-14 left-4">
-            <p className="text-white text-[22px] font-bold drop-shadow">Hi Laura</p>
+            <p className="text-white text-[22px] font-bold drop-shadow">
+              {user ? `Hi ${user.firstName}` : "Hi there"}
+            </p>
           </div>
           {/* Where to bar */}
           <div className="absolute bottom-3 left-4 right-4">

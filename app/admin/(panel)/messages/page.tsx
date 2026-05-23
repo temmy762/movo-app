@@ -78,6 +78,7 @@ export default function MessagesPage(){
   const[activeId,setActiveId]=useState(3);
   const[search,setSearch]=useState("");
   const[input,setInput]=useState("");
+  const[mobileView,setMobileView]=useState<"list"|"chat">("chat");
   const endRef=useRef<HTMLDivElement>(null);
 
   const active=convs.find(c=>c.id===activeId)!;
@@ -93,6 +94,7 @@ export default function MessagesPage(){
 
   const selectConv=(id:number)=>{
     setActiveId(id);
+    setMobileView("chat");
     setConvs(p=>p.map(c=>c.id===id?{...c,unread:false}:c));
   };
 
@@ -134,7 +136,7 @@ export default function MessagesPage(){
     <div className="flex h-full overflow-hidden">
 
       {/* ── Left: Conversation List ── */}
-      <div className="w-[295px] shrink-0 border-r border-gray-100 flex flex-col overflow-hidden bg-white">
+      <div className={`${mobileView==="list"?"flex":"hidden"} md:flex flex-col w-full md:w-[295px] md:shrink-0 md:border-r border-gray-100 overflow-hidden bg-white`}>
         {/* Toolbar */}
         <div className="px-4 pt-4 pb-2 shrink-0">
           <div className="flex items-center gap-2">
@@ -175,9 +177,12 @@ export default function MessagesPage(){
 
       {/* ── Right: Chat Window ── */}
       {active?(
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-white">
+        <div className={`${mobileView==="chat"?"flex":"hidden"} md:flex flex-1 flex-col overflow-hidden min-w-0 bg-white`}>
           {/* Chat Header */}
           <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 shrink-0">
+            <button onClick={()=>setMobileView("list")} className="md:hidden no-hover-fx w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
             <div className="relative">
               <Avatar name={active.name} size={10}/>
               {active.online&&<span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-400 border-2 border-white"/>}

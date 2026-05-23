@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const hearAboutOptions = [
   "Social Media", "Friend / Referral", "Google Search", "Radio / TV", "Other",
@@ -24,10 +24,14 @@ function IconInput({
   icon,
   placeholder,
   type = "text",
+  value,
+  onChange,
 }: {
   icon: React.ReactNode;
   placeholder: string;
   type?: string;
+  value: string;
+  onChange: (v: string) => void;
 }) {
   return (
     <div className="flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-2.5">
@@ -35,6 +39,8 @@ function IconInput({
       <input
         type={type}
         placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className="flex-1 focus:outline-none text-[14px] text-gray-800 placeholder-gray-300"
       />
     </div>
@@ -95,11 +101,49 @@ const BuildingIcon = () => (
   </svg>
 );
 
-export default function DriverRegisterStep2Page() {
+function DriverRegisterStep2Content() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const country = searchParams.get("country") ?? "CA";
+  const city = searchParams.get("city") ?? "";
+
   const [dialCode, setDialCode] = useState("+1");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const selectedDial = countryCodes.find((c) => c.code === dialCode);
+
+  async function handleNext() {
+    setError("");
+    if (!firstName || !lastName || !email || !password) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/driver/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName, email, phone: phone || undefined, password, country, city }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Registration failed"); return; }
+      router.push("/driver/onboarding/partner");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -125,9 +169,9 @@ export default function DriverRegisterStep2Page() {
           {/* Fields */}
           <div className="flex flex-col gap-3">
 
-            <IconInput icon={<PersonIcon />} placeholder="First Name" />
-            <IconInput icon={<PersonIcon />} placeholder="Last Name" />
-            <IconInput icon={<MailIcon />} placeholder="Email" type="email" />
+            <IconInput icon={<PersonIcon />} placeholder="First Name" value={firstName} onChange={setFirstName} />
+            <IconInput icon={<PersonIcon />} placeholder="Last Name" value={lastName} onChange={setLastName} />
+            <IconInput icon={<MailIcon />} placeholder="Email" type="email" value={email} onChange={setEmail} />
 
             {/* Country code + phone */}
             <div className="flex gap-2">
@@ -154,6 +198,8 @@ export default function DriverRegisterStep2Page() {
                 <input
                   type="tel"
                   placeholder="Phone number"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="w-full focus:outline-none text-[14px] text-gray-800 placeholder-gray-300"
                 />
               </div>
@@ -171,13 +217,25 @@ export default function DriverRegisterStep2Page() {
               options={representOptions}
             />
 
+            <IconInput
+              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
+              placeholder="Password (min. 8 characters)"
+              type="password"
+              value={password}
+              onChange={setPassword}
+            />
+
           </div>
+
+          {/* Error */}
+          {error && <p className="text-[12px] text-red-500 text-center mt-2">{error}</p>}
 
           {/* Next */}
           <button
             type="button"
-            onClick={() => router.push("/driver/onboarding/partner")}
-            className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide mt-6"
+            onClick={handleNext}
+            disabled={loading}
+            className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide mt-6 disabled:opacity-60"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
             Next
@@ -197,5 +255,13 @@ export default function DriverRegisterStep2Page() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DriverRegisterStep2Page() {
+  return (
+    <Suspense>
+      <DriverRegisterStep2Content />
+    </Suspense>
   );
 }

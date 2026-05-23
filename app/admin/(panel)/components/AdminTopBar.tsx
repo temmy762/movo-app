@@ -22,7 +22,7 @@ function resolveTitle(pathname: string): { title: string; parent?: { label: stri
   return { title: titles[pathname] ?? "Admin" };
 }
 
-export default function AdminTopBar() {
+export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggleSidebar: () => void; sidebarOpen: boolean }) {
   const pathname = usePathname();
   const { title, parent } = resolveTitle(pathname);
 
@@ -41,8 +41,24 @@ export default function AdminTopBar() {
   }, [showSettings]);
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0 z-10">
-      <div className="flex flex-col gap-0.5">
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 shrink-0 z-10">
+      {/* Hamburger — mobile only */}
+      <button
+        onClick={onToggleSidebar}
+        className="no-hover-fx md:hidden w-9 h-9 rounded-xl flex items-center justify-center mr-2 shrink-0 transition-colors"
+        style={{ background: sidebarOpen ? "#f3f0ff" : "#f9fafb" }}
+        aria-label="Toggle sidebar">
+        {sidebarOpen ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={sidebarOpen ? "#7c3aed" : "#6b7280"} strokeWidth="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        )}
+      </button>
+      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
         {parent && (
           <div className="flex items-center gap-1.5">
             <Link href={parent.href} className="no-hover-fx text-[10px] text-gray-400 hover:text-gray-600">{parent.label}</Link>
@@ -62,11 +78,11 @@ export default function AdminTopBar() {
           <h1 className="text-[17px] font-bold text-gray-900">{title}</h1>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
 
         {/* Inline search bar (shown when toggled) */}
         {showSearch && (
-          <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5 bg-gray-50/80">
+          <div className="hidden md:flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5 bg-gray-50/80">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -136,7 +152,7 @@ export default function AdminTopBar() {
         </button>
 
         {/* User info */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-gray-100">
+        <div className="flex items-center gap-2 md:gap-2.5 pl-2 md:pl-3 border-l border-gray-100">
           <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 bg-indigo-100 flex items-center justify-center">
             <svg width="28" height="32" viewBox="0 0 40 48" fill="none">
               <circle cx="20" cy="13" r="9" fill="#c4b5fd"/>
@@ -145,7 +161,7 @@ export default function AdminTopBar() {
               <path d="M19 26 L20 34 L21 26" fill="white"/>
             </svg>
           </div>
-          <div className="flex flex-col leading-tight">
+          <div className="hidden md:flex flex-col leading-tight">
             <span className="text-[13px] font-semibold text-gray-800">Abram Schleifer</span>
             <span className="text-[10px] text-gray-400">Admin</span>
           </div>

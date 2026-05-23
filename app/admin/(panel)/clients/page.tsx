@@ -229,7 +229,7 @@ export default function ClientsPage() {
 
       {/* ── Table ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b border-gray-100" style={{ background: "#f8fafc" }}>
@@ -317,6 +317,50 @@ export default function ClientsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ── Mobile client cards ── */}
+        <div className="md:hidden divide-y divide-gray-50">
+          {pageClients.map(client => {
+            const isSel = selected.has(client.id);
+            const fn = client.name.split(" ")[0];
+            return (
+              <div key={client.id} className="p-4" style={{ background: isSel ? "#eff6ff" : "white" }}>
+                <div className="flex items-start gap-3">
+                  <input type="checkbox" checked={isSel} onChange={() => toggleOne(client.id)}
+                    className="w-3.5 h-3.5 accent-red-500 shrink-0 mt-1"/>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0"
+                    style={{ background: avatarColor(client.name) }}>{initials(client.name)}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-semibold text-gray-900 truncate">{client.name}</p>
+                        <p className="text-[11px] text-gray-400 truncate">{client.email}</p>
+                      </div>
+                      <span className="text-[13px] font-bold text-gray-800 shrink-0">{client.points} pts</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                      <span className="text-[11px] text-gray-500">{client.phone}</span>
+                      <span className="text-[11px] text-gray-400">{client.address}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-gray-400">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      {fn}&apos;s License &amp; Residence Card
+                    </div>
+                    <div className="flex items-center gap-2 mt-2.5">
+                      <button onClick={() => setEditClient(client)}
+                        className="no-hover-fx px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 border border-gray-200">Edit</button>
+                      <button onClick={() => setDeleteId(client.id)}
+                        className="no-hover-fx px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-400 border border-red-100">Delete</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {pageClients.length === 0 && (
+            <p className="px-4 py-10 text-center text-[13px] text-gray-400">No clients found.</p>
+          )}
         </div>
 
         {/* ── Pagination ── */}

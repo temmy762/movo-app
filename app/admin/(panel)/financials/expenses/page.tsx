@@ -180,7 +180,7 @@ export default function ExpensesPage(){
       <div className="flex gap-4 items-start flex-wrap xl:flex-nowrap">
         {/* Left: stat cards + cashflow */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[{label:"Balance",value:"$155,820",change:"+$7,000",up:true},{label:"Income",value:"$25,700",change:"+$12,000",up:true},{label:"Expenses",value:"$14,575",change:"-$6,300",up:false}].map(s=>(
               <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between mb-3">
@@ -276,7 +276,7 @@ export default function ExpensesPage(){
             Download
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[700px]">
             <thead><tr style={{background:"#f8fafc"}} className="border-b border-gray-100">
               <th className={thC}><div className="flex items-center gap-2.5"><input type="checkbox" checked={allSel} ref={el=>{if(el)el.indeterminate=someSel;}} onChange={toggleAll} className="w-3.5 h-3.5 accent-red-500"/>
@@ -319,6 +319,40 @@ export default function ExpensesPage(){
             </tbody>
           </table>
         </div>
+
+        {/* ── Mobile transaction cards ── */}
+        <div className="md:hidden divide-y divide-gray-50">
+          {pageTxs.map(t=>(
+            <div key={t.id} className="p-4">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <input type="checkbox" checked={selected.has(t.id)} onChange={()=>toggleOne(t.id)} className="w-3.5 h-3.5 accent-red-500 shrink-0 mt-0.5"/>
+                  <p className="text-[13px] font-semibold text-gray-800 truncate">{t.expense}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0"
+                  style={{background:t.status==="Completed"?"#dcfce7":"#fee2e2",color:t.status==="Completed"?"#16a34a":"#dc2626"}}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{background:t.status==="Completed"?"#22c55e":"#ef4444"}}/>
+                  {t.status}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap mb-2.5 pl-5">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{background:CC[t.category]??"#9ca3af"}}/>
+                  <span className="text-[11px] text-gray-500">{t.category}</span>
+                </div>
+                <span className="text-[11px] text-gray-400">Qty: {t.qty}</span>
+                <span className="text-[12px] font-semibold text-gray-800">${t.amount.toLocaleString()}</span>
+                <span className="text-[11px] text-gray-400">{t.date}</span>
+              </div>
+              <div className="flex items-center gap-2 pl-5">
+                <button onClick={()=>setEditTx(t)} className="no-hover-fx px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 border border-gray-200">Edit</button>
+                <button onClick={()=>setDelId(t.id)} className="no-hover-fx px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-400 border border-red-100">Delete</button>
+              </div>
+            </div>
+          ))}
+          {pageTxs.length===0&&<p className="px-4 py-10 text-center text-[13px] text-gray-400">No transactions found.</p>}
+        </div>
+
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-50 flex-wrap gap-2">
           <div className="flex items-center gap-2"><span className="text-[11px] text-gray-400">Results per page</span>
             <select value={perPage} onChange={e=>{setPerPage(Number(e.target.value));setPage(1);}} className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 focus:outline-none" suppressHydrationWarning>

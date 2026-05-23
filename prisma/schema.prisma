@@ -1,13 +1,122 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  DRIVER
+  ADMIN
+}
+
+enum DriverStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  REFUNDED
+}
+
+// ─── Auth models ──────────────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?   @unique
+  phone     String?   @unique
+  password  String
+  role      Role      @default(USER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  sessions  Session[]
+  bookings  Booking[]
+}
+
+model Driver {
+  id        String       @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String       @unique
+  phone     String?      @unique
+  password  String
+  country   String
+  city      String
+  status    DriverStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  sessions Session[]
+  bookings Booking[]
+  vehicle  Vehicle?
+}
+
+model Vehicle {
+  id        String   @id @default(cuid())
+  driverId  String   @unique
+  driver    Driver   @relation(fields: [driverId], references: [id])
+  make      String
+  model     String
+  year      Int
+  plate     String
+  tier      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  role      Role
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+
+  driverId String?
+  driver   Driver? @relation(fields: [driverId], references: [id])
+}
+
+// ─── Booking ──────────────────────────────────────────────────────────────────
+
+model Booking {
+  id                    String        @id @default(cuid())
+  clientName            String
+  pickup                String
+  dropoff               String
+  carTier               String
+  carName               String
+  fare                  Float
+  serviceFee            Float
+  total                 Float
+  status                BookingStatus @default(PENDING)
+  paymentStatus         PaymentStatus @default(UNPAID)
+  stripePaymentIntentId String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+
+  driverId String?
+  driver   Driver? @relation(fields: [driverId], references: [id])
 }

@@ -243,7 +243,7 @@ export default function PaymentsPage(){
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead>
               <tr style={{background:"#f8fafc"}} className="border-b border-gray-100">
@@ -304,6 +304,46 @@ export default function PaymentsPage(){
               {pagePays.length===0&&<tr><td colSpan={9} className="px-3 py-10 text-center text-[13px] text-gray-400">No invoices found.</td></tr>}
             </tbody>
           </table>
+        </div>
+
+        {/* ── Mobile invoice cards ── */}
+        <div className="lg:hidden divide-y divide-gray-50">
+          {pagePays.map(p=>{
+            const isSel=selected.has(p.id);
+            const ss=STATUS_STYLE[p.status];
+            const isCompleted=p.status==="Completed";
+            return(
+              <div key={p.id} className="p-4" style={{background:isSel?"#eff6ff":"white"}}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" checked={isSel} onChange={()=>toggleOne(p.id)} className="w-3.5 h-3.5 accent-red-500 shrink-0 mt-0.5"/>
+                    <p className="text-[12px] font-semibold text-gray-700">{p.id}</p>
+                  </div>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0" style={{background:ss.bg,color:ss.color}}>{p.status}</span>
+                </div>
+                <div className="pl-5 flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[13px] font-semibold text-gray-800">{p.client}</p>
+                    <p className="text-[13px] font-bold text-gray-800">${p.amount.toLocaleString()}</p>
+                  </div>
+                  <p className="text-[11px] text-gray-500">{p.car}</p>
+                  <div className="flex items-center gap-3 flex-wrap mt-0.5">
+                    <span className="text-[11px] text-gray-400">${p.ratePerDay}/day × {p.rentalDays} {p.rentalDays===1?"day":"days"}</span>
+                    <span className="text-[11px] text-gray-400">Due: {p.dueDate}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    {isCompleted?(
+                      <button className="no-hover-fx px-3 py-1.5 rounded-lg text-[11px] font-medium text-blue-500 border border-blue-100">View</button>
+                    ):(
+                      <button onClick={()=>setEditPay(p)} className="no-hover-fx px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 border border-gray-200">Edit</button>
+                    )}
+                    <button onClick={()=>setDelId(p.id)} className="no-hover-fx px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-400 border border-red-100">Delete</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {pagePays.length===0&&<p className="px-4 py-10 text-center text-[13px] text-gray-400">No invoices found.</p>}
         </div>
 
         {/* Pagination */}
