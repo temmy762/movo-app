@@ -1,10 +1,29 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+type Profile = {
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+};
 
 export default function PersonalInfoPage() {
   const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
 
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.user) setProfile(data.user); })
+      .catch(() => {});
+  }, []);
+
+  const maskedPhone = profile?.phone
+    ? profile.phone.slice(0, 4) + "*".repeat(Math.max(0, profile.phone.length - 7)) + profile.phone.slice(-3)
+    : "—";
 
   return (
     <div
@@ -50,15 +69,17 @@ export default function PersonalInfoPage() {
             <div className="flex flex-col gap-3">
               <p className="text-[14px] font-bold text-gray-900">Contact details</p>
               <div>
-                <p className="text-[15px] font-semibold text-gray-900">Adams W</p>
+                <p className="text-[15px] font-semibold text-gray-900">
+                {profile ? `${profile.firstName} ${profile.lastName}` : "—"}
+              </p>
               </div>
               <div>
                 <p className="text-[12px] text-gray-400">Mobile Number</p>
-                <p className="text-[14px] font-medium text-gray-800">+1874*******34</p>
+                <p className="text-[14px] font-medium text-gray-800">{maskedPhone}</p>
               </div>
               <div>
                 <p className="text-[12px] text-gray-400">Email</p>
-                <p className="text-[14px] font-medium text-gray-800">Example@gmail.com</p>
+                <p className="text-[14px] font-medium text-gray-800">{profile?.email ?? "—"}</p>
               </div>
             </div>
           </div>

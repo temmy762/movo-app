@@ -5,7 +5,6 @@ export default function ByTheHourPage() {
     <ServiceDetailPage
       title="By The Hour"
       bannerImg="/images/by-the-hour.png"
-      pageLabel="City-to-city"
     />
   );
 }

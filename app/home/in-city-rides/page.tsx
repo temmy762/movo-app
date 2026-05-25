@@ -5,7 +5,6 @@ export default function InCityRidesPage() {
     <ServiceDetailPage
       title="In-City Rides"
       bannerImg="/images/In-City-drive.png"
-      pageLabel="in_city rides"
     />
   );
 }

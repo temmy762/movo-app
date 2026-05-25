@@ -242,7 +242,8 @@ function SortIcon() {
   );
 }
 
-function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Record<string, number>) => void }) {
+type CountsShape = { pending: number; confirmed: number; completed: number; cancelled: number };
+function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: CountsShape) => void }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");

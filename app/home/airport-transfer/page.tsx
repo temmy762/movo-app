@@ -5,7 +5,6 @@ export default function AirportTransferPage() {
     <ServiceDetailPage
       title="Airport Transfer"
       bannerImg="/images/Airport-Transfer.png"
-      pageLabel="Airport Transfer"
     />
   );
 }

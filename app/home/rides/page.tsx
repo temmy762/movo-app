@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 
 type TabId = "upcoming" | "past" | "canceled";
@@ -28,46 +28,41 @@ const emptyStates: Record<TabId, { title: string; desc: string }> = {
   },
 };
 
-interface Ride {
-  name: string;
-  specs: string;
-  distance: string;
-  img: string;
-}
-
-// Mock ride data — in production this would come from the API.
-const ridesByTab: Record<TabId, Ride[]> = {
-  upcoming: [
-    {
-      name: "Movo Classic",
-      specs: "Automatic  |  3 seats  |  Octane",
-      distance: "800m (5mins away)",
-      img: "/images/movo classic.png",
-    },
-  ],
-  past: [
-    {
-      name: "Movo Privé Black",
-      specs: "Automatic  |  3 seats  |  Octane",
-      distance: "800m (5mins away)",
-      img: "/images/prive black.png",
-    },
-  ],
-  canceled: [
-    {
-      name: "Movo Premium",
-      specs: "Automatic  |  3 seats  |  Octane",
-      distance: "800m (5mins away)",
-      img: "/images/movo premium.png",
-    },
-  ],
+const carImages: Record<string, string> = {
+  classic: "/images/movo classic.png",
+  premium: "/images/movo premium.png",
+  black: "/images/prive black.png",
 };
+
+interface Booking {
+  id: string;
+  carName: string;
+  carTier: string;
+  pickup: string;
+  dropoff: string;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  createdAt: string;
+}
 
 export default function RidesPage() {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>("upcoming");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/user/bookings?tab=${tab}`)
+      .then((r) => (r.ok ? r.json() : { bookings: [] }))
+      .then((data) => setBookings(data.bookings ?? []))
+      .catch(() => setBookings([]))
+      .finally(() => setLoading(false));
+  }, [tab]);
+
   const empty = emptyStates[tab];
-  const rides = ridesByTab[tab];
+  const rides = bookings;
 
   return (
     <div
@@ -105,12 +100,16 @@ export default function RidesPage() {
             })}
           </div>
 
-          {rides.length > 0 ? (
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center py-16">
+              <p className="text-[13px] text-gray-400">Loading rides…</p>
+            </div>
+          ) : rides.length > 0 ? (
             /* Ride list */
             <div className="flex-1 pt-4 md:pt-6 space-y-3">
-              {rides.map((ride, i) => (
+              {rides.map((ride) => (
                 <div
-                  key={i}
+                  key={ride.id}
                   className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-3 border border-transparent"
                   style={{
                     background:
@@ -120,42 +119,47 @@ export default function RidesPage() {
                   {/* Top row: info + image */}
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-bold text-gray-900">{ride.name}</p>
-                      <p className="text-[12px] text-gray-700 mt-0.5">{ride.specs}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
-                          <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
-                          <circle cx="12" cy="10" r="3" />
-                        </svg>
-                        <p className="text-[12px] text-gray-800">{ride.distance}</p>
+                      <p className="text-[15px] font-bold text-gray-900">{ride.carName}</p>
+                      <p className="text-[12px] text-gray-700 mt-0.5 truncate">{ride.pickup} → {ride.dropoff}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] font-semibold text-gray-500 uppercase">{ride.status}</span>
+                        <span className="text-[12px] font-bold text-gray-800">${ride.total.toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="relative w-24 h-16 md:w-28 md:h-20 shrink-0">
-                      <Image src={ride.img} alt={ride.name} fill sizes="(max-width: 768px) 96px, 112px" className="object-contain" />
+                      <Image
+                        src={carImages[ride.carTier] ?? "/images/movo classic.png"}
+                        alt={ride.carName}
+                        fill
+                        sizes="(max-width: 768px) 96px, 112px"
+                        className="object-contain"
+                      />
                     </div>
                   </div>
 
-                  {/* BOOK NOW button — inside card, gradient border + gradient text */}
-                  <button
-                    type="button"
-                    onClick={() => router.push("/home/pickup")}
-                    className="w-full py-2.5 rounded-xl border border-transparent text-[13px] font-bold tracking-widest"
-                    style={{
-                      background:
-                        "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(90deg, #2D0A53 0%, #8B7500 100%) border-box",
-                    }}
-                  >
-                    <span
+                  {/* BOOK NOW button — only shown for upcoming rides */}
+                  {(ride.status === "PENDING" || ride.status === "CONFIRMED") && (
+                    <button
+                      type="button"
+                      onClick={() => router.push("/home/pickup")}
+                      className="w-full py-2.5 rounded-xl border border-transparent text-[13px] font-bold tracking-widest"
                       style={{
-                        background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)",
-                        WebkitBackgroundClip: "text",
-                        backgroundClip: "text",
-                        color: "transparent",
+                        background:
+                          "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(90deg, #2D0A53 0%, #8B7500 100%) border-box",
                       }}
                     >
-                      BOOK NOW
-                    </span>
-                  </button>
+                      <span
+                        style={{
+                          background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)",
+                          WebkitBackgroundClip: "text",
+                          backgroundClip: "text",
+                          color: "transparent",
+                        }}
+                      >
+                        BOOK AGAIN
+                      </span>
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

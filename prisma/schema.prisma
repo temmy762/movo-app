@@ -37,15 +37,21 @@ enum PaymentStatus {
 // ─── Auth models ──────────────────────────────────────────────────────────────
 
 model User {
-  id        String    @id @default(cuid())
-  firstName String
-  lastName  String
-  email     String?   @unique
-  phone     String?   @unique
-  password  String
-  role      Role      @default(USER)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?   @unique
+  phone       String?   @unique
+  password    String
+  role        Role      @default(USER)
+  title       String?
+  company     String?
+  street      String?
+  postCode    String?
+  city        String?
+  country     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   sessions  Session[]
   bookings  Booking[]

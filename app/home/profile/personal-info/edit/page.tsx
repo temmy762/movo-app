@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const gradientBorder = {
   background:
@@ -101,6 +101,47 @@ export default function EditPersonalInfoPage() {
   const [postCode, setPostCode] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("usa");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.user) return;
+        const u = data.user;
+        if (u.title) setTitle(u.title);
+        if (u.firstName) setFirstName(u.firstName);
+        if (u.lastName) setLastName(u.lastName);
+        if (u.email) setEmail(u.email);
+        if (u.phone) setMobile(u.phone);
+        if (u.company) setCompany(u.company);
+        if (u.street) setStreet(u.street);
+        if (u.postCode) setPostCode(u.postCode);
+        if (u.city) setCity(u.city);
+        if (u.country) setCountry(u.country);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function handleSave() {
+    setError("");
+    setSaving(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, firstName, lastName, email, phone: mobile, company, street, postCode, city, country }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Failed to save"); return; }
+      router.back();
+    } catch {
+      setError("Something went wrong.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div
@@ -124,7 +165,7 @@ export default function EditPersonalInfoPage() {
           <h1 className="text-[18px] font-bold text-gray-900">Personal information</h1>
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={handleSave}
             className="no-hover-fx"
             aria-label="Save"
           >
@@ -191,14 +232,18 @@ export default function EditPersonalInfoPage() {
             />
           </div>
 
+          {/* Error */}
+          {error && <p className="text-[12px] text-red-500 text-center">{error}</p>}
+
           {/* Save button */}
           <button
             type="button"
-            onClick={() => router.back()}
-            className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mt-2"
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mt-2 disabled:opacity-60"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
           >
-            Save changes
+            {saving ? "Saving…" : "Save changes"}
           </button>
         </div>
 

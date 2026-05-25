@@ -1,33 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Polyline, Marker, useMap } from "react-leaflet";
-import L from "leaflet";
+import { useEffect, useRef } from "react";
+import { GoogleMap, Marker, Polyline, useJsApiLoader } from "@react-google-maps/api";
 
-function Recenter({ lat, lng }: { lat: number; lng: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lng], 15, { animate: true });
-  }, [lat, lng]);
-  return null;
-}
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
-const carIcon = L.divIcon({
-  className: "",
-  html: `<div style="position:relative;width:28px;height:28px">
-    <div style="position:absolute;inset:-10px;border-radius:50%;background:rgba(239,68,68,0.18)"></div>
-    <div style="width:28px;height:28px;background:#ef4444;border-radius:50%;border:3px solid white;
-      box-shadow:0 2px 12px rgba(239,68,68,0.55);display:flex;align-items:center;justify-content:center">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-        <path d="M5 11l1.5-4.5h11L19 11M3 11h18v6H3zM7 17v2M17 17v2"/>
-        <circle cx="7.5" cy="17" r="1.5" fill="white"/>
-        <circle cx="16.5" cy="17" r="1.5" fill="white"/>
-      </svg>
-    </div>
-  </div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
+const CAR_SVG = encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+    <circle cx="18" cy="18" r="18" fill="#ef4444" opacity="0.18"/>
+    <circle cx="18" cy="18" r="14" fill="#ef4444" stroke="white" stroke-width="3"/>
+    <path d="M10 17l1.5-4.5h13L26 17M8 17h20v6H8zM12 23v2M24 23v2"
+      stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <circle cx="12.5" cy="23" r="1.5" fill="white"/>
+    <circle cx="23.5" cy="23" r="1.5" fill="white"/>
+  </svg>`
+);
 
 interface TrackingMapProps {
   lat: number;
@@ -36,24 +24,60 @@ interface TrackingMapProps {
 }
 
 export default function TrackingMap({ lat, lng, route }: TrackingMapProps) {
+  const { isLoaded } = useJsApiLoader({
+    id: "movo-google-maps",
+    googleMapsApiKey: API_KEY,
+    libraries: LIBRARIES,
+  });
+
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat, lng });
+    }
+  }, [lat, lng]);
+
+  if (!isLoaded) {
+    return <div style={{ width: "100%", height: "100%", background: "#f1f5f9" }} />;
+  }
+
+  const path = route.map(([rlat, rlng]) => ({ lat: rlat, lng: rlng }));
+
   return (
-    <MapContainer
-      center={[lat, lng]}
+    <GoogleMap
+      mapContainerStyle={{ width: "100%", height: "100%" }}
+      center={{ lat, lng }}
       zoom={15}
-      scrollWheelZoom
-      zoomControl
-      attributionControl={false}
-      style={{ width: "100%", height: "100%" }}
+      onLoad={(map) => { mapRef.current = map; }}
+      options={{
+        disableDefaultUI: true,
+        zoomControl: true,
+        clickableIcons: false,
+        styles: [
+          { featureType: "poi",     stylers: [{ visibility: "off" }] },
+          { featureType: "transit", stylers: [{ visibility: "off" }] },
+        ],
+      }}
     >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <Recenter lat={lat} lng={lng} />
-      {route.length > 1 && (
+      {path.length > 1 && (
         <Polyline
-          positions={route}
-          pathOptions={{ color: "#1e2d45", weight: 4, opacity: 0.85, lineJoin: "round", lineCap: "round" }}
+          path={path}
+          options={{
+            strokeColor: "#1e2d45",
+            strokeWeight: 4,
+            strokeOpacity: 0.85,
+          }}
         />
       )}
-      <Marker position={[lat, lng]} icon={carIcon} />
-    </MapContainer>
+      <Marker
+        position={{ lat, lng }}
+        icon={{
+          url: `data:image/svg+xml;charset=UTF-8,${CAR_SVG}`,
+          scaledSize: new google.maps.Size(36, 36),
+          anchor: new google.maps.Point(18, 18),
+        }}
+      />
+    </GoogleMap>
   );
 }
