@@ -34,6 +34,17 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum WalletTxType {
+  PAYOUT
+  TOPUP
+}
+
+enum WalletTxStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
 // ─── Auth models ──────────────────────────────────────────────────────────────
 
 model User {
@@ -43,6 +54,7 @@ model User {
   email       String?   @unique
   phone       String?   @unique
   password    String
+  googleId    String?   @unique
   role        Role      @default(USER)
   title       String?
   company     String?
@@ -67,12 +79,17 @@ model Driver {
   country   String
   city      String
   status    DriverStatus @default(PENDING)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  lat       Float?
+  lng       Float?
+  isOnline           Boolean      @default(false)
+  trainingCompleted  Int[]        @default([])
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
-  sessions Session[]
-  bookings Booking[]
-  vehicle  Vehicle?
+  sessions        Session[]
+  bookings         Booking[]
+  vehicle          Vehicle?
+  walletTxs        WalletTransaction[]
 }
 
 model Vehicle {
@@ -117,6 +134,8 @@ model Booking {
   status                BookingStatus @default(PENDING)
   paymentStatus         PaymentStatus @default(UNPAID)
   stripePaymentIntentId String?
+  rating                Float?
+  review                String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -125,4 +144,19 @@ model Booking {
 
   driverId String?
   driver   Driver? @relation(fields: [driverId], references: [id])
+}
+
+// ─── Wallet ────────────────────────────────────────────────────────────────────
+
+model WalletTransaction {
+  id        String         @id @default(cuid())
+  type      WalletTxType
+  status    WalletTxStatus @default(PENDING)
+  amount    Float
+  note      String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  driverId  String
+  driver    Driver         @relation(fields: [driverId], references: [id])
 }

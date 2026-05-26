@@ -2,9 +2,22 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const TOTAL_STEPS = 9;
+
+const modules = [
+  "Welcome to Movo Privé",
+  "Chauffeur App: The Basics",
+  "Chauffeur App: Managing Rides",
+  "Waiting Time Policy",
+  "Partner Portal",
+  "Reviewing Rides",
+  "Guidelines, Quality Standards & Incentives",
+  "How to Avoid Incidents",
+  "Safety Guidelines & Emergency Procedures",
+];
 
 function ProgressBar({ step }: { step: number }) {
   return (
@@ -30,21 +43,29 @@ function ProgressBar({ step }: { step: number }) {
   );
 }
 
-const modules = [
-  "Welcome to Movo Privé",
-  "Chauffeur App: The basic",
-  "Chauffeur App: Managing Rides",
-  "Waiting Time Policy",
-  "Partner Portal",
-  "Reviewing Rides",
-  "Guidelines, Quality Standard and Incentives",
-  "How to Avoid Incidents",
-  "Safety Guidelines & Emergency Procedures",
-];
-
 export default function TrainingModulesPage() {
   const router = useRouter();
-  const completed = 0;
+  const [completedIndices, setCompletedIndices] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/driver/training");
+        if (r.status === 401) { router.push("/driver/onboarding/login"); return; }
+        const text = await r.text();
+        if (!text) return;
+        const d = JSON.parse(text);
+        setCompletedIndices(d.completed ?? []);
+      } catch {
+        // network error or malformed response — leave list empty
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [router]);
+
+  const completedCount = completedIndices.length;
 
   return (
     <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -71,44 +92,60 @@ export default function TrainingModulesPage() {
             <span className="font-semibold" style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Movo Privé
             </span>
-            , please complete the following nine modules. Each module can be accessed individually using the link below.
+            , please complete the following nine modules. Each module can be accessed individually using the links below.
           </p>
 
-          <p className="text-[13px] text-gray-500 mb-4">
-            You have completed <strong>{completed}</strong> out of 9 modules.
-          </p>
+          {loading ? (
+            <div className="h-5 w-48 bg-gray-200 rounded animate-pulse mb-4" />
+          ) : (
+            <p className="text-[13px] text-gray-500 mb-4">
+              You have completed <strong>{completedCount}</strong> out of {modules.length} modules.
+            </p>
+          )}
 
-          {/* Module index */}
-          <p className="text-[12px] text-gray-500 mb-1">Module#</p>
-          <ol className="list-decimal list-inside mb-5 space-y-0.5">
-            {modules.map((_, i) => (
-              <li key={i} className="text-[12px] text-gray-500">{i + 1}.</li>
-            ))}
-          </ol>
+          {/* Module index + links + progress side by side */}
+          <div className="mb-6">
+            <div className="grid grid-cols-[auto_1fr_auto] gap-x-3 gap-y-2 items-center mb-1">
+              <span className="text-[11px] font-bold text-gray-400">#</span>
+              <span className="text-[11px] font-bold text-gray-400">Module</span>
+              <span className="text-[11px] font-bold text-gray-400 text-right">Progress</span>
+            </div>
+            {modules.map((mod, i) => {
+              const done = completedIndices.includes(i);
+              return (
+                <div key={i} className="grid grid-cols-[auto_1fr_auto] gap-x-3 gap-y-0 items-center py-2 border-b border-gray-50 last:border-0">
+                  <span className="text-[12px] text-gray-400 w-5">{i + 1}.</span>
+                  <Link
+                    href={`/driver/onboarding/partner/training/${i}`}
+                    className="text-[13px] font-medium leading-snug"
+                    style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+                  >
+                    {mod}
+                  </Link>
+                  <span className="text-[12px] font-semibold text-right" style={{ color: done ? "#16a34a" : "#9ca3af" }}>
+                    {loading ? "…" : done ? "100%" : "0%"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
 
-          {/* Partner Modules links */}
-          <p className="text-[13px] font-bold text-gray-800 mb-2">Partner Modules</p>
-          <ul className="mb-5 space-y-1.5">
-            {modules.map((mod) => (
-              <li key={mod}>
-                <Link
-                  href="#"
-                  className="text-[13px] font-medium underline-offset-2 hover:underline"
-                  style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-                >
-                  {mod}
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {/* Progress percentage */}
-          <p className="text-[13px] font-bold text-gray-800 mb-2">Progress Percentage</p>
-          <ul className="mb-6 space-y-0.5">
-            {modules.map((mod) => (
-              <li key={mod} className="text-[12px] text-gray-500">0%</li>
-            ))}
-          </ul>
+          {/* Overall progress bar */}
+          <div className="mb-6">
+            <div className="flex justify-between text-[12px] text-gray-500 mb-1">
+              <span>Overall Progress</span>
+              <span>{loading ? "…" : `${Math.round((completedCount / modules.length) * 100)}%`}</span>
+            </div>
+            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${(completedCount / modules.length) * 100}%`,
+                  background: "linear-gradient(90deg,#2D0A53,#8B7500)",
+                }}
+              />
+            </div>
+          </div>
 
           {/* Divider */}
           <div className="h-px bg-gray-100 mb-5" />

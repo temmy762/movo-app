@@ -27,7 +27,7 @@ export default function MiniMap({
   selectedPoint,
   onLocationSelect,
 }: MiniMapProps) {
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
     libraries: LIBRARIES,
@@ -44,6 +44,14 @@ export default function MiniMap({
     },
     [onLocationSelect]
   );
+
+  if (!API_KEY || loadError) {
+    return (
+      <div style={{ width: "100%", height: "100%", background: "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", textAlign: "center" }}>
+        <span style={{ fontSize: "12px", color: "#6b7280" }}>Google Maps is not available. Check the API key configuration.</span>
+      </div>
+    );
+  }
 
   if (!isLoaded) {
     return <div style={{ width: "100%", height: "100%", background: "#e5e7eb" }} />;

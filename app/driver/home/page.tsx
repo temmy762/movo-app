@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -56,6 +56,14 @@ export default function DriverHomePage() {
   const [showTripComplete, setShowTripComplete] = useState(false);
   const [tripRating, setTripRating] = useState(4);
   const [actionLoading, setActionLoading] = useState(false);
+  const [stats, setStats] = useState<{ totalEarned: number; preBooked: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/driver/stats")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setStats(d); })
+      .catch(() => {});
+  }, []);
 
   const patchStatus = useCallback(async (id: string, status: string) => {
     await fetch(`/api/bookings/${id}/status`, {
@@ -169,7 +177,7 @@ export default function DriverHomePage() {
               </div>
               <div>
                 <p className="text-[10px] text-gray-400 leading-none">Pre Booked</p>
-                <p className="text-[13px] font-bold text-gray-800">12</p>
+                <p className="text-[13px] font-bold text-gray-800">{stats ? stats.preBooked : "–"}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm">
@@ -181,7 +189,7 @@ export default function DriverHomePage() {
               </div>
               <div>
                 <p className="text-[10px] text-gray-400 leading-none">Total Earned</p>
-                <p className="text-[13px] font-bold text-gray-800">$200.00</p>
+                <p className="text-[13px] font-bold text-gray-800">{stats ? `$${stats.totalEarned.toFixed(2)}` : "–"}</p>
               </div>
             </div>
           </div>
@@ -381,7 +389,14 @@ export default function DriverHomePage() {
               Trip completed review your trip now.
             </p>
             <button type="button"
-              onClick={() => {
+              onClick={async () => {
+                if (activeBooking) {
+                  await fetch(`/api/bookings/${activeBooking.id}/rating`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ rating: tripRating }),
+                  });
+                }
                 setShowTripComplete(false);
                 setRidePhase("idle");
                 setIsOnline(false);

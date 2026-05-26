@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 function SectionRow({ label, onClick }: { label: string; onClick?: () => void }) {
@@ -34,6 +34,18 @@ export default function DriverProfilePage() {
   const router = useRouter();
   const [photo, setPhoto] = useState<string | null>(null);
   const { user } = useCurrentUser();
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [totalReviews, setTotalReviews] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/driver/ratings")
+      .then((r) => r.json())
+      .then((d) => {
+        setAvgRating(d.avgRating ?? null);
+        setTotalReviews(d.totalReviews ?? 0);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -53,7 +65,17 @@ export default function DriverProfilePage() {
         </button>
         <div className="flex-1">
           <p className="text-[18px] font-bold text-gray-900 leading-tight">{user?.firstName ?? "Driver"}</p>
-          <p className="text-[12px] text-gray-400">Profile details</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <span className="text-[12px] font-semibold text-gray-700">
+              {avgRating !== null ? avgRating.toFixed(1) : "–"}
+            </span>
+            <span className="text-[11px] text-gray-400">
+              ({totalReviews} review{totalReviews !== 1 ? "s" : ""})
+            </span>
+          </div>
         </div>
         <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center overflow-hidden">
           {photo ? (

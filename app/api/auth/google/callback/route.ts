@@ -1,15 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, buildSetCookieHeader } from "@/lib/session";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+function loginRedirect(token: string) {
+  return NextResponse.redirect(`${BASE_URL}/home`, {
+    headers: { "Set-Cookie": buildSetCookieHeader(token) },
+  });
+}
+
+function errorRedirect(page: "login" | "register", code: string) {
+  const path = page === "register" ? "/onboarding/register" : "/onboarding/login";
+  return NextResponse.redirect(`${BASE_URL}${path}?error=${code}`);
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
+  const googleError = searchParams.get("error");
+  const state = searchParams.get("state");
+  const intent: "login" | "signup" = state === "signup" ? "signup" : "login";
+  const errorPage = intent === "signup" ? "register" : "login";
+
+  if (googleError) {
+    return errorRedirect(errorPage, googleError === "access_denied" ? "google_cancelled" : "google_provider_failed");
+  }
 
   if (!code) {
-    return NextResponse.redirect(`${BASE_URL}/onboarding/login?error=oauth`);
+    return errorRedirect(errorPage, "google_cancelled");
   }
 
   try {
@@ -29,37 +49,71 @@ export async function GET(req: NextRequest) {
 
     const tokens = await tokenRes.json();
     if (!tokenRes.ok || !tokens.access_token) {
-      return NextResponse.redirect(`${BASE_URL}/onboarding/login?error=oauth`);
+      return errorRedirect(errorPage, "google_token_failed");
     }
 
     const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
+    if (!userRes.ok) {
+      return errorRedirect(errorPage, "google_token_failed");
+    }
+
     const googleUser = await userRes.json();
 
     if (!googleUser.email) {
-      return NextResponse.redirect(`${BASE_URL}/onboarding/login?error=oauth`);
+      return errorRedirect(errorPage, "google_no_email");
     }
 
-    let user = await prisma.user.findUnique({ where: { email: googleUser.email } });
+    const googleId: string = googleUser.id;
 
-    if (!user) {
-      user = await prisma.user.create({
+    if (intent === "login") {
+      const byGoogleId = await prisma.user.findUnique({ where: { googleId } });
+      if (byGoogleId) {
+        const token = await createSession("USER", byGoogleId.id);
+        return loginRedirect(token);
+      }
+
+      const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } });
+      if (byEmail) {
+        if (!byEmail.googleId) {
+          return errorRedirect("login", "google_wrong_provider");
+        }
+        const token = await createSession("USER", byEmail.id);
+        return loginRedirect(token);
+      }
+
+      return errorRedirect("login", "google_not_linked");
+    }
+
+    if (intent === "signup") {
+      const byGoogleId = await prisma.user.findUnique({ where: { googleId } });
+      if (byGoogleId) {
+        const token = await createSession("USER", byGoogleId.id);
+        return loginRedirect(token);
+      }
+
+      const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } });
+      if (byEmail) {
+        return errorRedirect("register", "google_wrong_provider");
+      }
+
+      const password = await bcrypt.hash(crypto.randomUUID(), 12);
+      const newUser = await prisma.user.create({
         data: {
           firstName: googleUser.given_name ?? googleUser.name?.split(" ")[0] ?? "User",
           lastName: googleUser.family_name ?? googleUser.name?.split(" ").slice(1).join(" ") ?? "",
           email: googleUser.email,
-          password: crypto.randomUUID(),
+          googleId,
+          password,
         },
       });
+      const token = await createSession("USER", newUser.id);
+      return loginRedirect(token);
     }
 
-    const token = await createSession("USER", user.id);
-
-    return NextResponse.redirect(`${BASE_URL}/home`, {
-      headers: { "Set-Cookie": buildSetCookieHeader(token) },
-    });
+    return errorRedirect(errorPage, "google_token_failed");
   } catch {
-    return NextResponse.redirect(`${BASE_URL}/onboarding/login?error=oauth`);
+    return errorRedirect(errorPage, "google_token_failed");
   }
 }

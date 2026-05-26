@@ -1,7 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+type Ride = {
+  id: string;
+  clientName: string;
+  pickup: string;
+  dropoff: string;
+  carName: string;
+  fare: number;
+  total: number;
+  paymentStatus: string;
+  createdAt: string;
+};
 
 const quickLinks = [
   { label: "My Rides", href: "/driver/home/finish/my-rides", icon: (
@@ -25,6 +38,25 @@ const quickLinks = [
 
 export default function FinishPage() {
   const router = useRouter();
+  const [rides, setRides] = useState<Ride[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRides = () => {
+    setLoading(true);
+    fetch("/api/driver/rides")
+      .then((r) => r.json())
+      .then((data) => setRides(Array.isArray(data) ? data : []))
+      .catch(() => setRides([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchRides(); }, []);
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -41,7 +73,7 @@ export default function FinishPage() {
         </button>
       </header>
 
-      {/* Quick nav links */}
+      {/* Quick nav links — unchanged */}
       <div className="grid grid-cols-3 gap-3 px-4 pt-4">
         {quickLinks.map((l) => (
           <Link key={l.href} href={l.href}
@@ -52,25 +84,82 @@ export default function FinishPage() {
         ))}
       </div>
 
-      {/* Empty state */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" className="mb-4">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="#e5e7eb" strokeWidth="1.4" />
-        </svg>
-        <p className="text-[15px] font-semibold text-gray-700 mb-1">No finished rides yet</p>
-        <p className="text-[12px] text-gray-400 text-center mb-3">
-          Once you complete a ride it will be shown here.
-        </p>
-        <button
-          className="no-hover-fx text-[13px] font-semibold"
-          style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-          onClick={() => router.refresh()}
-        >
-          Refresh
-        </button>
-      </div>
+      {/* Finished rides list below */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
 
+        {/* Loading skeleton */}
+        {loading && Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl p-4 mb-3 animate-pulse space-y-2 shadow-sm">
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="h-3 bg-gray-200 rounded w-3/4" />
+            <div className="h-3 bg-gray-200 rounded w-2/3" />
+            <div className="h-3 bg-gray-200 rounded w-1/4" />
+          </div>
+        ))}
+
+        {/* Empty state */}
+        {!loading && rides.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" className="mb-4">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="#e5e7eb" strokeWidth="1.4" />
+            </svg>
+            <p className="text-[15px] font-semibold text-gray-700 mb-1">No finished rides yet</p>
+            <p className="text-[12px] text-gray-400 text-center mb-3">
+              Once you complete a ride it will appear here automatically.
+            </p>
+            <button
+              className="no-hover-fx text-[13px] font-semibold"
+              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+              onClick={fetchRides}
+            >
+              Refresh
+            </button>
+          </div>
+        )}
+
+        {/* Ride cards */}
+        {!loading && rides.map((ride) => (
+          <div key={ride.id} className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-[13px] font-bold text-gray-900">{formatDate(ride.createdAt)}</p>
+                <p className="text-[11px] text-gray-400">{formatTime(ride.createdAt)}</p>
+              </div>
+              <span
+                className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{
+                  background: ride.paymentStatus === "PAID" ? "#dcfce7" : "#fef9c3",
+                  color: ride.paymentStatus === "PAID" ? "#16a34a" : "#854d0e",
+                }}
+              >
+                {ride.paymentStatus === "PAID" ? "Paid" : "Unpaid"}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 mb-3">
+              <div className="flex items-start gap-2">
+                <span className="w-2 h-2 mt-1 rounded-full bg-[#2D0A53] shrink-0" />
+                <p className="text-[12px] text-gray-700 line-clamp-1">{ride.pickup}</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="w-2 h-2 mt-1 rounded-full bg-[#8B7500] shrink-0" />
+                <p className="text-[12px] text-gray-700 line-clamp-1">{ride.dropoff}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+              <div>
+                <p className="text-[11px] text-gray-400">Client</p>
+                <p className="text-[13px] font-semibold text-gray-800">{ride.clientName}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] text-gray-400">Earnings</p>
+                <p className="text-[15px] font-bold" style={{ color: "#2D0A53" }}>${ride.fare.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+      </div>
     </div>
   );
 }

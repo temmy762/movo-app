@@ -1,32 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Ride = {
-  id: number;
-  name: string;
-  vehicle: string;
-  amount: string;
-  from: string;
-  to: string;
-  payment: string;
-  date: string;
-  avatar?: string;
+  id: string;
+  clientName: string;
+  carName: string;
+  fare: number;
+  pickup: string;
+  dropoff: string;
+  status: string;
+  paymentStatus: string;
+  createdAt: string;
 };
 
-const pastRides: Ride[] = [
-  { id: 1, name: "Janet Precious", vehicle: "Alfa 500", amount: "$100.00", from: "Chicago, IL", to: "Houston, TX", payment: "Wallet", date: "Today | 10:36 AM" },
-  { id: 2, name: "Henry Smith", vehicle: "HB1234", amount: "$59.00", from: "San Diego, CA", to: "San Jose, CA", payment: "Visa", date: "Today | 12:30 AM" },
-  { id: 3, name: "Adam Uthman", vehicle: "Alfa 500", amount: "$180.00", from: "Chicago, IL", to: "Houston, TX", payment: "Wallet", date: "25 Jan 2025 | 10:36 AM" },
-  { id: 4, name: "Peter William", vehicle: "PW1234", amount: "$85.00", from: "San Diego, CA", to: "San Jose, CA", payment: "Visa", date: "Today | 12:00 AM" },
-  { id: 5, name: "Precious Sandra", vehicle: "", amount: "$59.00", from: "San Diego, CA", to: "San Jose, CA", payment: "Visa", date: "13 Dec 2025 | 10:30 AM" },
-];
-
-const upcomingRides: Ride[] = [
-  { id: 6, name: "Michael Ross", vehicle: "MR2200", amount: "$75.00", from: "New York, NY", to: "Boston, MA", payment: "MasterCard", date: "Tomorrow | 09:00 AM" },
-  { id: 7, name: "Sarah Connor", vehicle: "SC4400", amount: "$120.00", from: "Los Angeles, CA", to: "San Francisco, CA", payment: "Wallet", date: "02 Feb 2025 | 14:00 PM" },
-];
+function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const isToday = d.toDateString() === today.toDateString();
+  const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const date = isToday ? "Today" : d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return `${date} | ${time}`;
+}
 
 function RideCard({ ride }: { ride: Ride }) {
   return (
@@ -43,27 +39,27 @@ function RideCard({ ride }: { ride: Ride }) {
             </svg>
           </div>
           <div>
-            <p className="text-[14px] font-semibold text-gray-900">{ride.name}</p>
-            {ride.vehicle && <p className="text-[11px] text-gray-400">{ride.vehicle}</p>}
+            <p className="text-[14px] font-semibold text-gray-900">{ride.clientName}</p>
+            {ride.carName && <p className="text-[11px] text-gray-400">{ride.carName}</p>}
           </div>
         </div>
-        <span className="text-[14px] font-bold text-red-500">{ride.amount}</span>
+        <span className="text-[14px] font-bold text-red-500">${ride.fare.toFixed(2)}</span>
       </div>
 
       <div className="flex flex-col gap-1.5 mb-3 pl-1">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }} />
-          <p className="text-[12px] text-gray-600">{ride.from}</p>
+          <p className="text-[12px] text-gray-600 line-clamp-1">{ride.pickup}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
-          <p className="text-[12px] text-gray-600">{ride.to}</p>
+          <p className="text-[12px] text-gray-600 line-clamp-1">{ride.dropoff}</p>
         </div>
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-gray-400">
-        <span>Payment: <span className="font-medium text-gray-600">{ride.payment}</span></span>
-        <span>Date Time: <span className="font-medium text-gray-600">{ride.date}</span></span>
+        <span>Payment: <span className="font-medium text-gray-600">{ride.paymentStatus === "PAID" ? "Paid" : "Unpaid"}</span></span>
+        <span>Date Time: <span className="font-medium text-gray-600">{formatDateTime(ride.createdAt)}</span></span>
       </div>
     </div>
   );
@@ -72,7 +68,17 @@ function RideCard({ ride }: { ride: Ride }) {
 export default function MyRidesPage() {
   const router = useRouter();
   const [tab, setTab] = useState<"past" | "upcoming">("past");
-  const rides = tab === "past" ? pastRides : upcomingRides;
+  const [rides, setRides] = useState<Ride[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/driver/rides?tab=${tab}`)
+      .then((r) => r.json())
+      .then((data) => setRides(Array.isArray(data) ? data : []))
+      .catch(() => setRides([]))
+      .finally(() => setLoading(false));
+  }, [tab]);
 
   return (
     <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -110,11 +116,47 @@ export default function MyRidesPage() {
 
       {/* Ride list */}
       <div className="flex-1 px-4 pt-4 pb-8 w-full max-w-lg mx-auto md:max-w-2xl">
-        {rides.map((ride) => (
+
+        {/* Loading skeleton */}
+        {loading && Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl px-4 py-4 shadow-sm mb-3 animate-pulse space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200" />
+                <div className="space-y-1">
+                  <div className="h-4 bg-gray-200 rounded w-28" />
+                  <div className="h-3 bg-gray-200 rounded w-16" />
+                </div>
+              </div>
+              <div className="h-4 bg-gray-200 rounded w-14" />
+            </div>
+            <div className="h-3 bg-gray-200 rounded w-3/4" />
+            <div className="h-3 bg-gray-200 rounded w-2/3" />
+          </div>
+        ))}
+
+        {/* Empty state */}
+        {!loading && rides.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" className="mb-3">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="#e5e7eb" strokeWidth="1.4" />
+            </svg>
+            <p className="text-[14px] font-semibold text-gray-700">
+              No {tab === "past" ? "past" : "upcoming"} rides
+            </p>
+            <p className="text-[12px] text-gray-400 mt-1">
+              {tab === "past" ? "Completed rides will appear here." : "Confirmed bookings will appear here."}
+            </p>
+          </div>
+        )}
+
+        {/* Real ride cards */}
+        {!loading && rides.map((ride) => (
           <RideCard key={ride.id} ride={ride} />
         ))}
-      </div>
 
+      </div>
     </div>
   );
 }

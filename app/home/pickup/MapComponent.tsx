@@ -1,19 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 const DEFAULT_CENTER = { lat: 43.6532, lng: -79.3832 };
 
-const CAR_POSITIONS = [
-  { lat: 43.656, lng: -79.3802 },
-  { lat: 43.651, lng: -79.386 },
-  { lat: 43.6548, lng: -79.3775 },
-  { lat: 43.6498, lng: -79.3905 },
-  { lat: 43.6578, lng: -79.375 },
-];
+const POLL_INTERVAL_MS = 15000;
 
 const CAR_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
@@ -31,6 +25,14 @@ const PIN_SVG = encodeURIComponent(
   </svg>`
 );
 
+const DROPOFF_SVG = encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44">
+    <circle cx="17" cy="17" r="17" fill="#8B7500"/>
+    <circle cx="17" cy="17" r="7" fill="white"/>
+    <polygon points="9,31 25,31 17,44" fill="#8B7500"/>
+  </svg>`
+);
+
 const MAP_STYLES = [
   { featureType: "poi", stylers: [{ visibility: "off" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
@@ -38,11 +40,12 @@ const MAP_STYLES = [
 
 interface Props {
   selectedPoint?: { lat: number; lng: number } | null;
+  selectedDropoff?: { lat: number; lng: number } | null;
   onLocationSelect?: (lat: number, lng: number) => void;
 }
 
-export default function MapComponent({ selectedPoint, onLocationSelect }: Props) {
-  const { isLoaded } = useJsApiLoader({
+export default function MapComponent({ selectedPoint, selectedDropoff, onLocationSelect }: Props) {
+  const { isLoaded, loadError } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
     libraries: LIBRARIES,
@@ -50,6 +53,8 @@ export default function MapComponent({ selectedPoint, onLocationSelect }: Props)
 
   const [center, setCenter] = useState(DEFAULT_CENTER);
   const [mapRef, setMapRef] = useState<google.maps.Map | null>(null);
+  const [nearbyDrivers, setNearbyDrivers] = useState<{ id: string; lat: number; lng: number }[]>([]);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -63,6 +68,26 @@ export default function MapComponent({ selectedPoint, onLocationSelect }: Props)
     );
   }, [mapRef]);
 
+  useEffect(() => {
+    const fetchDrivers = async () => {
+      try {
+        const res = await fetch("/api/drivers/nearby");
+        if (res.ok) {
+          const data = await res.json();
+          setNearbyDrivers(data);
+        }
+      } catch {
+        // silent — map still works without live drivers
+      }
+    };
+
+    fetchDrivers();
+    intervalRef.current = setInterval(fetchDrivers, POLL_INTERVAL_MS);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
   const onMapClick = useCallback(
     (e: google.maps.MapMouseEvent) => {
       if (onLocationSelect && e.latLng) {
@@ -71,6 +96,14 @@ export default function MapComponent({ selectedPoint, onLocationSelect }: Props)
     },
     [onLocationSelect]
   );
+
+  if (!API_KEY || loadError) {
+    return (
+      <div style={{ width: "100%", height: "100%", background: "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", textAlign: "center" }}>
+        <span style={{ fontSize: "13px", color: "#6b7280" }}>Google Maps is not available. Please check the API key, billing, and allowed website referrers.</span>
+      </div>
+    );
+  }
 
   if (!isLoaded) {
     return (
@@ -109,11 +142,11 @@ export default function MapComponent({ selectedPoint, onLocationSelect }: Props)
         zIndex={10}
       />
 
-      {/* Nearby car markers */}
-      {CAR_POSITIONS.map((pos, i) => (
+      {/* Nearby car markers — live driver positions */}
+      {nearbyDrivers.map((driver) => (
         <Marker
-          key={i}
-          position={pos}
+          key={driver.id}
+          position={{ lat: driver.lat, lng: driver.lng }}
           icon={{
             url: `data:image/svg+xml;charset=UTF-8,${CAR_SVG}`,
             scaledSize: new google.maps.Size(32, 32),
@@ -128,6 +161,19 @@ export default function MapComponent({ selectedPoint, onLocationSelect }: Props)
           position={selectedPoint}
           icon={{
             url: `data:image/svg+xml;charset=UTF-8,${PIN_SVG}`,
+            scaledSize: new google.maps.Size(34, 44),
+            anchor: new google.maps.Point(17, 44),
+          }}
+          zIndex={20}
+        />
+      )}
+
+      {/* Selected dropoff pin */}
+      {selectedDropoff && (
+        <Marker
+          position={selectedDropoff}
+          icon={{
+            url: `data:image/svg+xml;charset=UTF-8,${DROPOFF_SVG}`,
             scaledSize: new google.maps.Size(34, 44),
             anchor: new google.maps.Point(17, 44),
           }}

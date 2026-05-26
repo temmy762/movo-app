@@ -4,31 +4,10 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-const cars = [
-  {
-    id: 1,
-    tier: "classic",
-    name: "Movo Classic",
-    specs: "Automatic  |  3 seats  |  Octane",
-    distance: "800m (3mins away)",
-    img: "/images/movo classic.png",
-  },
-  {
-    id: 2,
-    tier: "premium",
-    name: "Movo Premium",
-    specs: "Automatic  |  3 seats  |  Octane",
-    distance: "800m (3mins away)",
-    img: "/images/movo premium.png",
-  },
-  {
-    id: 3,
-    tier: "black",
-    name: "Movo Privé Black",
-    specs: "Automatic  |  3 seats  |  Octane",
-    distance: "800m (3mins away)",
-    img: "/images/prive black.png",
-  },
+const DEMO_CARS = [
+  { id: 1, tier: "classic", name: "Movo Classic",     specs: "Automatic  |  3 seats  |  Octane", distance: "800m (3 mins away)", img: "/images/movo classic.png" },
+  { id: 2, tier: "premium", name: "Movo Premium",     specs: "Automatic  |  3 seats  |  Octane", distance: "800m (3 mins away)", img: "/images/movo premium.png" },
+  { id: 3, tier: "black",   name: "Movo Privé Black", specs: "Automatic  |  3 seats  |  Octane", distance: "800m (3 mins away)", img: "/images/prive black.png" },
 ];
 
 function AvailableCarsContent() {
@@ -40,8 +19,8 @@ function AvailableCarsContent() {
 
   const filtered =
     tier === "all"
-      ? [...cars, ...cars, ...cars].slice(0, 9)
-      : Array(3).fill(cars.find((c) => c.tier === tier) ?? cars[0]);
+      ? [...DEMO_CARS, ...DEMO_CARS, ...DEMO_CARS].slice(0, 9)
+      : Array(3).fill(DEMO_CARS.find((c) => c.tier === tier) ?? DEMO_CARS[0]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -71,7 +50,6 @@ function AvailableCarsContent() {
               key={i}
               className="bg-gray-50 border border-gray-200 rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-2"
             >
-              {/* Top row: info + image */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-bold text-gray-900">{car.name}</p>
@@ -89,7 +67,6 @@ function AvailableCarsContent() {
                 </div>
               </div>
 
-              {/* BOOK NOW button */}
               <button
                 type="button"
                 onClick={() => {
