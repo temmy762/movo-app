@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -56,13 +56,23 @@ export default function DriverHomePage() {
   const [showTripComplete, setShowTripComplete] = useState(false);
   const [tripRating, setTripRating] = useState(4);
   const [actionLoading, setActionLoading] = useState(false);
-  const [stats, setStats] = useState<{ totalEarned: number; preBooked: number } | null>(null);
+  const [stats, setStats] = useState<{ totalEarned: number; preBooked: number }>({ totalEarned: 0, preBooked: 0 });
+  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(30);
 
   useEffect(() => {
     fetch("/api/driver/stats")
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setStats(d); })
+      .then((r) => r.ok ? r.json() : { totalEarned: 0, preBooked: 0 })
+      .then((d) => setStats(d))
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current)      clearInterval(pollRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
   }, []);
 
   const patchStatus = useCallback(async (id: string, status: string) => {
@@ -73,8 +83,26 @@ export default function DriverHomePage() {
     });
   }, []);
 
+  const startCountdown = useCallback((onExpire: () => void) => {
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setTimeLeft(30);
+    let remaining = 30;
+    countdownRef.current = setInterval(() => {
+      remaining -= 1;
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        onExpire();
+      }
+    }, 1000);
+  }, []);
+
+  const stopCountdown = useCallback(() => {
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    setTimeLeft(30);
+  }, []);
+
   const fetchNextPending = useCallback(async () => {
-    setRidePhase("searching");
     try {
       const res = await fetch("/api/bookings?status=PENDING");
       const data = await res.json();
@@ -83,20 +111,43 @@ export default function DriverHomePage() {
       if (next) {
         setActiveBooking(next);
         setRidePhase("requesting");
-      } else {
-        setRidePhase("idle");
       }
     } catch {
-      setRidePhase("idle");
+      // network hiccup — keep polling
     }
+  }, []);
+
+  const startPolling = useCallback((poll: () => void) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    poll(); // immediate first check
+    pollRef.current = setInterval(poll, 5000);
+  }, []);
+
+  /* Start 30s countdown whenever a new request arrives */
+  useEffect(() => {
+    if (ridePhase !== "requesting" || !activeBooking) return;
+    startCountdown(() => {
+      setActiveBooking(null);
+      setRidePhase("searching");
+      startPolling(fetchNextPending);
+    });
+    return () => stopCountdown();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBooking?.id]);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
   }, []);
 
   async function handleToggleOnline() {
     const next = !isOnline;
     setIsOnline(next);
     if (next) {
-      await fetchNextPending();
+      setRidePhase("searching");
+      startPolling(fetchNextPending);
     } else {
+      stopPolling();
+      stopCountdown();
       setRidePhase("idle");
       setActiveBooking(null);
       setShowDeclineModal(false);
@@ -105,17 +156,31 @@ export default function DriverHomePage() {
 
   async function handleAccept() {
     if (!activeBooking) return;
+    stopPolling();
+    stopCountdown();
     setActionLoading(true);
-    await patchStatus(activeBooking.id, "CONFIRMED");
+    const res = await fetch(`/api/bookings/${activeBooking.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "CONFIRMED" }),
+    });
     setActionLoading(false);
+    if (res.status === 409) {
+      /* Another driver got it first — resume searching */
+      setActiveBooking(null);
+      setRidePhase("searching");
+      startPolling(fetchNextPending);
+      return;
+    }
     setRidePhase("accepted");
   }
 
   async function handleDecline() {
+    stopCountdown();
     setShowDeclineModal(false);
-    setRidePhase("idle");
-    setIsOnline(false);
     setActiveBooking(null);
+    setRidePhase("searching");
+    startPolling(fetchNextPending);
   }
 
   async function handleEndRide() {
@@ -177,7 +242,7 @@ export default function DriverHomePage() {
               </div>
               <div>
                 <p className="text-[10px] text-gray-400 leading-none">Pre Booked</p>
-                <p className="text-[13px] font-bold text-gray-800">{stats ? stats.preBooked : "–"}</p>
+                <p className="text-[13px] font-bold text-gray-800">{stats.preBooked}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm">
@@ -189,7 +254,7 @@ export default function DriverHomePage() {
               </div>
               <div>
                 <p className="text-[10px] text-gray-400 leading-none">Total Earned</p>
-                <p className="text-[13px] font-bold text-gray-800">{stats ? `$${stats.totalEarned.toFixed(2)}` : "–"}</p>
+                <p className="text-[13px] font-bold text-gray-800">${stats.totalEarned.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -197,26 +262,15 @@ export default function DriverHomePage() {
 
         <div className="flex-1" />
 
-        {/* Searching spinner */}
+        {/* Searching / waiting */}
         {ridePhase === "searching" && (
           <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-5 pb-6 flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-4 border-gray-200 border-t-[#2D0A53] rounded-full animate-spin" />
             <p className="text-[14px] font-semibold text-gray-700">Looking for ride requests…</p>
+            <p className="text-[11px] text-gray-400">New requests will appear automatically</p>
           </div>
         )}
 
-        {/* No rides available */}
-        {ridePhase === "idle" && isOnline && (
-          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-5 pb-6 flex flex-col items-center gap-2">
-            <p className="text-[14px] font-semibold text-gray-700">No pending rides right now</p>
-            <p className="text-[12px] text-gray-400">Stay online — new requests will appear here</p>
-            <button onClick={fetchNextPending}
-              className="no-hover-fx mt-2 px-6 py-2 rounded-xl text-white text-[13px] font-semibold"
-              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
-              Check Again
-            </button>
-          </div>
-        )}
 
         {/* ── Bottom sheet — phase aware ── */}
         {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "started") && activeBooking && (
@@ -227,10 +281,23 @@ export default function DriverHomePage() {
               <>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[15px] font-bold text-gray-900">Ride Request</p>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
-                    style={{ background: "#fef3c7", color: "#d97706" }}>
-                    {activeBooking.carName}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {ridePhase === "requesting" && (
+                      <span
+                        className="text-[12px] font-bold w-7 h-7 rounded-full flex items-center justify-center"
+                        style={{
+                          background: timeLeft <= 10 ? "#fee2e2" : "#f3f4f6",
+                          color:      timeLeft <= 10 ? "#ef4444" : "#374151",
+                        }}
+                      >
+                        {timeLeft}
+                      </span>
+                    )}
+                    <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+                      style={{ background: "#fef3c7", color: "#d97706" }}>
+                      {activeBooking.carName}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">

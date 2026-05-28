@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 const TrackingMap = dynamic(() => import("./TrackingMap"), {
@@ -10,7 +10,7 @@ const TrackingMap = dynamic(() => import("./TrackingMap"), {
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TripStatus = "On Trip" | "Returned";
 type Vehicle = {
-  id:number; client:string; car:string; carType:string; carNumber:string;
+  id:string; client:string; car:string; carType:string; carNumber:string;
   status:TripStatus; startDate:string; endDate:string; tripTime:string; distance:string;
   pos:[number,number]; route:[number,number][];
 };
@@ -24,17 +24,6 @@ const AVATAR_COLS=["#ef4444","#f97316","#eab308","#22c55e","#06b6d4","#6366f1","
 const ac=(n:string)=>AVATAR_COLS[n.charCodeAt(0)%AVATAR_COLS.length];
 const ini=(n:string)=>n.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
 
-const VEHICLES: Vehicle[] = [
-  {id:1,client:"Helen Martinez",car:"Aston Martin",   carType:"Sedan", carNumber:"A01234",status:"Returned",startDate:"Mon, 1 Aug 2028", endDate:"Tue, 2 Aug 2028", tripTime:"8 hrs 20 min",  distance:"140 miles",pos:[34.0620,-118.2420],route:[[34.0720,-118.2300],[34.0680,-118.2350],[34.0620,-118.2420]]},
-  {id:2,client:"Bob Smith",     car:"Hyundai Sonata", carType:"Sedan", carNumber:"B05678",status:"On Trip", startDate:"Tue, 2 Aug 2028", endDate:"Thu, 4 Aug 2028", tripTime:"6 hrs 15 min",  distance:"95 miles", pos:[34.0520,-118.2480],route:[[34.0680,-118.2350],[34.0610,-118.2410],[34.0520,-118.2480]]},
-  {id:3,client:"Diana White",   car:"Chevrolet Bolt", carType:"SUV",   carNumber:"C02345",status:"On Trip", startDate:"Wed, 2 Aug 2028", endDate:"Thu, 3 Aug 2028", tripTime:"12 hrs 39 min", distance:"180 miles",pos:[34.0445,-118.2630],route:[[34.0680,-118.2360],[34.0620,-118.2420],[34.0570,-118.2480],[34.0510,-118.2550],[34.0445,-118.2630]]},
-  {id:4,client:"Edward Green",  car:"VW Amarok",      carType:"Pickup",carNumber:"D09012",status:"Returned",startDate:"Sun, 31 Jul 2028",endDate:"Tue, 2 Aug 2028", tripTime:"10 hrs 5 min",  distance:"160 miles",pos:[34.0380,-118.2620],route:[[34.0680,-118.2380],[34.0530,-118.2510],[34.0380,-118.2620]]},
-  {id:5,client:"Fiona Brown",   car:"BMW iX3",        carType:"SUV",   carNumber:"E03456",status:"On Trip", startDate:"Wed, 2 Aug 2028", endDate:"Fri, 4 Aug 2028", tripTime:"5 hrs 50 min",  distance:"75 miles", pos:[34.0560,-118.2450],route:[[34.0730,-118.2310],[34.0650,-118.2380],[34.0560,-118.2450]]},
-  {id:6,client:"George Clark",  car:"Audi Q7",        carType:"SUV",   carNumber:"F07890",status:"On Trip", startDate:"Tue, 2 Aug 2028", endDate:"Thu, 4 Aug 2028", tripTime:"9 hrs 10 min",  distance:"130 miles",pos:[34.0490,-118.2510],route:[[34.0670,-118.2390],[34.0590,-118.2450],[34.0490,-118.2510]]},
-  {id:7,client:"Helen Martinez",car:"Nissan Ariya",   carType:"SUV",   carNumber:"G01234",status:"Returned",startDate:"Mon, 1 Aug 2028", endDate:"Wed, 3 Aug 2028", tripTime:"7 hrs 45 min",  distance:"110 miles",pos:[34.0400,-118.2570],route:[[34.0640,-118.2430],[34.0510,-118.2490],[34.0400,-118.2570]]},
-  {id:8,client:"Laura King",    car:"Kia EV6",        carType:"SUV",   carNumber:"H05678",status:"On Trip", startDate:"Wed, 2 Aug 2028", endDate:"Fri, 4 Aug 2028", tripTime:"4 hrs 30 min",  distance:"60 miles", pos:[34.0460,-118.2680],route:[[34.0640,-118.2500],[34.0570,-118.2590],[34.0460,-118.2680]]},
-  {id:9,client:"Ivan Rodriguez",car:"Range Rover Velar",carType:"SUV", carNumber:"I09012",status:"On Trip", startDate:"Tue, 2 Aug 2028", endDate:"Fri, 5 Aug 2028", tripTime:"15 hrs 20 min", distance:"210 miles",pos:[34.0350,-118.2650],route:[[34.0700,-118.2370],[34.0540,-118.2490],[34.0350,-118.2650]]},
-];
 
 // ── Car silhouette icon ───────────────────────────────────────────────────────
 function CarThumb({color="#94a3b8"}:{color?:string}){
@@ -112,11 +101,21 @@ function AddCarModal({ onSave, onClose }: { onSave:(v:Omit<Vehicle,"id"|"pos"|"r
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function TrackingPage() {
-  const[vehicles,setVehicles]=useState<Vehicle[]>(VEHICLES);
-  const[activeId,setActiveId]=useState(3);
+  const[vehicles,setVehicles]=useState<Vehicle[]>([]);
+  const[activeId,setActiveId]=useState<string|null>(null);
   const[search,setSearch]=useState("");
   const[addOpen,setAddOpen]=useState(false);
   const[mobileView,setMobileView]=useState<"list"|"map">("map");
+
+  useEffect(()=>{
+    fetch("/api/admin/tracking")
+      .then(r=>r.json())
+      .then((data:Vehicle[])=>{
+        setVehicles(data);
+        if(data.length>0) setActiveId(data[0].id);
+      })
+      .catch(console.error);
+  },[]);
 
   const filtered=vehicles.filter(v=>
     v.client.toLowerCase().includes(search.toLowerCase())||
@@ -125,9 +124,8 @@ export default function TrackingPage() {
   const active=vehicles.find(v=>v.id===activeId);
 
   const handleAdd=(d:Omit<Vehicle,"id"|"pos"|"route">)=>{
-    const id=Math.max(...vehicles.map(v=>v.id))+1;
-    const pos:[number,number]=[34.0430+( Math.random()-0.5)*0.04, -118.2500+(Math.random()-0.5)*0.04];
-    setVehicles(p=>[...p,{...d,id,pos,route:[pos]}]);
+    const pos:[number,number]=[34.0430+(Math.random()-0.5)*0.04, -118.2500+(Math.random()-0.5)*0.04];
+    setVehicles(p=>[...p,{...d,id:crypto.randomUUID(),pos,route:[pos]}]);
     setAddOpen(false);
   };
 

@@ -1,9 +1,21 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function SplashPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push("/onboarding/welcome");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [router]);
+
   return (
-    <Link href="/onboarding/welcome" className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white">
 
       {/* Logo — top 55% */}
       <div className="flex items-center justify-center" style={{ height: "55%" }}>
@@ -28,6 +40,6 @@ export default function SplashPage() {
           priority
         />
       </div>
-    </Link>
+    </div>
   );
 }

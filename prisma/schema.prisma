@@ -45,6 +45,20 @@ enum WalletTxStatus {
   FAILED
 }
 
+enum SupportCategory {
+  CONTACT_DRIVER
+  RIDE_ISSUE
+  PAYMENT_HELP
+  CHAT_SUPPORT
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
 // ─── Auth models ──────────────────────────────────────────────────────────────
 
 model User {
@@ -65,8 +79,9 @@ model User {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  sessions  Session[]
-  bookings  Booking[]
+  sessions        Session[]
+  bookings         Booking[]
+  supportTickets   SupportTicket[]
 }
 
 model Driver {
@@ -144,6 +159,26 @@ model Booking {
 
   driverId String?
   driver   Driver? @relation(fields: [driverId], references: [id])
+
+  supportTickets SupportTicket[]
+}
+
+// ─── Support ──────────────────────────────────────────────────────────────────
+
+model SupportTicket {
+  id          String          @id @default(cuid())
+  category    SupportCategory
+  issue       String?
+  description String?
+  status      SupportStatus   @default(OPEN)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  bookingId   String?
+  booking     Booking?        @relation(fields: [bookingId], references: [id])
+
+  userId      String?
+  user        User?           @relation(fields: [userId], references: [id])
 }
 
 // ─── Wallet ────────────────────────────────────────────────────────────────────

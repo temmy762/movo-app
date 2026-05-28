@@ -13,6 +13,7 @@ export async function GET() {
       id: true,
       lat: true,
       lng: true,
+      vehicle: { select: { tier: true } },
     },
   });
 

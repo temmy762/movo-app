@@ -1,36 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Client = { id: number; name: string; email: string; phone: string; address: string; points: number; };
+type Client = { id: string; name: string; email: string; phone: string; address: string; points: number; };
 type SortCol = "name" | "phone" | "address" | "points" | null;
 type SortDir = "asc" | "desc";
 type ClientForm = Omit<Client, "id">;
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-const SEED: Client[] = [
-  { id:1,  name:"Alice Johnson",   email:"alice.johnson@example.com",   phone:"123-456-7890", address:"123 Maple Street",   points:120 },
-  { id:2,  name:"Bob Smith",       email:"bob.smith@example.com",       phone:"234-567-8901", address:"455 Oak Avenue",     points:150 },
-  { id:3,  name:"Charlie Davis",   email:"charlie.davis@example.com",   phone:"345-678-9012", address:"788 Pine Road",      points:200 },
-  { id:4,  name:"Diana White",     email:"diana.white@example.com",     phone:"456-789-0123", address:"101 Birch Lane",     points:180 },
-  { id:5,  name:"Edward Green",    email:"edward.green@example.com",    phone:"567-890-1234", address:"202 Cedar Street",   points:140 },
-  { id:6,  name:"Fiona Brown",     email:"fiona.brown@example.com",     phone:"678-901-2345", address:"303 Elm Avenue",     points:160 },
-  { id:7,  name:"George Clark",    email:"george.clark@example.com",    phone:"789-012-3456", address:"404 Spruce Road",    points:110 },
-  { id:8,  name:"Helen Martinez",  email:"helen.martinez@example.com",  phone:"800-123-4567", address:"505 Willow Lane",    points:170 },
-  { id:9,  name:"Ivan Rodriguez",  email:"ivan.rodriguez@example.com",  phone:"901-234-5678", address:"606 Walnut Street",  points:150 },
-  { id:10, name:"Jane Wilson",     email:"jane.wilson@example.com",     phone:"012-345-6789", address:"707 Ash Avenue",     points:180 },
-  { id:11, name:"Kyle Thompson",   email:"kyle.thompson@example.com",   phone:"123-456-7899", address:"808 Cherry Road",    points:175 },
-  { id:12, name:"Laura King",      email:"laura.king@example.com",      phone:"234-567-8902", address:"909 Chestnut Lane",  points:155 },
-  { id:13, name:"Michael Brown",   email:"michael.brown@example.com",   phone:"345-678-9013", address:"010 Walnut Drive",   points:130 },
-  { id:14, name:"Nancy Davis",     email:"nancy.davis@example.com",     phone:"456-789-0124", address:"111 Cedar Court",    points:195 },
-  { id:15, name:"Oliver Scott",    email:"oliver.scott@example.com",    phone:"567-890-1235", address:"222 Maple Avenue",   points:165 },
-  { id:16, name:"Patricia Lee",    email:"patricia.lee@example.com",    phone:"678-901-2346", address:"333 Oak Lane",       points:145 },
-  { id:17, name:"Quinn Taylor",    email:"quinn.taylor@example.com",    phone:"789-012-3457", address:"444 Pine Court",     points:115 },
-  { id:18, name:"Rachel Adams",    email:"rachel.adams@example.com",    phone:"890-123-4568", address:"555 Elm Drive",      points:185 },
-  { id:19, name:"Sam Wilson",      email:"sam.wilson@example.com",      phone:"901-234-5679", address:"666 Cedar Avenue",   points:125 },
-  { id:20, name:"Tina Harris",     email:"tina.harris@example.com",     phone:"012-345-6780", address:"777 Birch Road",     points:190 },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ["#ef4444","#f97316","#eab308","#22c55e","#06b6d4","#6366f1","#ec4899","#8b5cf6"];
@@ -149,16 +126,28 @@ function DeleteConfirm({ name, onConfirm, onCancel }: { name: string; onConfirm:
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
-  const [clients,    setClients]    = useState<Client[]>(SEED);
+  const [clients,    setClients]    = useState<Client[]>([]);
+  const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState("");
   const [sortCol,    setSortCol]    = useState<SortCol>(null);
   const [sortDir,    setSortDir]    = useState<SortDir>("asc");
-  const [selected,   setSelected]   = useState<Set<number>>(new Set([3, 4]));
+  const [selected,   setSelected]   = useState<Set<string>>(new Set());
   const [page,       setPage]       = useState(1);
   const [perPage,    setPerPage]    = useState(12);
   const [addOpen,    setAddOpen]    = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
-  const [deleteId,   setDeleteId]   = useState<number | null>(null);
+  const [deleteId,   setDeleteId]   = useState<string | null>(null);
+
+  const loadClients = () => {
+    setLoading(true);
+    fetch("/api/admin/clients")
+      .then(r => r.json())
+      .then(setClients)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadClients(); }, []);
 
   // ── Filter + sort ───────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -191,13 +180,32 @@ export default function ClientsPage() {
     allSel ? pageClients.forEach(c => n.delete(c.id)) : pageClients.forEach(c => n.add(c.id));
     return n;
   });
-  const toggleOne = (id: number) => setSelected(prev => {
+  const toggleOne = (id: string) => setSelected(prev => {
     const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
 
-  const handleAdd  = (d: ClientForm) => { setClients(p => [...p, { ...d, id: Math.max(...p.map(c=>c.id))+1 }]); setAddOpen(false); };
-  const handleEdit = (d: ClientForm) => { setClients(p => p.map(c => c.id === editClient!.id ? { ...c, ...d } : c)); setEditClient(null); };
-  const handleDel  = (id: number)    => { setClients(p => p.filter(c => c.id !== id)); setDeleteId(null); setSelected(s => { const n=new Set(s); n.delete(id); return n; }); };
+  const handleAdd = async (d: ClientForm) => {
+    await fetch("/api/admin/clients", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(d),
+    });
+    setAddOpen(false); loadClients();
+  };
+
+  const handleEdit = async (d: ClientForm) => {
+    await fetch(`/api/admin/clients/${editClient!.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(d),
+    });
+    setEditClient(null); loadClients();
+  };
+
+  const handleDel = async (id: string) => {
+    await fetch(`/api/admin/clients/${id}`, { method: "DELETE" });
+    setDeleteId(null);
+    setSelected(s => { const n = new Set(s); n.delete(id); return n; });
+    loadClients();
+  };
 
   const delClient = clients.find(c => c.id === deleteId);
   const pages = paginationPages(page, totalPages);
@@ -242,26 +250,21 @@ export default function ClientsPage() {
                     </button>
                   </div>
                 </th>
-                <th className={thCls}>
-                  <button onClick={() => handleSort("phone")} className="no-hover-fx flex items-center gap-1">
-                    Phone <SortIcon active={sortCol==="phone"} dir={sortDir}/>
-                  </button>
-                </th>
-                <th className={thCls}>
-                  <button onClick={() => handleSort("address")} className="no-hover-fx flex items-center gap-1">
-                    Address <SortIcon active={sortCol==="address"} dir={sortDir}/>
-                  </button>
-                </th>
+                <th className={thCls}><button onClick={() => handleSort("phone")} className="no-hover-fx flex items-center gap-1">Phone <SortIcon active={sortCol==="phone"} dir={sortDir}/></button></th>
+                <th className={thCls}><button onClick={() => handleSort("address")} className="no-hover-fx flex items-center gap-1">Address <SortIcon active={sortCol==="address"} dir={sortDir}/></button></th>
                 <th className={thCls}>Documents</th>
-                <th className={thCls}>
-                  <button onClick={() => handleSort("points")} className="no-hover-fx flex items-center gap-1">
-                    Points <SortIcon active={sortCol==="points"} dir={sortDir}/>
-                  </button>
-                </th>
+                <th className={thCls}><button onClick={() => handleSort("points")} className="no-hover-fx flex items-center gap-1">Points <SortIcon active={sortCol==="points"} dir={sortDir}/></button></th>
                 <th className={thCls}>Action</th>
               </tr>
             </thead>
             <tbody>
+              {loading && Array.from({length:6}).map((_,i)=>(
+                <tr key={i} className="border-b border-gray-50">
+                  {["w-40","w-28","w-36","w-24","w-12","w-20"].map((w,j)=>(
+                    <td key={j} className="px-4 py-3"><div className={`h-3.5 ${w} bg-gray-100 rounded animate-pulse`}/></td>
+                  ))}
+                </tr>
+              ))}
               {pageClients.map(client => {
                 const isSel = selected.has(client.id);
                 const fn = firstName(client.name);
@@ -312,7 +315,7 @@ export default function ClientsPage() {
                   </tr>
                 );
               })}
-              {pageClients.length === 0 && (
+              {!loading && pageClients.length === 0 && (
                 <tr><td colSpan={6} className="px-4 py-10 text-center text-[13px] text-gray-400">No clients found.</td></tr>
               )}
             </tbody>

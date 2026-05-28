@@ -1,41 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DriverStatus = "On Duty" | "Sick Leave" | "Half-Day Leave";
-type Driver = { id: number; name: string; email: string; phone: string; address: string; status: DriverStatus; workHours: number; performance: number; perfLabel: string; };
-type ScheduleEntry = { driverId: number; date: Date; dateLabel: string; client: string; car: string; time: string; };
+type ScheduleEntry = { id: string; date: string; time: string; client: string; car: string; status: string; createdAt: string; };
+type Driver = {
+  id: string; name: string; email: string; phone: string; address: string;
+  status: DriverStatus; workHours: number; performance: number; perfLabel: string;
+  vehicle: { make: string; model: string; tier: string; plate: string } | null;
+  recentBookings: ScheduleEntry[];
+};
 type SortCol = "name" | "email" | "phone" | "status" | null;
 type SortDir = "asc" | "desc";
 
-// ── Data ──────────────────────────────────────────────────────────────────────
-const DRIVERS: Driver[] = [
-  { id:1,  name:"John Adams",      email:"john.adams@example.com",      phone:"111-222-3333", address:"100 Oak Street",     status:"On Duty",        workHours:220, performance:4.2, perfLabel:"Good"      },
-  { id:2,  name:"Emily Brown",     email:"emily.brown@example.com",     phone:"222-333-4444", address:"200 Pine Avenue",    status:"Sick Leave",     workHours:180, performance:3.8, perfLabel:"Average"   },
-  { id:3,  name:"Michael Clark",   email:"michael.clark@example.com",   phone:"333-444-5555", address:"300 Maple Road",     status:"On Duty",        workHours:260, performance:4.6, perfLabel:"Excellent" },
-  { id:4,  name:"Sarah Davis",     email:"sarah.davis@example.com",     phone:"444-555-6666", address:"400 Birch Lane",     status:"Half-Day Leave", workHours:200, performance:4.0, perfLabel:"Good"      },
-  { id:5,  name:"James Evans",     email:"james.evans@example.com",     phone:"555-666-7777", address:"500 Cedar Street",   status:"On Duty",        workHours:240, performance:4.4, perfLabel:"Good"      },
-  { id:6,  name:"Laura Fisher",    email:"laura.fisher@example.com",    phone:"666-777-8888", address:"600 Elm Avenue",     status:"On Duty",        workHours:210, performance:4.1, perfLabel:"Good"      },
-  { id:7,  name:"Robert Gray",     email:"robert.gray@example.com",     phone:"777-888-9999", address:"700 Spruce Road",    status:"Sick Leave",     workHours:170, performance:3.5, perfLabel:"Average"   },
-  { id:8,  name:"Jessica Harris",  email:"jessica.harris@example.com",  phone:"888-999-0000", address:"800 Willow Lane",    status:"On Duty",        workHours:235, performance:4.3, perfLabel:"Good"      },
-  { id:9,  name:"Daniel Jackson",  email:"daniel.jackson@example.com",  phone:"999-000-1111", address:"133 Elm Street",     status:"On Duty",        workHours:248, performance:4.5, perfLabel:"Excellent" },
-  { id:10, name:"Olivia King",     email:"olivia.king@example.com",     phone:"000-111-2222", address:"900 Cherry Road",    status:"On Duty",        workHours:225, performance:4.2, perfLabel:"Good"      },
-  { id:11, name:"David Lee",       email:"david.lee@example.com",       phone:"111-222-3334", address:"010 Chestnut Lane",  status:"Half-Day Leave", workHours:190, performance:3.9, perfLabel:"Average"   },
-  { id:12, name:"Mia Martinez",    email:"mia.martinez@example.com",    phone:"222-333-4445", address:"111 Walnut Drive",   status:"On Duty",        workHours:215, performance:4.0, perfLabel:"Good"      },
-];
-
-const D = (d: number) => new Date(2028, 7, d);
-const SCHEDULES: ScheduleEntry[] = [
-  { driverId:9, date:D(1),  dateLabel:"Tue, 1 Aug",  client:"Alice Johnson",  car:"Toyota Corolla",   time:"10:10 AM" },
-  { driverId:9, date:D(3),  dateLabel:"Thu, 3 Aug",  client:"Bob Smith",      car:"Honda Civic",      time:"11:00 AM" },
-  { driverId:9, date:D(7),  dateLabel:"Mon, 7 Aug",  client:"Charlie Davis",  car:"Ford Focus",       time:"3:00 PM"  },
-  { driverId:9, date:D(10), dateLabel:"Thu, 10 Aug", client:"Diana White",    car:"Chevrolet Malibu", time:"1:00 PM"  },
-  { driverId:1, date:D(2),  dateLabel:"Wed, 2 Aug",  client:"Edward Green",   car:"Kia Soul",         time:"9:00 AM"  },
-  { driverId:1, date:D(5),  dateLabel:"Sat, 5 Aug",  client:"Fiona Brown",    car:"Audi Q7",          time:"2:00 PM"  },
-  { driverId:3, date:D(4),  dateLabel:"Fri, 4 Aug",  client:"George Clark",   car:"BMW X5",           time:"10:00 AM" },
-  { driverId:3, date:D(8),  dateLabel:"Tue, 8 Aug",  client:"Helen Martinez", car:"Ford Focus",       time:"1:30 PM"  },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = ["#ef4444","#f97316","#eab308","#22c55e","#06b6d4","#6366f1","#ec4899","#8b5cf6"];
@@ -79,9 +58,10 @@ function paginationPages(cur: number, total: number): (number | "…")[] {
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAY_H  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
-function MiniCalendar({ scheduledDays }: { scheduledDays: number[] }) {
-  const [cm, setCm] = useState(7);
-  const [cy, setCy] = useState(2028);
+function MiniCalendar({ scheduledDays, scheduleMonthYear }: { scheduledDays: number[]; scheduleMonthYear: { m: number; y: number } }) {
+  const now = new Date();
+  const [cm, setCm] = useState(now.getMonth());
+  const [cy, setCy] = useState(now.getFullYear());
   const firstDow   = new Date(cy, cm, 1).getDay();
   const daysInMon  = new Date(cy, cm+1, 0).getDate();
   const daysInPrev = new Date(cy, cm, 0).getDate();
@@ -92,8 +72,8 @@ function MiniCalendar({ scheduledDays }: { scheduledDays: number[] }) {
   while (cells.length % 7 !== 0) cells.push({ day: nd++, cur: false });
   const prevM = () => cm===0?(setCm(11),setCy(y=>y-1)):setCm(m=>m-1);
   const nextM = () => cm===11?(setCm(0),setCy(y=>y+1)):setCm(m=>m+1);
-  const todayDay = cy===2028&&cm===7 ? 14 : -1;
-  const isSchedMonth = cy===2028&&cm===7;
+  const todayDay = cy===now.getFullYear()&&cm===now.getMonth() ? now.getDate() : -1;
+  const isSchedMonth = cy===scheduleMonthYear.y&&cm===scheduleMonthYear.m;
 
   return (
     <div>
@@ -131,20 +111,19 @@ function MiniCalendar({ scheduledDays }: { scheduledDays: number[] }) {
 }
 
 // ── Driver Detail Panel ───────────────────────────────────────────────────────
-function DriverDetailPanel({ driver, onEdit, onClose }: { driver: Driver; onEdit: () => void; onClose: () => void }) {
-  const schedules    = SCHEDULES.filter(s => s.driverId === driver.id);
-  const scheduledDays = schedules.map(s => s.date.getDate());
+function DriverDetailPanel({ driver, onEdit, onClose, onDelete }: { driver: Driver; onEdit: () => void; onClose: () => void; onDelete: (id: string) => void }) {
+  const schedules     = driver.recentBookings;
+  const scheduledDays = schedules.map(s => new Date(s.createdAt).getDate());
+  const schedMY       = schedules.length > 0
+    ? { m: new Date(schedules[0].createdAt).getMonth(), y: new Date(schedules[0].createdAt).getFullYear() }
+    : { m: new Date().getMonth(), y: new Date().getFullYear() };
   const perfColor = driver.performance>=4.5?"#22c55e":driver.performance>=4.0?"#3b82f6":"#f97316";
+  const router = useRouter();
 
   return (
     <div className="fixed inset-0 z-40 lg:static lg:w-[290px] lg:shrink-0 bg-white flex flex-col overflow-y-auto border-l border-gray-100">
-      {/* Mobile back button */}
-      <button onClick={onClose} className="lg:hidden flex items-center gap-2 px-4 py-3 border-b border-gray-100 text-[12px] text-gray-500 shrink-0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-        Back to Drivers
-      </button>
       {/* Header */}
-      <div className="p-4 border-b border-gray-100">
+      <div className="p-4 border-b border-gray-100 flex flex-col gap-2.5">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full flex items-center justify-center text-white text-[13px] font-bold shrink-0"
             style={{ background: avatarColor(driver.name) }}>
@@ -154,16 +133,18 @@ function DriverDetailPanel({ driver, onEdit, onClose }: { driver: Driver; onEdit
             <p className="text-[14px] font-bold text-gray-900 truncate">{driver.name}</p>
             <StatusBadge status={driver.status}/>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button className="no-hover-fx w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-            </button>
-            <button onClick={onEdit} className="no-hover-fx px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-600 border border-gray-200">
-              Edit
-            </button>
-          </div>
+          <button onClick={onClose} className="lg:hidden no-hover-fx w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.push(`/admin/messages?driver=${driver.id}&name=${encodeURIComponent(driver.name)}`)} className="no-hover-fx w-7 h-7 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center shrink-0 hover:bg-blue-50 hover:border-blue-200 transition-colors" title="Open in Messages">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+          <button onClick={onEdit} className="no-hover-fx flex-1 py-1.5 rounded-lg text-[11px] font-medium text-gray-600 border border-gray-200 bg-gray-50">Edit</button>
+          <button onClick={()=>onDelete(driver.id)} className="no-hover-fx flex-1 py-1.5 rounded-lg text-[11px] font-medium text-red-500 border border-red-200 bg-red-50">Delete</button>
         </div>
       </div>
 
@@ -208,23 +189,23 @@ function DriverDetailPanel({ driver, onEdit, onClose }: { driver: Driver; onEdit
 
       {/* Mini Calendar */}
       <div className="px-4 py-3 border-b border-gray-100">
-        <MiniCalendar scheduledDays={scheduledDays}/>
+        <MiniCalendar scheduledDays={scheduledDays} scheduleMonthYear={schedMY}/>
       </div>
 
-      {/* Schedule */}
+      {/* Recent Trips */}
       <div className="px-4 py-3 flex-1">
         <div className="flex items-center justify-between mb-2.5">
-          <p className="text-[12px] font-bold text-gray-900">Schedule</p>
+          <p className="text-[12px] font-bold text-gray-900">Recent Trips</p>
           <button className="no-hover-fx text-gray-400"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
         </div>
         {schedules.length === 0
-          ? <p className="text-[11px] text-gray-400 text-center py-4">No upcoming schedule.</p>
+          ? <p className="text-[11px] text-gray-400 text-center py-4">No trips yet.</p>
           : (
             <div className="flex flex-col gap-3">
-              {schedules.map((s, i) => (
-                <div key={i} className="flex items-start gap-2.5">
+              {schedules.map((s) => (
+                <div key={s.id} className="flex items-start gap-2.5">
                   <div className="shrink-0 text-right w-[68px]">
-                    <p className="text-[9px] text-gray-400 leading-tight">{s.dateLabel}</p>
+                    <p className="text-[9px] text-gray-400 leading-tight">{s.date}</p>
                     <p className="text-[9px] text-gray-300">{s.time}</p>
                   </div>
                   <div className="w-px self-stretch bg-gray-100 shrink-0"/>
@@ -300,7 +281,8 @@ function DriverModal({ initial, onSave, onClose }: { initial?: Driver; onSave:(d
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function DriversPage() {
-  const [drivers,    setDrivers]    = useState<Driver[]>(DRIVERS);
+  const [drivers,    setDrivers]    = useState<Driver[]>([]);
+  const [loading,    setLoading]    = useState(true);
   const [search,     setSearch]     = useState("");
   const [statusFilt, setStatusFilt] = useState<DriverStatus | "All">("All");
   const [showFilt,   setShowFilt]   = useState(false);
@@ -308,9 +290,23 @@ export default function DriversPage() {
   const [sortDir,    setSortDir]    = useState<SortDir>("asc");
   const [page,       setPage]       = useState(1);
   const [perPage,    setPerPage]    = useState(11);
-  const [selected,   setSelected]   = useState<Driver | null>(DRIVERS.find(d=>d.id===9)??null);
+  const [selected,   setSelected]   = useState<Driver | null>(null);
   const [addOpen,    setAddOpen]    = useState(false);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
+
+  const loadDrivers = () => {
+    setLoading(true);
+    fetch("/api/admin/drivers")
+      .then(r => r.json())
+      .then((data: Driver[]) => {
+        setDrivers(data);
+        setSelected(prev => prev ? (data.find(d => d.id === prev.id) ?? data[0] ?? null) : (data[0] ?? null));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadDrivers(); }, []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -320,8 +316,9 @@ export default function DriversPage() {
     );
     if (sortCol) {
       r = [...r].sort((a,b) => {
-        const av=a[sortCol as keyof Driver], bv=b[sortCol as keyof Driver];
-        return sortDir==="asc" ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+        const av = String(a[sortCol as keyof Driver]);
+        const bv = String(b[sortCol as keyof Driver]);
+        return sortDir==="asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       });
     }
     return r;
@@ -334,8 +331,34 @@ export default function DriversPage() {
   const handleSort = (col: SortCol) => {
     if (sortCol===col) setSortDir(d=>d==="asc"?"desc":"asc"); else { setSortCol(col); setSortDir("asc"); }
   };
-  const handleAdd  = (f: DriverForm) => { setDrivers(p=>[...p,{...f,id:Math.max(...p.map(d=>d.id))+1,workHours:0,performance:0,perfLabel:"New"}]); setAddOpen(false); };
-  const handleEdit = (f: DriverForm) => { setDrivers(p=>p.map(d=>d.id===editDriver!.id?{...d,...f}:d)); if(selected?.id===editDriver!.id) setSelected(s=>s?{...s,...f}:s); setEditDriver(null); };
+
+  const handleAdd = async (f: DriverForm) => {
+    const parts = f.name.trim().split(" ");
+    await fetch("/api/admin/drivers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ firstName: parts[0], lastName: parts.slice(1).join(" ") || ".", email: f.email, phone: f.phone, city: f.address, status: f.status }),
+    });
+    setAddOpen(false);
+    loadDrivers();
+  };
+
+  const handleEdit = async (f: DriverForm) => {
+    await fetch(`/api/admin/drivers/${editDriver!.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: f.name, email: f.email, phone: f.phone, city: f.address, status: f.status }),
+    });
+    setEditDriver(null);
+    loadDrivers();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this driver?")) return;
+    await fetch(`/api/admin/drivers/${id}`, { method: "DELETE" });
+    if (selected?.id === id) setSelected(null);
+    loadDrivers();
+  };
 
   const thCls = "px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500 select-none";
 
@@ -393,11 +416,18 @@ export default function DriversPage() {
               </tr>
             </thead>
             <tbody>
-              {pageDrivers.map(driver => {
+              {loading && Array.from({length:5}).map((_,i)=>(
+                <tr key={i} className="border-b border-gray-50">
+                  {["w-32","w-40","w-24","w-20"].map((w,j)=>(
+                    <td key={j} className="px-3 py-3"><div className={`h-3.5 ${w} bg-gray-100 rounded animate-pulse`}/></td>
+                  ))}
+                </tr>
+              ))}
+              {!loading && pageDrivers.map(driver => {
                 const isSel = selected?.id===driver.id;
                 return (
                   <tr key={driver.id} onClick={()=>setSelected(isSel?null:driver)}
-                    className="border-b border-gray-50 cursor-pointer transition-colors"
+                    className="border-b border-gray-50 cursor-pointer transition-colors group"
                     style={{ background: isSel?"#eff6ff":"white" }}>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2.5">
@@ -410,11 +440,19 @@ export default function DriversPage() {
                     </td>
                     <td className="px-3 py-2.5 text-[12px] text-gray-500 hidden md:table-cell">{driver.email}</td>
                     <td className="px-3 py-2.5 text-[12px] text-gray-500 hidden sm:table-cell whitespace-nowrap">{driver.phone}</td>
-                    <td className="px-3 py-2.5"><StatusBadge status={driver.status}/></td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={driver.status}/>
+                        <button onClick={e=>{e.stopPropagation();handleDelete(driver.id);}}
+                          className="no-hover-fx opacity-0 group-hover:opacity-100 transition-opacity ml-auto w-6 h-6 rounded-md bg-red-50 flex items-center justify-center">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
-              {pageDrivers.length===0&&(
+              {!loading && pageDrivers.length===0&&(
                 <tr><td colSpan={4} className="px-3 py-10 text-center text-[13px] text-gray-400">No drivers found.</td></tr>
               )}
             </tbody>
@@ -446,7 +484,7 @@ export default function DriversPage() {
       </div>
 
       {/* ── Right detail panel ── */}
-      {selected&&<DriverDetailPanel driver={selected} onEdit={()=>setEditDriver(selected)} onClose={()=>setSelected(null)}/>}
+      {selected&&<DriverDetailPanel driver={selected} onEdit={()=>setEditDriver(selected)} onClose={()=>setSelected(null)} onDelete={handleDelete}/>}
 
       {/* ── Modals ── */}
       {addOpen    &&<DriverModal onSave={handleAdd}  onClose={()=>setAddOpen(false)}/>}

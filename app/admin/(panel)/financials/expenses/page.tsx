@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 function pol(cx:number,cy:number,r:number,deg:number):[number,number]{const rad=((deg-90)*Math.PI)/180;return[cx+r*Math.cos(rad),cy+r*Math.sin(rad)];}
 function arcSlice(cx:number,cy:number,r:number,ir:number,s:number,e:number){
@@ -19,8 +19,8 @@ type Tx={id:number;expense:string;category:string;qty:number;amount:number;date:
 type SortCol="expense"|"category"|"qty"|"amount"|"date"|"status"|null;
 
 const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const INC=[28000,32000,30000,38000,50400,45000,40000,42000,36000,41000,39000,46000];
-const EXP=[20000,23000,19000,27000,34200,29000,24000,27000,21000,25000,23000,28000];
+const FALLBACK_INC=[0,0,0,0,0,0,0,0,0,0,0,0];
+const FALLBACK_EXP=[0,0,0,0,0,0,0,0,0,0,0,0];
 const CATS=[
   {name:"Vehicle Maintenance",amount:3000,color:"#ef4444"},
   {name:"Staff Salaries",amount:2500,color:"#1e2d45"},
@@ -48,19 +48,28 @@ const INIT:Tx[]=[
   {id:15,expense:"Office Rent",category:"Office Supplies",qty:1,amount:1200,date:"2024-08-21",status:"Pending"},
 ];
 
-function DonutChart(){
-  const total=CATS.reduce((s,c)=>s+c.amount,0);let deg=0;
+type Cat={name:string;amount:number;color:string;};
+function DonutChart({cats}:{cats:Cat[];}){
+  const total=cats.reduce((s,c)=>s+c.amount,0);
+  if(cats.length===0||total===0)return(
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="52" fill="none" stroke="#f1f5f9" strokeWidth="20"/>
+      <text x="70" y="64" textAnchor="middle" fontSize="9" fill="#9ca3af">No expenses</text>
+      <text x="70" y="80" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1e293b">$0</text>
+    </svg>
+  );
+  let deg=0;
   return(<svg width="140" height="140" viewBox="0 0 140 140">
-    {CATS.map((c,i)=>{const a=(c.amount/total)*360,s=deg;deg+=a;return<path key={i} d={arcSlice(70,70,62,42,s,deg-0.5)} fill={c.color} stroke="white" strokeWidth="2"/>;})
-    }<text x="70" y="64" textAnchor="middle" fontSize="9" fill="#9ca3af">Total expenses</text>
-    <text x="70" y="80" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1e293b">$10,000</text>
+    {cats.map((c,i)=>{const a=(c.amount/total)*360,s=deg;deg+=a;return<path key={i} d={arcSlice(70,70,62,42,s,deg-0.5)} fill={c.color} stroke="white" strokeWidth="2"/>;})}
+    <text x="70" y="64" textAnchor="middle" fontSize="9" fill="#9ca3af">Total expenses</text>
+    <text x="70" y="80" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1e293b">${total.toLocaleString()}</text>
   </svg>);
 }
 
-function CashflowChart(){
+function CashflowChart({inc=FALLBACK_INC,exp=FALLBACK_EXP}:{inc?:number[];exp?:number[];}){
   const[hov,setHov]=useState<number|null>(null);
   const W=560,H=160,PL=44,PB=22,PT=8,cW=W-PL,cH=H-PB-PT;
-  const all=[...INC,...EXP],maxV=Math.max(...all),minV=Math.min(...all)-3000,rng=maxV-minV;
+  const all=[...inc,...exp],maxV=Math.max(...all,1),minV=Math.min(...all,0)-3000,rng=Math.max(maxV-minV,1);
   const tx=(i:number)=>PL+(i/(MO.length-1))*cW;
   const ty=(v:number)=>PT+cH-((v-minV)/rng)*cH;
   const ln=(d:number[])=>d.map((v,i)=>`${i===0?"M":"L"}${tx(i)},${ty(v)}`).join(" ");
@@ -73,21 +82,21 @@ function CashflowChart(){
           <linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ef4444" stopOpacity="0.2"/><stop offset="100%" stopColor="#ef4444" stopOpacity="0"/></linearGradient>
         </defs>
         {[0,0.25,0.5,0.75,1].map(f=><line key={f} x1={PL} y1={PT+cH*(1-f)} x2={W} y2={PT+cH*(1-f)} stroke="#f1f5f9" strokeWidth="1"/>)}
-        <path d={ar(INC)} fill="url(#ig)"/><path d={ar(EXP)} fill="url(#eg)"/>
-        <path d={ln(INC)} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d={ln(EXP)} fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d={ar(inc)} fill="url(#ig)"/><path d={ar(exp)} fill="url(#eg)"/>
+        <path d={ln(inc)} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d={ln(exp)} fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         {MO.map((m,i)=><text key={m} x={tx(i)} y={H-5} textAnchor="middle" fontSize="9" fill="#9ca3af">{m}</text>)}
         {hov!==null&&<><line x1={tx(hov)} y1={PT} x2={tx(hov)} y2={PT+cH} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4"/>
-          <circle cx={tx(hov)} cy={ty(INC[hov])} r="4" fill="white" stroke="#3b82f6" strokeWidth="2"/>
-          <circle cx={tx(hov)} cy={ty(EXP[hov])} r="4" fill="white" stroke="#ef4444" strokeWidth="2"/></>}
-        {MO.map((_,i)=><rect key={i} x={tx(i)-26} y={PT} width={52} height={cH} fill="transparent" style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)}/>)}
+          <circle cx={tx(hov)} cy={ty(inc[hov])} r="4" fill="white" stroke="#3b82f6" strokeWidth="2"/>
+          <circle cx={tx(hov)} cy={ty(exp[hov])} r="4" fill="white" stroke="#ef4444" strokeWidth="2"/></>}
+        {MO.map((_,i)=><rect key={i} x={tx(i)-26} y={PT} width={52} height={cH} fill="transparent" style={{cursor:"crosshair"}} onMouseEnter={()=>setHov(i)}/> )}
       </svg>
       {hov!==null&&(
         <div className="absolute top-0 pointer-events-none z-10" style={{left:`max(4px,calc(${(tx(hov)/W)*100}% - 64px))`}}>
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 px-3 py-2">
-            <p className="text-[10px] font-bold text-gray-700 mb-1">{MO[hov]} 2028</p>
-            <p className="text-[10px] text-blue-500">Income: ${INC[hov].toLocaleString()}</p>
-            <p className="text-[10px] text-red-500">Expenses: ${EXP[hov].toLocaleString()}</p>
+            <p className="text-[10px] font-bold text-gray-700 mb-1">{MO[hov]} {new Date().getFullYear()}</p>
+            <p className="text-[10px] text-blue-500">Income: ${inc[hov].toLocaleString()}</p>
+            <p className="text-[10px] text-red-500">Expenses: ${exp[hov].toLocaleString()}</p>
           </div>
         </div>
       )}
@@ -137,8 +146,32 @@ function TxModal({initial,onSave,onClose}:{initial?:Tx;onSave:(d:Omit<Tx,"id">)=
   );
 }
 
+type ApiStats={balance:number;income:number;expenses:number;balanceChange:string;incomeChange:string;expensesChange:string;};
+
 export default function ExpensesPage(){
-  const[txs,setTxs]=useState<Tx[]>(INIT);
+  const[txs,setTxs]=useState<Tx[]>([]);
+  const[loading,setLoading]=useState(true);
+  const[apiStats,setApiStats]=useState<ApiStats|null>(null);
+  const[cashInc,setCashInc]=useState<number[]>(FALLBACK_INC);
+  const[cashExp,setCashExp]=useState<number[]>(FALLBACK_EXP);
+  const[breakdown,setBreakdown]=useState<Cat[]>([]);
+  const[availableYears,setAvailableYears]=useState<number[]>([new Date().getFullYear()]);
+  const[selectedYear,setSelectedYear]=useState(new Date().getFullYear());
+  const[showYearDd,setShowYearDd]=useState(false);
+
+  useEffect(()=>{
+    setLoading(true);
+    fetch(`/api/admin/financials/expenses?year=${selectedYear}`).then(r=>r.json()).then(d=>{
+      if(d.stats) setApiStats(d.stats);
+      if(d.cashflow&&Array.isArray(d.cashflow)){
+        setCashInc(d.cashflow.map((m:{income:number})=>m.income));
+        setCashExp(d.cashflow.map((m:{expenses:number})=>m.expenses));
+      }
+      if(d.transactions&&Array.isArray(d.transactions)) setTxs(d.transactions);
+      if(d.breakdown&&Array.isArray(d.breakdown)) setBreakdown(d.breakdown);
+      if(d.availableYears&&Array.isArray(d.availableYears)) setAvailableYears(d.availableYears);
+    }).catch(console.error).finally(()=>setLoading(false));
+  },[selectedYear]);
   const[search,setSearch]=useState("");
   const[catFilt,setCatFilt]=useState("All");
   const[showCatDd,setShowCatDd]=useState(false);
@@ -181,21 +214,23 @@ export default function ExpensesPage(){
         {/* Left: stat cards + cashflow */}
         <div className="flex-1 min-w-0 flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[{label:"Balance",value:"$155,820",change:"+$7,000",up:true},{label:"Income",value:"$25,700",change:"+$12,000",up:true},{label:"Expenses",value:"$14,575",change:"-$6,300",up:false}].map(s=>(
+            {[
+              {label:"Balance", val:apiStats?`$${apiStats.balance.toLocaleString()}`:"—", change:apiStats?.balanceChange??"—", up:(apiStats?.balanceChange??"+").startsWith("+"),
+                icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>},
+              {label:"Income",  val:apiStats?`$${apiStats.income.toLocaleString()}`:"—",  change:apiStats?.incomeChange??"—",  up:(apiStats?.incomeChange??"+").startsWith("+"),
+                icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>},
+              {label:"Expenses",val:apiStats?`$${apiStats.expenses.toLocaleString()}`:"—", change:apiStats?.expensesChange??"—", up:false,
+                icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>},
+            ].map(s=>(
               <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"#1e2d45"}}>
-                    {s.label==="Balance"&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
-                    {s.label==="Income"&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>}
-                    {s.label==="Expenses"&&<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>}
-                  </div>
-                  <button className="no-hover-fx text-gray-300 text-[16px]">⋯</button>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:"#1e2d45"}}>{s.icon}</div>
                 </div>
                 <p className="text-[10px] text-gray-400 mb-0.5">{s.label}</p>
-                <p className="text-[20px] font-bold text-gray-900">{s.value}</p>
+                <p className="text-[20px] font-bold text-gray-900">{s.val}</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold" style={{background:s.up?"#dcfce7":"#fee2e2",color:s.up?"#16a34a":"#dc2626"}}>{s.change}</span>
-                  <span className="text-[9px] text-gray-400">from last week</span>
+                  <span className="text-[9px] text-gray-400">vs last week</span>
                 </div>
               </div>
             ))}
@@ -208,18 +243,39 @@ export default function ExpensesPage(){
                 <div className="flex items-center gap-1.5"><span className="w-2.5 h-0.5 bg-red-400 inline-block rounded"/><span className="text-[10px] text-gray-400">Expenses</span></div>
               </div>
             </div>
-            <CashflowChart/>
+            <CashflowChart inc={cashInc} exp={cashExp}/>
           </div>
         </div>
         {/* Right: Expense Breakdown */}
-        <div className="w-full xl:w-[230px] shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div className="w-full xl:w-[230px] shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4" onClick={e=>e.stopPropagation()}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[13px] font-bold text-gray-900">Expense Breakdown</p>
-            <button className="no-hover-fx text-[10px] text-gray-400 border border-gray-200 rounded-lg px-2 py-1">This Year ▾</button>
+            <div className="relative">
+              <button onClick={()=>setShowYearDd(v=>!v)}
+                className="no-hover-fx text-[10px] text-gray-500 border border-gray-200 rounded-lg px-2 py-1 flex items-center gap-1">
+                {selectedYear}
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              {showYearDd&&(
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg py-1 z-20 min-w-[80px]">
+                  {availableYears.map(y=>(
+                    <button key={y} onClick={()=>{setSelectedYear(y);setShowYearDd(false);}}
+                      className="no-hover-fx w-full px-3 py-1.5 text-left text-[11px] hover:bg-gray-50"
+                      style={{color:selectedYear===y?"#ef4444":"#374151",fontWeight:selectedYear===y?600:400}}>
+                      {y}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex justify-center mb-3"><DonutChart/></div>
+          {loading?(
+            <div className="flex justify-center py-8"><div className="w-5 h-5 rounded-full border-2 border-red-400 border-t-transparent animate-spin"/></div>
+          ):(
+          <>
+          <div className="flex justify-center mb-3"><DonutChart cats={breakdown}/></div>
           <div className="flex flex-col gap-1.5">
-            {CATS.map(c=>(
+            {breakdown.length>0?breakdown.map(c=>(
               <div key={c.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{background:c.color}}/>
@@ -227,8 +283,12 @@ export default function ExpensesPage(){
                 </div>
                 <span className="text-[10px] font-semibold text-gray-700">${c.amount.toLocaleString()}</span>
               </div>
-            ))}
+            )):(
+              <p className="text-[10px] text-gray-400 text-center py-2">No expense data for {selectedYear}</p>
+            )}
           </div>
+          </>
+          )}
         </div>
       </div>
 
@@ -247,7 +307,7 @@ export default function ExpensesPage(){
             <button onClick={()=>setShowCatDd(v=>!v)}
               className="no-hover-fx flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-[11px] text-gray-600">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-              {catFilt==="All"?"Modal":catFilt}
+              {catFilt==="All"?"Category":catFilt}
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             {showCatDd&&(
@@ -271,11 +331,22 @@ export default function ExpensesPage(){
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Expense
           </button>
-          <button className="no-hover-fx flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-[11px] text-gray-600">
+          <button onClick={()=>{
+              const hdr=["Expense","Category","Qty","Amount","Date","Status"];
+              const rows=filtered.map(t=>[`"${t.expense}"`,`"${t.category}"`,t.qty,t.amount,t.date,t.status]);
+              const csv=[hdr,...rows].map(r=>r.join(",")).join("\n");
+              const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);
+              const a=document.createElement("a");a.href=url;a.download="expenses.csv";a.click();URL.revokeObjectURL(url);
+            }} className="no-hover-fx flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-[11px] text-gray-600">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download
+            CSV
           </button>
         </div>
+        {loading?(
+          <div className="py-16 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full border-2 border-red-400 border-t-transparent animate-spin"/>
+          </div>
+        ):(<>
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[700px]">
             <thead><tr style={{background:"#f8fafc"}} className="border-b border-gray-100">
@@ -352,6 +423,7 @@ export default function ExpensesPage(){
           ))}
           {pageTxs.length===0&&<p className="px-4 py-10 text-center text-[13px] text-gray-400">No transactions found.</p>}
         </div>
+        </>)}
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-50 flex-wrap gap-2">
           <div className="flex items-center gap-2"><span className="text-[11px] text-gray-400">Results per page</span>

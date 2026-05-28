@@ -7,7 +7,28 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
+    const session = await getSession(req);
 
+    /* ── Driver requesting PENDING bookings → tier-match + unassigned only ── */
+    if (session?.driverId && status === "PENDING") {
+      const driver = await prisma.driver.findUnique({
+        where: { id: session.driverId },
+        select: { vehicle: { select: { tier: true } } },
+      });
+      const tier = driver?.vehicle?.tier ?? null;
+
+      const bookings = await prisma.booking.findMany({
+        where: {
+          status: "PENDING",
+          driverId: null,
+          ...(tier ? { carTier: tier } : {}),
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      return NextResponse.json(bookings);
+    }
+
+    /* ── Admin / general query ── */
     const bookings = await prisma.booking.findMany({
       where: status ? { status: status as never } : undefined,
       orderBy: { createdAt: "desc" },

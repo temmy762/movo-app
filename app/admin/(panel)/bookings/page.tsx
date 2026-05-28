@@ -77,25 +77,12 @@ function BookingStatCard({ s }: { s: typeof bookingStats[0] }) {
 }
 
 // ── Bookings Bar Chart (bidirectional) ────────────────────────────────────
-const overviewData = [
-  { m: "Jan", done: 300, cancelled: 350 },
-  { m: "Feb", done: 320, cancelled: 400 },
-  { m: "Mar", done: 380, cancelled: 430 },
-  { m: "Apr", done: 350, cancelled: 430 },
-  { m: "May", done: 310, cancelled: 370 },
-  { m: "Jun", done: 586, cancelled: 450 },
-  { m: "Jul", done: 330, cancelled: 370 },
-  { m: "Aug", done: 280, cancelled: 330 },
-  { m: "Sep", done: 300, cancelled: 360 },
-  { m: "Oct", done: 360, cancelled: 410 },
-  { m: "Nov", done: 340, cancelled: 430 },
-  { m: "Dec", done: 380, cancelled: 480 },
-];
-const MAX_VAL = 600;
 const HALF_H = 110;
 
-function BookingsBarChart() {
+type OverviewItem = { m: string; done: number; cancelled: number };
+function BookingsBarChart({ data }: { data: OverviewItem[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const MAX_VAL = data.length > 0 ? Math.max(...data.map(d => Math.max(d.done, d.cancelled)), 100) : 600;
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm">
       {/* Header */}
@@ -136,7 +123,7 @@ function BookingsBarChart() {
 
           {/* Bars */}
           <div className="flex gap-1 relative" style={{ height: `${HALF_H * 2}px` }}>
-            {overviewData.map((d, i) => {
+            {data.map((d, i) => {
               const doneH  = Math.round((d.done      / MAX_VAL) * HALF_H);
               const cancH  = Math.round((d.cancelled / MAX_VAL) * HALF_H);
               const active = hovered === i;
@@ -186,7 +173,7 @@ function BookingsBarChart() {
 
       {/* X-axis labels */}
       <div className="flex gap-1 mt-1 pl-8 min-w-[400px]">
-        {overviewData.map(d => (
+        {data.map(d => (
           <div key={d.m} className="flex-1 text-center">
             <span className="text-[9px] text-gray-400">{d.m}</span>
           </div>
@@ -495,7 +482,19 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
 
 // ── Page ─────────────────────────────────────────────────────────────────
 export default function BookingsPage() {
-  const [counts, setCounts] = useState({ pending: 0, confirmed: 0, completed: 0, cancelled: 0 });
+  const [counts,   setCounts]   = useState({ pending: 0, confirmed: 0, completed: 0, cancelled: 0 });
+  const [chartData, setChartData] = useState<OverviewItem[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/stats")
+      .then(r => r.json())
+      .then(d => {
+        if (d?.monthlyBookings) {
+          setChartData(d.monthlyBookings.map((b: { m: string; done: number; cancelled: number }) => ({ m: b.m, done: b.done, cancelled: b.cancelled })));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const livStats = [
     { label: "Pending Bookings",   value: counts.pending,   pct: "", up: true  },
@@ -512,7 +511,7 @@ export default function BookingsPage() {
           <div className="grid grid-cols-2 gap-3">
             {livStats.map(s => <BookingStatCard key={s.label} s={s} />)}
           </div>
-          <BookingsBarChart />
+          <BookingsBarChart data={chartData} />
         </div>
 
         {/* Full bookings table */}

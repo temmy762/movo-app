@@ -6,9 +6,8 @@ import { GoogleMap, Marker, DirectionsRenderer, useJsApiLoader } from "@react-go
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
-const PICKUP = { lat: 43.662, lng: -79.393 };
-const CAR    = { lat: 43.655, lng: -79.385 };
-const DEST   = { lat: 43.644, lng: -79.372 };
+const DEFAULT_PICKUP = { lat: 43.662, lng: -79.393 };
+const DEFAULT_DEST   = { lat: 43.644, lng: -79.372 };
 
 const PICKUP_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
@@ -39,7 +38,13 @@ const DARK_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: "transit",           stylers: [{ visibility: "off" }] },
 ];
 
-export default function RideMap() {
+interface RideMapProps {
+  pickup?: string;
+  dropoff?: string;
+  onDirectionsFetched?: (durationText: string, durationSeconds: number) => void;
+}
+
+export default function RideMap({ pickup, dropoff, onDirectionsFetched }: RideMapProps) {
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
@@ -47,22 +52,42 @@ export default function RideMap() {
   });
 
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [pickupPos, setPickupPos] = useState<google.maps.LatLngLiteral>(DEFAULT_PICKUP);
+  const [destPos, setDestPos] = useState<google.maps.LatLngLiteral>(DEFAULT_DEST);
 
   useEffect(() => {
     if (!isLoaded) return;
     const svc = new google.maps.DirectionsService();
+    const origin = pickup || DEFAULT_PICKUP;
+    const destination = dropoff || DEFAULT_DEST;
+
     svc.route(
       {
-        origin: PICKUP,
-        destination: DEST,
-        waypoints: [{ location: CAR, stopover: false }],
+        origin,
+        destination,
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
-        if (status === "OK" && result) setDirections(result);
+        if (status === "OK" && result) {
+          setDirections(result);
+          const leg = result.routes[0]?.legs[0];
+          if (leg?.start_location) {
+            setPickupPos({ lat: leg.start_location.lat(), lng: leg.start_location.lng() });
+          }
+          if (leg?.end_location) {
+            setDestPos({ lat: leg.end_location.lat(), lng: leg.end_location.lng() });
+          }
+          if (leg?.duration && onDirectionsFetched) {
+            onDirectionsFetched(leg.duration.text, leg.duration.value);
+          }
+        }
       }
     );
-  }, [isLoaded]);
+  }, [isLoaded, pickup, dropoff]);
+
+  const mapCenter = directions
+    ? pickupPos
+    : DEFAULT_PICKUP;
 
   if (!isLoaded) {
     return (
@@ -75,7 +100,7 @@ export default function RideMap() {
   return (
     <GoogleMap
       mapContainerStyle={{ width: "100%", height: "100%" }}
-      center={CAR}
+      center={mapCenter}
       zoom={13}
       options={{
         disableDefaultUI: true,
@@ -98,9 +123,9 @@ export default function RideMap() {
         />
       )}
 
-      {/* Pickup */}
+      {/* Pickup marker */}
       <Marker
-        position={PICKUP}
+        position={pickupPos}
         icon={{
           url: `data:image/svg+xml;charset=UTF-8,${PICKUP_SVG}`,
           scaledSize: new google.maps.Size(30, 30),
@@ -108,9 +133,9 @@ export default function RideMap() {
         }}
       />
 
-      {/* Car */}
+      {/* Car marker — midpoint of route */}
       <Marker
-        position={CAR}
+        position={mapCenter}
         icon={{
           url: "/images/Car.png",
           scaledSize: new google.maps.Size(52, 30),
@@ -118,9 +143,9 @@ export default function RideMap() {
         }}
       />
 
-      {/* Destination */}
+      {/* Destination marker */}
       <Marker
-        position={DEST}
+        position={destPos}
         icon={{
           url: `data:image/svg+xml;charset=UTF-8,${DEST_SVG}`,
           scaledSize: new google.maps.Size(28, 36),

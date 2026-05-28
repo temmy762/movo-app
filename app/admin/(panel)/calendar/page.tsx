@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -9,7 +9,7 @@ const S_HOUR  = 8;
 const E_HOUR  = 18;
 const HOURS   = Array.from({ length: E_HOUR - S_HOUR }, (_, i) => S_HOUR + i);
 const WEEK_DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-const BASE_DATE = new Date(2028, 7, 14); // Aug 14, 2028 — anchor for mock data
+const TODAY = new Date();
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
@@ -35,35 +35,17 @@ type Filter  = "all" | "pickup" | "return";
 type ViewMode = "week" | "day" | "month";
 type EvtType = "pickup" | "return";
 interface Evt {
-  id: number; date: Date; h: number; m: number; dur: number;
+  id: string; date: Date; h: number; m: number; dur: number;
   car: string; client: string; type: EvtType;
   driver: string; startDate: string; endDate: string;
   notes?: string; carType: string; carNum: string; trans: string;
   carImg: string; agenda: string;
   ow?: 0 | 1;
 }
+const TIER_IMG: Record<string,string> = {
+  classic:"/images/movo classic.png", premium:"/images/movo premium.png", black:"/images/prive black.png",
+};
 
-// ── Events data (dates tied to Aug 14-19 2028 mock week) ─────────────────────
-const D = (d: number) => new Date(2028, 7, d); // Aug 2028 shorthand
-const EVENTS: Evt[] = [
-  { id:1,  date:D(14), h:8,  m:0,  dur:55, car:"Ford Focus",       client:"Michael Brown",  type:"pickup", driver:"None", startDate:"Mon, 14 Aug 2028", endDate:"Tue, 15 Aug 2028", carType:"Sedan",     carNum:"AB1234", trans:"Manual",    carImg:"/images/movo premium.png",  agenda:"Car Pickup at 8:00 AM" },
-  { id:2,  date:D(14), h:13, m:5,  dur:55, car:"Hyundai Elantra",  client:"Jane Wilson",    type:"pickup", driver:"None", startDate:"Mon, 14 Aug 2028", endDate:"Tue, 15 Aug 2028", carType:"Sedan",     carNum:"DE5678", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Pickup at 1:05 PM" },
-  { id:3,  date:D(15), h:9,  m:0,  dur:55, car:"Toyota Corolla",   client:"Alice Johnson",  type:"pickup", driver:"None", startDate:"Tue, 15 Aug 2028", endDate:"Wed, 16 Aug 2028", carType:"Sedan",     carNum:"GH9012", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Pickup at 9:00 AM" },
-  { id:4,  date:D(15), h:12, m:0,  dur:55, car:"Chevrolet Malibu", client:"Helen Martinez", type:"return", driver:"None", startDate:"Mon, 14 Aug 2028", endDate:"Tue, 15 Aug 2028", carType:"Sedan",     carNum:"IJ3456", trans:"Automatic", carImg:"/images/movo classic.png",  agenda:"Car Return at 12:00 PM" },
-  { id:5,  date:D(15), h:15, m:0,  dur:55, car:"Ford Focus",       client:"Kyle Thompson",  type:"pickup", driver:"None", startDate:"Tue, 15 Aug 2028", endDate:"Wed, 16 Aug 2028", carType:"Sedan",     carNum:"KL7890", trans:"Manual",    carImg:"/images/movo premium.png",  agenda:"Car Pickup at 3:00 PM" },
-  { id:6,  date:D(16), h:8,  m:0,  dur:55, car:"Kia Soul",         client:"Oliver Scott",   type:"pickup", driver:"None", startDate:"Wed, 16 Aug 2028", endDate:"Thu, 17 Aug 2028", carType:"Hatchback", carNum:"MN1234", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Pickup at 8:00 AM" },
-  { id:7,  date:D(16), h:13, m:30, dur:55, car:"Mercedes C-Class", client:"Fiona Brown",    type:"return", driver:"None", startDate:"Mon, 14 Aug 2028", endDate:"Wed, 16 Aug 2028", carType:"Sedan",     carNum:"OP5678", trans:"Automatic", carImg:"/images/prive black.png",   agenda:"Car Return at 1:30 PM", ow:0 },
-  { id:8,  date:D(16), h:13, m:30, dur:55, car:"Hyundai Elantra",  client:"George Clark",   type:"return", driver:"None", startDate:"Mon, 14 Aug 2028", endDate:"Wed, 16 Aug 2028", carType:"Sedan",     carNum:"QR9012", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Return at 1:30 PM", ow:1 },
-  { id:9,  date:D(17), h:9,  m:30, dur:55, car:"Toyota Corolla",   client:"Alice Johnson",  type:"pickup", driver:"None", startDate:"Thu, 17 Aug 2028", endDate:"Fri, 18 Aug 2028", carType:"Sedan",     carNum:"ST3456", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Pickup at 9:30 AM", ow:0 },
-  { id:10, date:D(17), h:9,  m:30, dur:55, car:"Nissan Altima",    client:"Oliver Scott",   type:"pickup", driver:"None", startDate:"Thu, 17 Aug 2028", endDate:"Fri, 18 Aug 2028", carType:"Sedan",     carNum:"UV7890", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Pickup at 9:30 AM", ow:1 },
-  { id:11, date:D(17), h:12, m:30, dur:55, car:"Audi Q7",          client:"Kyle Thompson",  type:"pickup", driver:"None", startDate:"Thu, 17 Aug 2028", endDate:"Fri, 18 Aug 2028", notes:"Client requested a child safety seat.", carType:"SUV", carNum:"CX2345", trans:"Automatic", carImg:"/images/movo classic.png", agenda:"Car Pickup at 12:30 PM" },
-  { id:12, date:D(18), h:8,  m:0,  dur:55, car:"Chevrolet Malibu", client:"Nancy Davis",    type:"pickup", driver:"None", startDate:"Fri, 18 Aug 2028", endDate:"Sat, 19 Aug 2028", carType:"Sedan",     carNum:"WX1234", trans:"Automatic", carImg:"/images/movo classic.png",  agenda:"Car Pickup at 8:00 AM" },
-  { id:13, date:D(18), h:9,  m:0,  dur:55, car:"BMW X5",           client:"Charlie Davis",  type:"pickup", driver:"None", startDate:"Fri, 18 Aug 2028", endDate:"Sat, 19 Aug 2028", carType:"SUV",       carNum:"YZ5678", trans:"Automatic", carImg:"/images/prive black.png",   agenda:"Car Pickup at 9:00 AM" },
-  { id:14, date:D(18), h:11, m:0,  dur:55, car:"Honda Civic",      client:"Bob Smith",      type:"return", driver:"None", startDate:"Wed, 16 Aug 2028", endDate:"Fri, 18 Aug 2028", carType:"Sedan",     carNum:"AB9012", trans:"Manual",    carImg:"/images/movo premium.png",  agenda:"Car Return at 11:00 AM" },
-  { id:15, date:D(18), h:13, m:0,  dur:55, car:"Toyota Corolla",   client:"Michael Brown",  type:"return", driver:"None", startDate:"Wed, 16 Aug 2028", endDate:"Fri, 18 Aug 2028", carType:"Sedan",     carNum:"CD3456", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Return at 1:00 PM" },
-  { id:16, date:D(19), h:13, m:0,  dur:55, car:"Toyota Corolla",   client:"Michael Brown",  type:"return", driver:"None", startDate:"Fri, 18 Aug 2028", endDate:"Sat, 19 Aug 2028", carType:"Sedan",     carNum:"EF7890", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Return at 1:00 PM" },
-  { id:17, date:D(19), h:15, m:30, dur:55, car:"Kia Soul",         client:"Elona White",    type:"pickup", driver:"None", startDate:"Sat, 19 Aug 2028", endDate:"Sun, 20 Aug 2028", carType:"Hatchback", carNum:"GH1234", trans:"Automatic", carImg:"/images/movo premium.png",  agenda:"Car Pickup at 3:30 PM" },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtHour(h: number) {
@@ -257,8 +239,38 @@ function MonthView({ anchor, eventsFor, filter, selected, onEvt }: {
 export default function CalendarPage() {
   const [filter,   setFilter]   = useState<Filter>("all");
   const [view,     setView]     = useState<ViewMode>("week");
-  const [anchor,   setAnchor]   = useState<Date>(BASE_DATE);
-  const [selected, setSelected] = useState<Evt | null>(EVENTS.find(e => e.id === 11) ?? null);
+  const [anchor,   setAnchor]   = useState<Date>(TODAY);
+  const [selected, setSelected] = useState<Evt | null>(null);
+  const [events,   setEvents]   = useState<Evt[]>([]);
+
+  useEffect(() => {
+    fetch("/api/bookings")
+      .then(r => r.json())
+      .then((data: { id:string; clientName:string; carName:string; carTier:string; status:string; createdAt:string; updatedAt:string }[]) => {
+        const mapped: Evt[] = (Array.isArray(data) ? data : []).map(b => {
+          const d   = new Date(b.createdAt);
+          const h   = d.getHours();
+          const m   = d.getMinutes();
+          const tier = b.carTier?.toLowerCase() ?? "premium";
+          const type: EvtType = b.status === "COMPLETED" ? "return" : "pickup";
+          const label = type === "pickup" ? "Pickup" : "Return";
+          return {
+            id: b.id, date: d, h, m, dur: 55,
+            car: b.carName, client: b.clientName, type,
+            driver: "—",
+            startDate: d.toLocaleDateString("en-US", { weekday:"short", day:"numeric", month:"short", year:"numeric" }),
+            endDate:   new Date(b.updatedAt).toLocaleDateString("en-US", { weekday:"short", day:"numeric", month:"short", year:"numeric" }),
+            carType:  tier.charAt(0).toUpperCase() + tier.slice(1),
+            carNum:   "—",
+            trans:    "Automatic",
+            carImg:   TIER_IMG[tier] ?? "/images/movo premium.png",
+            agenda:   `Car ${label} at ${fmtTime(h, m)}`,
+          };
+        });
+        setEvents(mapped);
+      })
+      .catch(console.error);
+  }, []);
 
   // ── Derived dates ──────────────────────────────────────────────────────────
   const weekDays = useMemo(() => {
@@ -281,11 +293,11 @@ export default function CalendarPage() {
   const delta = view === "day" ? 1 : view === "week" ? 7 : 28;
   const goBack    = () => setAnchor(d => addDays(d, -delta));
   const goForward = () => setAnchor(d => addDays(d, +delta));
-  const goToday   = () => setAnchor(BASE_DATE);
+  const goToday   = () => setAnchor(new Date());
 
   // ── Event helpers ──────────────────────────────────────────────────────────
   const eventsForDay = (day: Date) =>
-    EVENTS.filter(e => sameDay(e.date, day) && (filter === "all" || e.type === filter));
+    events.filter(e => sameDay(e.date, day) && (filter === "all" || e.type === filter));
 
   const handleEvt = (evt: Evt) => setSelected(prev => prev?.id === evt.id ? null : evt);
 
@@ -356,7 +368,7 @@ export default function CalendarPage() {
 
         {/* ── Grid / Month body ── */}
         {view === "month"
-          ? <MonthView anchor={anchor} eventsFor={d => EVENTS.filter(e => sameDay(e.date,d))}
+          ? <MonthView anchor={anchor} eventsFor={d => events.filter(e => sameDay(e.date,d))}
               filter={filter} selected={selected} onEvt={handleEvt}/>
           : <TimeGrid days={headerDays} eventsForDay={eventsForDay}
               selected={selected} onEvt={handleEvt}/>

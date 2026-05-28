@@ -2,27 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 type UnitStatus = "Available" | "Maintenance" | "Unavailable";
 type Unit = {
-  id: number; brand: string; model: string;
+  id: string; brand: string; model: string;
   transmission: "Automatic" | "Manual";
   seats: number; status: UnitStatus; units: number;
   price: number; image: string;
 };
-
-const allUnits: Unit[] = [
-  { id:1, brand:"Aston",       model:"Martin",  transmission:"Automatic", seats:2, status:"Available",   units:1, price:130, image:"/images/movo classic.png" },
-  { id:2, brand:"Hyundai",     model:"Sonata",  transmission:"Manual",    seats:5, status:"Available",   units:1, price:45,  image:"/images/movo premium.png" },
-  { id:3, brand:"Nissan",      model:"Ariya",   transmission:"Automatic", seats:5, status:"Available",   units:1, price:55,  image:"/images/prive black.png"  },
-  { id:4, brand:"Range Rover", model:"Velar",   transmission:"Automatic", seats:5, status:"Maintenance", units:0, price:60,  image:"/images/movo classic.png" },
-  { id:5, brand:"BMW",         model:"LX3",     transmission:"Automatic", seats:7, status:"Available",   units:4, price:120, image:"/images/movo premium.png" },
-  { id:6, brand:"Audi",        model:"Q7",      transmission:"Automatic", seats:7, status:"Unavailable", units:0, price:130, image:"/images/prive black.png"  },
-  { id:7, brand:"Mercedes",    model:"S-Class", transmission:"Automatic", seats:5, status:"Available",   units:1, price:100, image:"/images/movo classic.png" },
-  { id:8, brand:"KIA",         model:"EV6",     transmission:"Manual",    seats:5, status:"Available",   units:1, price:40,  image:"/images/movo premium.png" },
-];
 
 // ── Status config ────────────────────────────────────────────────────────────
 const statusCfg: Record<UnitStatus, { bg: string; color: string }> = {
@@ -335,16 +324,28 @@ function UnitModal({ initial, onSave, onClose }: {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function UnitsPage() {
-  const [units, setUnits]     = useState<Unit[]>(allUnits);
-  const [search, setSearch]   = useState("");
-  const [carType, setCarType] = useState("All");
-  const [status, setStatus]   = useState("All");
-  const [page, setPage]       = useState(1);
-  const [view, setView]       = useState<"list" | "grid">("list");
-  const [perPage, setPerPage] = useState(8);
-  const [showAdd, setShowAdd] = useState(false);
+  const [units,    setUnits]    = useState<Unit[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [search,   setSearch]   = useState("");
+  const [carType,  setCarType]  = useState("All");
+  const [status,   setStatus]   = useState("All");
+  const [page,     setPage]     = useState(1);
+  const [view,     setView]     = useState<"list" | "grid">("list");
+  const [perPage,  setPerPage]  = useState(8);
+  const [showAdd,  setShowAdd]  = useState(false);
   const [editUnit, setEditUnit] = useState<Unit | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const loadUnits = () => {
+    setLoading(true);
+    fetch("/api/admin/units")
+      .then(r => r.json())
+      .then(setUnits)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadUnits(); }, []);
 
   const brands = Array.from(new Set(units.map(u => u.brand).filter(Boolean)));
 
@@ -354,19 +355,31 @@ export default function UnitsPage() {
     (`${u.brand} ${u.model}`.toLowerCase().includes(search.toLowerCase()))
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const paged = filtered.slice((page - 1) * perPage, page * perPage);
+  const paged = loading ? [] : filtered.slice((page - 1) * perPage, page * perPage);
 
   const handleAdd = (data: UnitForm) => {
-    setUnits(prev => [...prev, { id: Date.now(), ...data }]);
+    setUnits(prev => [...prev, { id: crypto.randomUUID(), ...data }]);
     setShowAdd(false);
   };
-  const handleEdit = (data: UnitForm) => {
-    setUnits(prev => prev.map(u => u.id === editUnit!.id ? { ...u, ...data } : u));
+
+  const handleEdit = async (data: UnitForm) => {
+    await fetch("/api/admin/units", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editUnit!.id, status: data.status, price: data.price }),
+    });
     setEditUnit(null);
+    loadUnits();
   };
-  const handleDelete = (id: number) => {
-    setUnits(prev => prev.filter(u => u.id !== id));
+
+  const handleDelete = async (id: string) => {
+    await fetch("/api/admin/units", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
     setDeleteId(null);
+    loadUnits();
   };
 
   return (

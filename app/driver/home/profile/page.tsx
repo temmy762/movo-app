@@ -127,18 +127,18 @@ export default function DriverProfilePage() {
         {/* Right col — settings */}
         <div>
           <SectionGroup title="Vehicle">
-            <SectionRow label="Default Vehicles" />
+            <SectionRow label="Default Vehicles" onClick={() => router.push("/driver/home/profile/vehicle")} />
           </SectionGroup>
 
           <SectionGroup title="Support">
-            <SectionRow label="Help" />
-            <SectionRow label="Share Feedback" />
+            <SectionRow label="Help" onClick={() => router.push("/driver/home/profile/help")} />
+            <SectionRow label="Share Feedback" onClick={() => router.push("/driver/home/profile/feedback")} />
           </SectionGroup>
 
           <SectionGroup title="Legal">
-            <SectionRow label="Legal Notice" />
-            <SectionRow label="Privacy Policy" />
-            <SectionRow label="GPS Tracking Policy" />
+            <SectionRow label="Legal Notice" onClick={() => router.push("/driver/home/profile/legal")} />
+            <SectionRow label="Privacy Policy" onClick={() => router.push("/driver/home/profile/privacy")} />
+            <SectionRow label="GPS Tracking Policy" onClick={() => router.push("/driver/home/profile/gps-policy")} />
           </SectionGroup>
         </div>
 
