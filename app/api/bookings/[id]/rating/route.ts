@@ -4,8 +4,9 @@ import { getSession } from "@/lib/session";
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await getSession(req);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,13 +18,13 @@ export async function POST(
     return NextResponse.json({ error: "Rating must be 1–5" }, { status: 400 });
   }
 
-  const booking = await prisma.booking.findUnique({ where: { id: params.id } });
+  const booking = await prisma.booking.findUnique({ where: { id } });
   if (!booking) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
   const updated = await prisma.booking.update({
-    where: { id: params.id },
+    where: { id },
     data: { rating, review: review ?? null },
   });
 
