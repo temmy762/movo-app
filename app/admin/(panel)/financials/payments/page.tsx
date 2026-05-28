@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type PayStatus = "Completed" | "Awaiting" | "Overdue";
@@ -96,7 +96,7 @@ function InvoiceModal({initial,onSave,onClose}:{initial?:Payment;onSave:(d:Omit<
 // ── Payment Detail Modal ──────────────────────────────────────────────────────
 function PaymentDetailModal({pay,onClose}:{pay:Payment;onClose:()=>void;}){
   const ss=STATUS_STYLE[pay.status];
-  const rows:Array<[string,JSX.Element]>=[
+  const rows:Array<[string,React.ReactElement]>=[
     ["Invoice ID",<span className="text-[12px] font-semibold text-gray-700">{pay.id}</span>],
     ["Client",<span className="text-[12px] font-medium text-gray-800">{pay.client}</span>],
     ["Car Model",<span className="text-[12px] text-gray-600">{pay.car}</span>],
