@@ -36,7 +36,7 @@ export async function GET() {
 
     // ── Admin-to-driver messages (grouped by driverId) ──────────────────────
     const driverTickets = tickets.filter(t => t.issue?.startsWith("DRIVER_MSG:"));
-    const driverIds = [...new Set(driverTickets.map(t => t.issue!.replace("DRIVER_MSG:", "")))];
+    const driverIds: string[] = [...new Set(driverTickets.map(t => t.issue!.replace("DRIVER_MSG:", "")))];
     const drivers = driverIds.length > 0
       ? await prisma.driver.findMany({ where: { id: { in: driverIds } }, select: { id: true, firstName: true, lastName: true, phone: true } })
       : [];
