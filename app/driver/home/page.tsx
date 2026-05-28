@@ -60,6 +60,7 @@ export default function DriverHomePage() {
   const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const geoWatchRef  = useRef<number | null>(null);
+  const lastPushRef  = useRef<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(30);
 
   useEffect(() => {
@@ -80,8 +81,12 @@ export default function DriverHomePage() {
   const startLocationTracking = useCallback((bookingId: string) => {
     if (!navigator.geolocation) return;
     if (geoWatchRef.current !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
+    lastPushRef.current = 0;
     geoWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        const now = Date.now();
+        if (now - lastPushRef.current < 5000) return; // throttle: max 1 push per 5 s
+        lastPushRef.current = now;
         const { latitude: lat, longitude: lng, heading, speed } = pos.coords;
         fetch("/api/trips/location", {
           method: "POST",
@@ -90,7 +95,7 @@ export default function DriverHomePage() {
         }).catch(() => {});
       },
       () => {},
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 4000, timeout: 10000 }
     );
   }, []);
 

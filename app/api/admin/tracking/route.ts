@@ -9,44 +9,82 @@ export async function GET() {
       take: 30,
       include: {
         driver: {
-          select: { id: true, firstName: true, lastName: true, lat: true, lng: true, isOnline: true, vehicle: { select: { make: true, model: true, plate: true, tier: true } } },
+          select: {
+            id: true, firstName: true, lastName: true,
+            lat: true, lng: true, isOnline: true,
+            vehicle: { select: { make: true, model: true, plate: true, tier: true } },
+          },
         },
       },
     });
 
-    const vehicles = bookings
-      .filter(b => b.driver?.vehicle)
-      .map(b => {
-        const d = b.driver!;
-        const v = d.vehicle!;
-        const lat = d.lat ?? 0;
-        const lng = d.lng ?? 0;
+    const filtered = bookings.filter(b => b.driver?.vehicle);
 
-        let tripStatus: "On Way" | "Active Trip" | "Returned";
-        if (b.status === "COMPLETED") {
-          tripStatus = "Returned";
-        } else if (b.startedAt) {
-          tripStatus = "Active Trip";
-        } else {
-          tripStatus = "On Way";
-        }
+    // For active trips, batch-fetch their GPS trail (last 150 points each)
+    const activeIds = filtered
+      .filter(b => b.status === "CONFIRMED" && b.startedAt)
+      .map(b => b.id);
 
-        return {
-          id:         b.id,
-          client:     b.clientName,
-          car:        `${v.make} ${v.model}`,
-          carType:    v.tier,
-          carNumber:  v.plate,
-          status:     tripStatus,
-          startDate:  new Date(b.createdAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
-          endDate:    new Date(b.updatedAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
-          tripTime:   b.startedAt ? `Started ${new Date(b.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "—",
-          distance:   "—",
-          pos:        [lat, lng] as [number, number],
-          route:      [[lat, lng]] as [number, number][],
-          driverName: `${d.firstName} ${d.lastName}`,
-        };
+    // Map: bookingId → chronological [lat,lng] trail
+    const routeMap = new Map<string, [number, number][]>();
+    const latestMap = new Map<string, { lat: number; lng: number }>();
+
+    if (activeIds.length > 0) {
+      // Fetch most-recent 150 points per active booking
+      const locs = await prisma.tripLocation.findMany({
+        where:   { bookingId: { in: activeIds } },
+        orderBy: { timestamp: "desc" },
+        take:    150 * activeIds.length,
+        select:  { bookingId: true, lat: true, lng: true },
       });
+
+      // Group by bookingId (points arrive newest-first; cap at 150 per booking)
+      for (const loc of locs) {
+        if (!routeMap.has(loc.bookingId)) {
+          routeMap.set(loc.bookingId, []);
+          latestMap.set(loc.bookingId, { lat: loc.lat, lng: loc.lng });
+        }
+        const arr = routeMap.get(loc.bookingId)!;
+        if (arr.length < 150) arr.push([loc.lat, loc.lng]);
+      }
+
+      // Reverse so routes are chronological (oldest → newest)
+      for (const [k, v] of routeMap) routeMap.set(k, v.reverse());
+    }
+
+    const vehicles = filtered.map(b => {
+      const d = b.driver!;
+      const v = d.vehicle!;
+
+      let tripStatus: "On Way" | "Active Trip" | "Returned";
+      if (b.status === "COMPLETED")     tripStatus = "Returned";
+      else if (b.startedAt)             tripStatus = "Active Trip";
+      else                              tripStatus = "On Way";
+
+      // Live position: prefer latest TripLocation, fall back to Driver.lat/lng
+      const livePos    = latestMap.get(b.id);
+      const lat        = livePos?.lat ?? d.lat ?? 0;
+      const lng        = livePos?.lng ?? d.lng ?? 0;
+
+      // Route trail: real GPS points for active trips, single-point otherwise
+      const trail      = routeMap.get(b.id) ?? [[lat, lng]] as [number, number][];
+
+      return {
+        id:         b.id,
+        client:     b.clientName,
+        car:        `${v.make} ${v.model}`,
+        carType:    v.tier,
+        carNumber:  v.plate,
+        status:     tripStatus,
+        startDate:  new Date(b.createdAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
+        endDate:    new Date(b.updatedAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
+        tripTime:   b.startedAt ? `Started ${new Date(b.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "—",
+        distance:   "—",
+        pos:        [lat, lng] as [number, number],
+        route:      trail,
+        driverName: `${d.firstName} ${d.lastName}`,
+      };
+    });
 
     return NextResponse.json(vehicles);
   } catch (e) {

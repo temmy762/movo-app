@@ -108,21 +108,35 @@ export default function TrackingPage() {
   const[search,setSearch]=useState("");
   const[addOpen,setAddOpen]=useState(false);
   const[mobileView,setMobileView]=useState<"list"|"map">("map");
-  const pollRef=useRef<ReturnType<typeof setInterval>|null>(null);
+  const pollRef=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   useEffect(()=>{
+    let cancelled=false;
+
+    const schedule=(delay:number)=>{
+      if(cancelled) return;
+      pollRef.current=setTimeout(()=>load(),delay);
+    };
+
     const load=()=>{
       fetch("/api/admin/tracking")
         .then(r=>r.json())
         .then((data:Vehicle[])=>{
+          if(cancelled) return;
           setVehicles(data);
           setActiveId(prev=>prev??(data.length>0?data[0].id:null));
+          // Refresh faster when there are active trips in progress
+          const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
+          schedule(hasActive?5000:15000);
         })
-        .catch(()=>{});
+        .catch(()=>{ schedule(10000); });
     };
+
     load();
-    pollRef.current=setInterval(load,10000);
-    return()=>{ if(pollRef.current) clearInterval(pollRef.current); };
+    return()=>{
+      cancelled=true;
+      if(pollRef.current) clearTimeout(pollRef.current);
+    };
   },[]);
 
   const filtered=vehicles.filter(v=>
