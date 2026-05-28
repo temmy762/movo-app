@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const TrackingMap = dynamic(() => import("./TrackingMap"), {
@@ -8,17 +8,19 @@ const TrackingMap = dynamic(() => import("./TrackingMap"), {
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type TripStatus = "On Trip" | "Returned";
+type TripStatus = "On Way" | "Active Trip" | "Returned";
 type Vehicle = {
   id:string; client:string; car:string; carType:string; carNumber:string;
   status:TripStatus; startDate:string; endDate:string; tripTime:string; distance:string;
   pos:[number,number]; route:[number,number][];
+  driverName?:string;
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ST: Record<TripStatus,{bg:string;color:string}> = {
-  "On Trip":  {bg:"#dbeafe",color:"#1d4ed8"},
-  "Returned": {bg:"#fce7f3",color:"#db2777"},
+  "On Way":      {bg:"#dbeafe",color:"#1d4ed8"},
+  "Active Trip": {bg:"#dcfce7",color:"#16a34a"},
+  "Returned":    {bg:"#fce7f3",color:"#db2777"},
 };
 const AVATAR_COLS=["#ef4444","#f97316","#eab308","#22c55e","#06b6d4","#6366f1","#ec4899","#8b5cf6"];
 const ac=(n:string)=>AVATAR_COLS[n.charCodeAt(0)%AVATAR_COLS.length];
@@ -106,15 +108,21 @@ export default function TrackingPage() {
   const[search,setSearch]=useState("");
   const[addOpen,setAddOpen]=useState(false);
   const[mobileView,setMobileView]=useState<"list"|"map">("map");
+  const pollRef=useRef<ReturnType<typeof setInterval>|null>(null);
 
   useEffect(()=>{
-    fetch("/api/admin/tracking")
-      .then(r=>r.json())
-      .then((data:Vehicle[])=>{
-        setVehicles(data);
-        if(data.length>0) setActiveId(data[0].id);
-      })
-      .catch(console.error);
+    const load=()=>{
+      fetch("/api/admin/tracking")
+        .then(r=>r.json())
+        .then((data:Vehicle[])=>{
+          setVehicles(data);
+          setActiveId(prev=>prev??(data.length>0?data[0].id:null));
+        })
+        .catch(()=>{});
+    };
+    load();
+    pollRef.current=setInterval(load,10000);
+    return()=>{ if(pollRef.current) clearInterval(pollRef.current); };
   },[]);
 
   const filtered=vehicles.filter(v=>

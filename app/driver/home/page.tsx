@@ -59,6 +59,7 @@ export default function DriverHomePage() {
   const [stats, setStats] = useState<{ totalEarned: number; preBooked: number }>({ totalEarned: 0, preBooked: 0 });
   const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const geoWatchRef  = useRef<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(30);
 
   useEffect(() => {
@@ -72,7 +73,32 @@ export default function DriverHomePage() {
     return () => {
       if (pollRef.current)      clearInterval(pollRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
+      if (geoWatchRef.current !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
     };
+  }, []);
+
+  const startLocationTracking = useCallback((bookingId: string) => {
+    if (!navigator.geolocation) return;
+    if (geoWatchRef.current !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
+    geoWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng, heading, speed } = pos.coords;
+        fetch("/api/trips/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId, lat, lng, heading, speed }),
+        }).catch(() => {});
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+  }, []);
+
+  const stopLocationTracking = useCallback(() => {
+    if (geoWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(geoWatchRef.current);
+      geoWatchRef.current = null;
+    }
   }, []);
 
   const patchStatus = useCallback(async (id: string, status: string) => {
@@ -183,8 +209,18 @@ export default function DriverHomePage() {
     startPolling(fetchNextPending);
   }
 
+  async function handleStartRide() {
+    if (!activeBooking) return;
+    setActionLoading(true);
+    await fetch(`/api/bookings/${activeBooking.id}/start`, { method: "PATCH" });
+    setActionLoading(false);
+    startLocationTracking(activeBooking.id);
+    setRidePhase("started");
+  }
+
   async function handleEndRide() {
     if (!activeBooking) return;
+    stopLocationTracking();
     setActionLoading(true);
     await patchStatus(activeBooking.id, "COMPLETED");
     setActionLoading(false);
@@ -380,10 +416,11 @@ export default function DriverHomePage() {
             )}
 
             {ridePhase === "accepted" && (
-              <button type="button" onClick={() => setRidePhase("started")}
+              <button type="button" onClick={handleStartRide}
+                disabled={actionLoading}
                 className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
-                Start Ride
+                style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                {actionLoading ? "Starting…" : "Start Ride"}
               </button>
             )}
 

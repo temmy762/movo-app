@@ -41,10 +41,11 @@ const DARK_STYLES: google.maps.MapTypeStyle[] = [
 interface RideMapProps {
   pickup?: string;
   dropoff?: string;
+  driverPosition?: { lat: number; lng: number } | null;
   onDirectionsFetched?: (durationText: string, durationSeconds: number) => void;
 }
 
-export default function RideMap({ pickup, dropoff, onDirectionsFetched }: RideMapProps) {
+export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsFetched }: RideMapProps) {
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
@@ -133,9 +134,9 @@ export default function RideMap({ pickup, dropoff, onDirectionsFetched }: RideMa
         }}
       />
 
-      {/* Car marker — midpoint of route */}
+      {/* Car marker — live driver position (falls back to pickup if no GPS yet) */}
       <Marker
-        position={mapCenter}
+        position={driverPosition ?? mapCenter}
         icon={{
           url: "/images/Car.png",
           scaledSize: new google.maps.Size(52, 30),

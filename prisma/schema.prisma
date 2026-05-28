@@ -151,6 +151,8 @@ model Booking {
   stripePaymentIntentId String?
   rating                Float?
   review                String?
+  startedAt             DateTime?
+  completedAt           DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -161,6 +163,22 @@ model Booking {
   driver   Driver? @relation(fields: [driverId], references: [id])
 
   supportTickets SupportTicket[]
+  tripLocations  TripLocation[]
+}
+
+// ─── Trip Location (live tracking) ────────────────────────────────────────────
+
+model TripLocation {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  lat       Float
+  lng       Float
+  heading   Float?
+  speed     Float?
+  timestamp DateTime @default(now())
+
+  @@index([bookingId, timestamp])
 }
 
 // ─── Support ──────────────────────────────────────────────────────────────────

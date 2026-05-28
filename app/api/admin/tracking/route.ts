@@ -22,20 +22,29 @@ export async function GET() {
         const lat = d.lat ?? 0;
         const lng = d.lng ?? 0;
 
+        let tripStatus: "On Way" | "Active Trip" | "Returned";
+        if (b.status === "COMPLETED") {
+          tripStatus = "Returned";
+        } else if (b.startedAt) {
+          tripStatus = "Active Trip";
+        } else {
+          tripStatus = "On Way";
+        }
+
         return {
-          id:        b.id,
-          client:    b.clientName,
-          car:       `${v.make} ${v.model}`,
-          carType:   v.tier,
-          carNumber: v.plate,
-          status:    (b.status === "CONFIRMED" ? "On Trip" : "Returned") as "On Trip" | "Returned",
-          startDate: new Date(b.createdAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
-          endDate:   new Date(b.updatedAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
-          tripTime:  "—",
-          distance:  "—",
-          pos:       [lat, lng] as [number, number],
-          route:     [[lat, lng]] as [number, number][],
-          driverName:`${d.firstName} ${d.lastName}`,
+          id:         b.id,
+          client:     b.clientName,
+          car:        `${v.make} ${v.model}`,
+          carType:    v.tier,
+          carNumber:  v.plate,
+          status:     tripStatus,
+          startDate:  new Date(b.createdAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
+          endDate:    new Date(b.updatedAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
+          tripTime:   b.startedAt ? `Started ${new Date(b.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "—",
+          distance:   "—",
+          pos:        [lat, lng] as [number, number],
+          route:      [[lat, lng]] as [number, number][],
+          driverName: `${d.firstName} ${d.lastName}`,
         };
       });
 

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Image from "next/image";
 import SupportSheet from "./SupportSheet";
 
@@ -30,9 +30,11 @@ function RideTrackingContent() {
   const [arrivalTime, setArrivalTime] = useState("...");
 
   /* ── Driver info ── */
-  const [driverName,   setDriverName]   = useState("Driver");
-  const [driverRating, setDriverRating] = useState<number | null>(null);
-  const [driverPhone,  setDriverPhone]  = useState<string | null>(null);
+  const [driverName,     setDriverName]     = useState("Driver");
+  const [driverRating,   setDriverRating]   = useState<number | null>(null);
+  const [driverPhone,    setDriverPhone]    = useState<string | null>(null);
+  const [driverPosition, setDriverPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const locationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ── Modal states ── */
   const [showMessage,  setShowMessage]  = useState(false);
@@ -65,6 +67,29 @@ function RideTrackingContent() {
         if (data.driver.avgRating != null) setDriverRating(data.driver.avgRating);
       })
       .catch(() => {});
+  }, [bookingId]);
+
+  /* ── Live driver location polling ── */
+  useEffect(() => {
+    if (!bookingId) return;
+
+    const poll = () => {
+      fetch(`/api/bookings/${bookingId}/driver-location`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.position?.lat != null && data?.position?.lng != null) {
+            setDriverPosition({ lat: data.position.lat, lng: data.position.lng });
+          }
+        })
+        .catch(() => {});
+    };
+
+    poll(); // immediate first fetch
+    locationPollRef.current = setInterval(poll, 6000);
+
+    return () => {
+      if (locationPollRef.current) clearInterval(locationPollRef.current);
+    };
   }, [bookingId]);
 
   /* ── Directions callback from RideMap ── */
@@ -104,7 +129,7 @@ function RideTrackingContent() {
         <div className="absolute top-4 left-5 z-[999]">
           <span className="text-white text-[16px] font-semibold drop-shadow-md">Ride</span>
         </div>
-        <RideMap pickup={pickup} dropoff={dropoff} onDirectionsFetched={handleDirectionsFetched} />
+        <RideMap pickup={pickup} dropoff={dropoff} driverPosition={driverPosition} onDirectionsFetched={handleDirectionsFetched} />
       </div>
 
       {/* White panel */}
