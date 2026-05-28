@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ function NewConvModal({onClose,onSelect}:{onClose:()=>void;onSelect:(id:string,n
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function MessagesPage(){
+function MessagesPageInner(){
   const params     = useSearchParams();
   const driverId   = params.get("driver");
   const driverName = params.get("name")??"Driver";
@@ -397,5 +397,13 @@ export default function MessagesPage(){
         </div>
       )}
     </div>
+  );
+}
+
+export default function MessagesPage(){
+  return(
+    <Suspense fallback={null}>
+      <MessagesPageInner/>
+    </Suspense>
   );
 }
