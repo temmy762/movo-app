@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
       orderBy: { firstName: "asc" },
     });
 
-    const result = drivers.map(d => {
+    type DriverRow = (typeof drivers)[number];
+    const result = drivers.map((d: DriverRow) => {
       // For today: busy if has any active (CONFIRMED/PENDING) booking
       // For past:  busy if had an active booking on that day
       // For future: everyone is available
