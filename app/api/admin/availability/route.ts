@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       } else if (isToday) {
         busy = d.bookings.length > 0;
       } else {
-        busy = d.bookings.some(b => {
+        busy = d.bookings.some((b: { id: string; status: string; createdAt: Date }) => {
           const bd = new Date(b.createdAt);
           return bd.toDateString() === selectedDate.toDateString();
         });
