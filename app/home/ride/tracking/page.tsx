@@ -233,6 +233,11 @@ function RideTrackingContent() {
                     icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>),
                     onClick: () => setShowSupport(true),
                   },
+                  {
+                    label: "Report\nIncident",
+                    icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>),
+                    onClick: () => router.push(`/home/report-incident${bookingId ? `?bookingId=${bookingId}` : ""}`),
+                  },
                 ].map((btn) => (
                   <button key={btn.label} type="button" onClick={btn.onClick} className="no-hover-fx flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border border-gray-200 bg-white">
                     {btn.icon}

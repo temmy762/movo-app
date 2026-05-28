@@ -425,12 +425,19 @@ export default function DriverHomePage() {
             )}
 
             {ridePhase === "started" && (
-              <button type="button" onClick={handleEndRide}
-                disabled={actionLoading}
-                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
-                {actionLoading ? "Saving…" : "End Ride"}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={handleEndRide}
+                  disabled={actionLoading}
+                  className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                  {actionLoading ? "Saving…" : "End Ride"}
+                </button>
+                <button type="button"
+                  onClick={() => router.push(`/driver/home/report-incident${activeBooking ? `?bookingId=${activeBooking.id}` : ""}`)}
+                  className="no-hover-fx w-full py-2 rounded-xl text-[13px] font-semibold border border-red-200 text-red-600 bg-red-50">
+                  Report Incident
+                </button>
+              </div>
             )}
 
           </div>
