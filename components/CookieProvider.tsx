@@ -1,8 +1,7 @@
 "use client";
 
-import CookieBanner from "./cookies/CookieBanner";
-
-/* Thin client wrapper so it can be imported from the Server Component layout */
+// ── Deprecated — consent system has been moved to ConsentProvider in layout.tsx
+// This file is kept only so any lingering import doesn't break a build.
 export default function CookieProvider() {
-  return <CookieBanner />;
+  return null;
 }
