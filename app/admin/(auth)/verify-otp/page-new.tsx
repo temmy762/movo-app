@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import SetPasswordClient from "./SetPasswordClient";
+import VerifyOtpClient from "./VerifyOtpClient";
 
-export default function AdminSetPasswordPage() {
+export default function AdminVerifyOtpPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -13,7 +13,7 @@ export default function AdminSetPasswordPage() {
         </div>
       </div>
     }>
-      <SetPasswordClient />
+      <VerifyOtpClient />
     </Suspense>
   );
 }
