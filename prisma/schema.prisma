@@ -83,6 +83,37 @@ enum RiskLevel {
   CRITICAL
 }
 
+enum OnboardingType {
+  INDIVIDUAL
+  FLEET
+}
+
+enum OnboardingAdminStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum DocumentType {
+  DRIVERS_LICENSE
+  BACKGROUND_CHECK
+  DRIVERS_ABSTRACT
+  VEHICLE_REGISTRATION
+  VEHICLE_INSURANCE
+  VEHICLE_PHOTO
+  PROFILE_PHOTO
+  WORK_ELIGIBILITY
+  BANKING_INFO
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ─── Auth models ──────────────────────────────────────────────────────────────
 
 model User {
@@ -121,16 +152,18 @@ model Driver {
   status    DriverStatus @default(PENDING)
   lat       Float?
   lng       Float?
-  isOnline           Boolean      @default(false)
-  trainingCompleted  Int[]        @default([])
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  isOnline           Boolean            @default(false)
+  trainingCompleted  Int[]              @default([])
+  onboardingType     OnboardingType?    
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   sessions        Session[]
   bookings         Booking[]
   vehicle          Vehicle?
   walletTxs        WalletTransaction[]
   incidentReports  IncidentReport[]
+  onboarding       DriverOnboarding?
 }
 
 model Vehicle {
@@ -224,6 +257,65 @@ model SupportTicket {
 
   userId      String?
   user        User?           @relation(fields: [userId], references: [id])
+}
+
+// ─── Driver Onboarding ─────────────────────────────────────────────────────────
+
+model DriverOnboarding {
+  id             String                @id @default(cuid())
+  type           OnboardingType        @default(INDIVIDUAL)
+  currentStep    Int                   @default(1)
+  completedSteps Int[]                 @default([])
+
+  profilePhotoUrl   String?
+  dob               String?
+  licenseNumber     String?
+  vehicleMake       String?
+  vehicleModel      String?
+  vehicleYear       String?
+  vehiclePlate      String?
+  vehicleTier       String?
+  vehicleColor      String?
+
+  bankAccountName   String?
+  bankInstitution   String?
+  bankAccountNumber String?
+  bankRoutingNumber String?
+
+  signature          String?
+  gpsConsentAt       DateTime?
+  privacyPolicyAt    DateTime?
+  legalNoticeAt      DateTime?
+  termsAcceptedAt    DateTime?
+  contractSignedAt   DateTime?
+
+  adminStatus        OnboardingAdminStatus @default(PENDING)
+  adminNote          String?
+  reviewedAt         DateTime?
+
+  submittedAt        DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  driverId   String            @unique
+  driver     Driver            @relation(fields: [driverId], references: [id])
+  documents  OnboardingDocument[]
+
+  @@index([adminStatus])
+}
+
+model OnboardingDocument {
+  id           String         @id @default(cuid())
+  type         DocumentType
+  fileName     String
+  status       DocumentStatus @default(PENDING)
+  adminNote    String?
+  uploadedAt   DateTime       @default(now())
+
+  onboardingId String
+  onboarding   DriverOnboarding @relation(fields: [onboardingId], references: [id])
+
+  @@index([onboardingId])
 }
 
 // ─── Incident Reporting ───────────────────────────────────────────────────────

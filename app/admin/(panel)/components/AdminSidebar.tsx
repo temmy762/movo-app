@@ -130,6 +130,17 @@ const navItems: NavEntry[] = [
   },
   {
     kind: "item",
+    label: "Onboarding", href: "/admin/onboarding",
+    match: (p) => p.startsWith("/admin/onboarding"),
+    icon: (a) => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <polyline points="16 11 18 13 22 9"/>
+      </svg>
+    ),
+  },
+  {
+    kind: "item",
     label: "Incidents", href: "/admin/incidents",
     match: (p) => p.startsWith("/admin/incidents"),
     icon: (a) => (

@@ -31,12 +31,19 @@ export default function DriverSplashPage() {
         />
       </div>
 
-      {/* Log In button */}
-      <div className="flex justify-center px-6 pb-10 pt-4">
+      {/* Buttons */}
+      <div className="flex flex-col items-center gap-3 px-6 pb-10 pt-4">
         <Link
-          href="/driver/onboarding/login"
+          href="/driver/onboarding/type"
           className="block w-full max-w-xs py-3.5 rounded-xl text-white font-bold text-[15px] text-center tracking-wide"
           style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+        >
+          Join as Chauffeur
+        </Link>
+        <Link
+          href="/driver/onboarding/login"
+          className="block w-full max-w-xs py-3.5 rounded-xl font-bold text-[15px] text-center tracking-wide border"
+          style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
         >
           Log In
         </Link>

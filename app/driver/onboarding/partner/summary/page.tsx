@@ -66,7 +66,7 @@ export default function ApplicationSummaryPage() {
             </div>
           </div>
 
-          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Partner Onboarding</h1>
+          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Fleet Partner Onboarding</h1>
           <ProgressBar step={9} />
 
           {/* Section heading */}

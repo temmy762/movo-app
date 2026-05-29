@@ -100,7 +100,7 @@ export default function PartnerOnboardingStep1() {
           </div>
 
           {/* Heading */}
-          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Partner Onboarding</h1>
+          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Fleet Partner Onboarding</h1>
 
           {/* Progress bar */}
           <ProgressBar step={1} />
@@ -226,7 +226,7 @@ export default function PartnerOnboardingStep1() {
 
           {/* FAQ note */}
           <p className="text-[12px] text-gray-500 mb-5">
-            For more information regarding Partner Onboarding, you can visit our FAQ page{" "}
+            For more information regarding Fleet Partner Onboarding, you can visit our FAQ page{" "}
             <Link
               href="#"
               className="font-semibold underline"

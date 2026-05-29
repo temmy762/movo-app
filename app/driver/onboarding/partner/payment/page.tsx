@@ -55,7 +55,7 @@ export default function PartnerPaymentPage() {
             </div>
           </div>
 
-          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Partner Onboarding</h1>
+          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Fleet Partner Onboarding</h1>
           <ProgressBar step={8} />
 
           {/* Section heading */}

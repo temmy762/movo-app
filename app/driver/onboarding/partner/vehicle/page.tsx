@@ -75,7 +75,7 @@ export default function VehicleInformationPage() {
             </div>
           </div>
 
-          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Partner Onboarding</h1>
+          <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Fleet Partner Onboarding</h1>
           <ProgressBar step={3} />
 
           <p className="text-[13px] font-bold text-gray-800 mb-4">First Vehicle Information</p>
