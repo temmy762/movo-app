@@ -192,7 +192,7 @@ export default function HelpPage() {
       </div>
 
       {/* Contact Support */}
-      <div className="px-4 pb-8">
+      <div className="px-4 pb-24">
         <div className="bg-gradient-to-r from-[#2D0A53] to-[#8B7500] rounded-2xl p-4 text-white">
           <h3 className="font-semibold mb-1">Still need help?</h3>
           <p className="text-sm text-white/80 mb-3">Our support team is available 24/7</p>
