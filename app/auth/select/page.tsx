@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 
-export default function AuthSelectPage() {
+function AuthSelectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "";
@@ -165,5 +165,20 @@ export default function AuthSelectPage() {
         By continuing, you agree to our Terms of Service and Privacy Policy
       </p>
     </div>
+  );
+}
+
+export default function AuthSelectPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-gray-200 mb-4" />
+          <div className="h-4 w-32 bg-gray-200 rounded" />
+        </div>
+      </div>
+    }>
+      <AuthSelectContent />
+    </Suspense>
   );
 }
