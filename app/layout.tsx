@@ -39,6 +39,8 @@ export default function RootLayout({
                 const isDark = mode === 'dark' || (mode === 'system' && systemDark);
                 if (isDark) {
                   document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
                 }
               })();
             `,
