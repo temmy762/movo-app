@@ -92,12 +92,12 @@ export default function ProfilePage() {
       </div>
 
       {/* White section — normal flow, slides over the sticky banner */}
-      <div className="relative z-10 bg-white rounded-t-3xl -mt-10 min-h-screen pb-24">
+      <div className="relative z-10 bg-white dark:bg-gray-900 rounded-t-3xl -mt-10 min-h-screen pb-24">
 
         {/* Welcome */}
         <div className="px-5 pt-5 pb-3">
-          <p className="text-[13px] text-gray-500">Welcome</p>
-          <p className="text-[22px] font-bold text-gray-900 leading-tight">{user?.firstName ?? ""}</p>
+          <p className="text-[13px] text-gray-500 dark:text-gray-400">Welcome</p>
+          <p className="text-[22px] font-bold text-gray-900 dark:text-white leading-tight">{user?.firstName ?? ""}</p>
         </div>
 
         {/* Gradient divider */}
@@ -115,11 +115,11 @@ export default function ProfilePage() {
               onClick={() => item.label === "Log out" ? handleLogout() : router.push(item.href)}
               className="no-hover-fx flex items-center justify-between px-5 py-4 border-b border-gray-100"
             >
-              <div className="flex items-center gap-3 text-gray-700">
+              <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
                 {item.icon}
-                <span className="text-[14px] font-medium">{item.label}</span>
+                <span className="text-[14px] font-medium dark:text-gray-200">{item.label}</span>
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-400 dark:text-gray-500">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>

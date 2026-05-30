@@ -26,8 +26,25 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${poppins.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <head />
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const stored = localStorage.getItem('movo-theme-mode');
+                const mode = stored || 'system';
+                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const isDark = mode === 'dark' || (mode === 'system' && systemDark);
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>
           <ConsentProvider>
