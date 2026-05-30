@@ -42,7 +42,7 @@ export default function SettingsPage() {
 
   return (
     <div
-      className="min-h-screen bg-white flex flex-col"
+      className="min-h-screen bg-white dark:bg-gray-900 flex flex-col"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
       {/* Header */}
@@ -53,12 +53,12 @@ export default function SettingsPage() {
           className="no-hover-fx mb-3"
           aria-label="Go back"
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-gray-900 dark:text-white">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
-        <h1 className="text-[22px] font-bold text-gray-900">Settings</h1>
+        <h1 className="text-[22px] font-bold text-gray-900 dark:text-white">Settings</h1>
         {/* Gradient underline */}
         <div
           className="mt-2 h-[2px]"
@@ -68,7 +68,7 @@ export default function SettingsPage() {
 
       {/* App appearance */}
       <div className="px-5 pt-5">
-        <p className="text-[13px] font-bold text-gray-900 mb-4">App appearance</p>
+        <p className="text-[13px] font-bold text-gray-900 dark:text-white mb-4">App appearance</p>
 
         {/* System settings */}
         <button
@@ -78,7 +78,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <RadioDot selected={mode === "system"} />
-            <span className="text-[14px] text-gray-800">System settings</span>
+            <span className="text-[14px] text-gray-800 dark:text-gray-200">System settings</span>
           </div>
           <GradientToggle checked={mode === "system"} />
         </button>
@@ -91,7 +91,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <RadioDot selected={mode === "light"} />
-            <span className="text-[14px] text-gray-800">Always light</span>
+            <span className="text-[14px] text-gray-800 dark:text-gray-200">Always light</span>
           </div>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.8">
             <circle cx="12" cy="12" r="5" />
@@ -114,7 +114,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <RadioDot selected={mode === "dark"} />
-            <span className="text-[14px] text-gray-800">Always dark</span>
+            <span className="text-[14px] text-gray-800 dark:text-gray-200">Always dark</span>
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.8">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
@@ -124,7 +124,7 @@ export default function SettingsPage() {
 
       {/* Account section */}
       <div className="px-5 pt-7">
-        <p className="text-[13px] font-bold text-gray-900 mb-4">Account</p>
+        <p className="text-[13px] font-bold text-gray-900 dark:text-white mb-4">Account</p>
 
         <button
           type="button"
