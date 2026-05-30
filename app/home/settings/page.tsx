@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useTheme } from "@/context/ThemeContext";
 
 type AppearanceMode = "system" | "light" | "dark";
 
@@ -38,7 +38,7 @@ function RadioDot({ selected }: { selected: boolean }) {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<AppearanceMode>("system");
+  const { mode, setMode } = useTheme();
 
   return (
     <div
