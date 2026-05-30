@@ -20,7 +20,7 @@ export default function HomePage() {
   const { user } = useCurrentUser();
 
   return (
-    <div className="h-full flex flex-col bg-gray-100 dark:bg-gray-900" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full flex flex-col bg-gray-100" style={{ fontFamily: "var(--font-poppins)" }}>
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto pb-20">
 
@@ -81,20 +81,20 @@ export default function HomePage() {
 
         {/* Our Services */}
         <div className="px-4 mt-5">
-          <p className="text-[16px] font-bold text-gray-900 dark:text-white mb-3">Our Services</p>
+          <p className="text-[16px] font-bold text-gray-900 mb-3">Our Services</p>
           <div className="grid grid-cols-2 gap-3">
             {services.map((s) => (
               <Link
                 key={s.id}
                 href={s.href}
-                className="bg-white dark:bg-gray-800 rounded-xl p-3 flex items-start gap-2 shadow-sm cursor-pointer"
+                className="bg-white rounded-xl p-3 flex items-start gap-2 shadow-sm cursor-pointer"
               >
                 <div className="relative w-12 h-12 shrink-0">
                   <Image src={s.img} alt={s.title} fill className="object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-gray-900 dark:text-white leading-tight">{s.title}</p>
-                  <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug line-clamp-3">{s.desc}</p>
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{s.title}</p>
+                  <p className="text-[12px] text-gray-500 mt-0.5 leading-snug line-clamp-3">{s.desc}</p>
                 </div>
               </Link>
             ))}
@@ -103,7 +103,7 @@ export default function HomePage() {
 
         {/* Promo carousel */}
         <div className="mt-5">
-          <p className="text-[16px] font-bold text-gray-900 dark:text-white mb-3 px-4">Explore</p>
+          <p className="text-[16px] font-bold text-gray-900 mb-3 px-4">Explore</p>
           <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 pb-2">
             {/* Card 1 */}
             <div className="relative rounded-xl overflow-hidden h-44 shrink-0 snap-start w-[72%] sm:w-[32%] lg:w-[23%]">

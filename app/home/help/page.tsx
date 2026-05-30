@@ -90,7 +90,7 @@ export default function HelpPage() {
   const router = useRouter();
 
   return (
-    <div className="h-screen overflow-y-auto bg-gray-50 dark:bg-gray-900" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-screen overflow-y-auto bg-gray-50" style={{ fontFamily: "var(--font-poppins)" }}>
       {/* Header */}
       <div
         className="sticky top-0 z-10 px-4 py-4 flex items-center gap-3"
@@ -132,20 +132,20 @@ export default function HelpPage() {
 
       {/* Help Topics */}
       <div className="px-4 py-4">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Help Topics</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Help Topics</h2>
         <div className="grid grid-cols-1 gap-3">
           {helpTopics.map((topic) => (
             <button
               key={topic.id}
               onClick={() => alert(`${topic.title} - Coming soon!`)}
-              className="flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-[#2D0A53] transition-colors text-left"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-[#2D0A53] transition-colors text-left"
             >
               <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-[#2D0A53]">
                 {topic.icon}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{topic.title}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{topic.description}</p>
+                <p className="text-sm font-medium text-gray-900">{topic.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{topic.description}</p>
               </div>
               <svg
                 width="16"
@@ -164,15 +164,15 @@ export default function HelpPage() {
 
       {/* FAQs */}
       <div className="px-4 pb-24">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Frequently Asked Questions</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Frequently Asked Questions</h2>
         <div className="space-y-2">
           {faqs.map((faq, index) => (
             <details
               key={index}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden group"
+              className="bg-white rounded-xl border border-gray-100 overflow-hidden group"
             >
               <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
-                <span className="text-sm font-medium text-gray-900 dark:text-white pr-4">{faq.question}</span>
+                <span className="text-sm font-medium text-gray-900 pr-4">{faq.question}</span>
                 <svg
                   className="shrink-0 transition-transform group-open:rotate-180"
                   width="16"
@@ -185,7 +185,7 @@ export default function HelpPage() {
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </summary>
-              <div className="px-4 pb-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{faq.answer}</div>
+              <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">{faq.answer}</div>
             </details>
           ))}
         </div>
