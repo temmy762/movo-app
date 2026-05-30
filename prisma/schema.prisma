@@ -138,6 +138,7 @@ model User {
   bookings         Booking[]
   supportTickets   SupportTicket[]
   incidentReports  IncidentReport[]
+  notifications    Notification[] @relation(name: "UserNotifications")
 }
 
 model Driver {
@@ -164,6 +165,7 @@ model Driver {
   walletTxs        WalletTransaction[]
   incidentReports  IncidentReport[]
   onboarding       DriverOnboarding?
+  notifications    Notification[] @relation(name: "DriverNotifications")
 }
 
 model Vehicle {
@@ -361,4 +363,132 @@ model WalletTransaction {
 
   driverId  String
   driver    Driver         @relation(fields: [driverId], references: [id])
+}
+
+// ─── Notification System ──────────────────────────────────────────────────────
+
+enum NotificationType {
+  EMAIL
+  IN_APP
+  SMS
+  PUSH
+}
+
+enum NotificationChannel {
+  RIDER
+  CHAUFFEUR
+  ADMIN
+  SYSTEM
+}
+
+enum NotificationEventType {
+  // Rider events
+  RIDER_WELCOME
+  RIDER_EMAIL_VERIFICATION
+  RIDER_PASSWORD_RESET
+  RIDER_BOOKING_CONFIRMED
+  RIDER_BOOKING_UPDATED
+  RIDER_DRIVER_ASSIGNED
+  RIDER_RIDE_COMPLETED
+  RIDER_PAYMENT_RECEIPT
+  RIDER_INCIDENT_SUBMITTED
+  RIDER_INCIDENT_RESOLVED
+
+  // Chauffeur events
+  CHAUFFEUR_WELCOME
+  CHAUFFEUR_ONBOARDING_SUBMITTED
+  CHAUFFEUR_ONBOARDING_APPROVED
+  CHAUFFEUR_ONBOARDING_REJECTED
+  CHAUFFEUR_BOOKING_ASSIGNED
+  CHAUFFEUR_BOOKING_CANCELLED
+  CHAUFFEUR_PAYOUT_NOTIFICATION
+
+  // Admin events
+  ADMIN_NEW_DRIVER_APPLICATION
+  ADMIN_NEW_INCIDENT_REPORT
+  ADMIN_EMERGENCY_INCIDENT
+  ADMIN_NEW_FLEET_APPLICATION
+
+  // Support events
+  SUPPORT_TICKET_CREATED
+  SUPPORT_TICKET_UPDATED
+  SUPPORT_TICKET_RESOLVED
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  CANCELLED
+}
+
+model Notification {
+  id        String                @id @default(cuid())
+
+  // Polymorphic recipient (one of these will be set)
+  userId    String?
+  user      User?                 @relation(fields: [userId], references: [id], name: "UserNotifications")
+
+  driverId  String?
+  driver    Driver?               @relation(fields: [driverId], references: [id], name: "DriverNotifications")
+
+  // Admin recipients (for admin notifications, we store which admins were notified)
+  adminNotifications AdminNotification[]
+
+  // Notification metadata
+  type      NotificationType
+  channel   NotificationChannel
+  eventType NotificationEventType
+
+  // Content
+  title     String
+  message   String                @db.Text
+  data      Json?                 // Flexible data payload (bookingId, incidentId, etc.)
+
+  // Email specific
+  emailSubject   String?
+  emailTemplate  String?          // Template name used
+  emailSentAt    DateTime?
+  emailError     String?
+
+  // In-app specific
+  readAt    DateTime?
+  clickedAt DateTime?
+
+  // Status tracking
+  status    NotificationStatus    @default(PENDING)
+  sentAt    DateTime?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  // Related entities (for context)
+  bookingId     String?
+  incidentId    String?
+  onboardingId  String?
+  ticketId      String?
+
+  @@index([userId, status, createdAt])
+  @@index([driverId, status, createdAt])
+  @@index([eventType, createdAt])
+  @@index([status, createdAt])
+  @@index([bookingId])
+  @@index([incidentId])
+}
+
+// Track which admins have been notified (for admin broadcast notifications)
+model AdminNotification {
+  id             String       @id @default(cuid())
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  adminEmail     String       // Store email since admin might not have user record
+  adminUserId    String?      // Optional link if admin has user account
+
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([notificationId])
+  @@index([adminEmail, readAt])
 }
