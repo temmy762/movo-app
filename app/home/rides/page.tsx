@@ -66,14 +66,14 @@ export default function RidesPage() {
 
   return (
     <div
-      className="h-screen flex flex-col bg-white"
+      className="h-screen flex flex-col bg-white dark:bg-gray-900"
       style={{ fontFamily: "var(--font-poppins)" }}
     >
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto pb-32 md:pb-24 flex flex-col">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto flex-1 flex flex-col px-5 md:px-10 pt-6 md:pt-10">
           {/* Title */}
-          <h1 className="text-[26px] md:text-[34px] font-bold text-gray-900 leading-tight">Rides</h1>
+          <h1 className="text-[26px] md:text-[34px] font-bold text-gray-900 dark:text-white leading-tight">Rides</h1>
 
           {/* Tabs */}
           <div className="mt-4 md:mt-6 flex items-center gap-6 md:gap-10 border-b border-gray-200">
@@ -85,7 +85,7 @@ export default function RidesPage() {
                   type="button"
                   onClick={() => setTab(t.id)}
                   className={`no-hover-fx relative pb-2.5 md:pb-3 text-[14px] md:text-[16px] font-medium transition-colors ${
-                    active ? "text-gray-900" : "text-gray-400"
+                    active ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-500"
                   }`}
                 >
                   {t.label}
@@ -102,7 +102,7 @@ export default function RidesPage() {
 
           {loading ? (
             <div className="flex-1 flex items-center justify-center py-16">
-              <p className="text-[13px] text-gray-400">Loading rides…</p>
+              <p className="text-[13px] text-gray-400 dark:text-gray-500">Loading rides…</p>
             </div>
           ) : rides.length > 0 ? (
             /* Ride list */
@@ -119,11 +119,11 @@ export default function RidesPage() {
                   {/* Top row: info + image */}
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-bold text-gray-900">{ride.carName}</p>
-                      <p className="text-[12px] text-gray-700 mt-0.5 truncate">{ride.pickup} → {ride.dropoff}</p>
+                      <p className="text-[15px] font-bold text-gray-900 dark:text-white">{ride.carName}</p>
+                      <p className="text-[12px] text-gray-700 dark:text-gray-300 mt-0.5 truncate">{ride.pickup} → {ride.dropoff}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[11px] font-semibold text-gray-500 uppercase">{ride.status}</span>
-                        <span className="text-[12px] font-bold text-gray-800">${ride.total.toFixed(2)}</span>
+                        <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase">{ride.status}</span>
+                        <span className="text-[12px] font-bold text-gray-800 dark:text-gray-200">${ride.total.toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="relative w-24 h-16 md:w-28 md:h-20 shrink-0">
@@ -175,8 +175,8 @@ export default function RidesPage() {
                   className="object-contain"
                 />
               </div>
-              <p className="text-[15px] md:text-[18px] font-bold text-gray-900">{empty.title}</p>
-              <p className="text-[12px] md:text-[14px] text-gray-500 mt-1 md:mt-2 whitespace-pre-line leading-snug md:leading-relaxed max-w-md">
+              <p className="text-[15px] md:text-[18px] font-bold text-gray-900 dark:text-white">{empty.title}</p>
+              <p className="text-[12px] md:text-[14px] text-gray-500 dark:text-gray-400 mt-1 md:mt-2 whitespace-pre-line leading-snug md:leading-relaxed max-w-md">
                 {empty.desc}
               </p>
             </div>
