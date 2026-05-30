@@ -73,17 +73,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);
-    localStorage.setItem(STORAGE_KEY, newMode);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, newMode);
+    }
     
     const effectiveTheme = newMode === "system" ? getSystemTheme() : newMode;
     setTheme(effectiveTheme);
     applyTheme(effectiveTheme);
   }, []);
-
-  // Prevent flash of wrong theme during SSR/hydration
-  if (!mounted) {
-    return <>{children}</>;
-  }
 
   return (
     <ThemeContext.Provider value={{ mode, theme, setMode }}>
