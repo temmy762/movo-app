@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, getSessionFromCookieHeader } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
-  const session = await getSession(req);
+  // Support both cookie-based session and header token (for simulator)
+  let session = await getSession(req);
+  
+  // If no session from cookies, try header token (simulator)
+  if (!session?.driverId) {
+    const headerToken = req.headers.get("X-Session-Token");
+    if (headerToken) {
+      session = await getSessionFromCookieHeader(`movo_session=${headerToken}`);
+    }
+  }
+  
   if (!session?.driverId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
