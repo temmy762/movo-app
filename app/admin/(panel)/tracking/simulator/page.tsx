@@ -349,7 +349,7 @@ export default function SimulatorPage() {
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500">Booking ID</p>
-            <p className="font-medium text-gray-900 text-sm truncate">{SIMULATOR_CONFIG.bookingId}</p>
+            <p className="font-medium text-gray-900 text-sm truncate">{bookingId}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-500">Route Distance</p>
