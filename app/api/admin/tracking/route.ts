@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const bookings = await prisma.booking.findMany({
-      where: { status: { in: ["CONFIRMED", "COMPLETED"] }, driverId: { not: null } },
+      where: { status: { in: ["CONFIRMED", "COMPLETED"] } },
       orderBy: { createdAt: "desc" },
       take: 30,
       include: {
@@ -18,7 +18,8 @@ export async function GET() {
       },
     });
 
-    const filtered = bookings.filter(b => b.driver?.vehicle);
+    // Show bookings with drivers OR bookings with location data (simulations)
+    const filtered = bookings.filter(b => b.driver?.vehicle || b.driverId === null);
 
     // For active trips, batch-fetch their GPS trail (last 150 points each)
     const activeIds = filtered
@@ -53,8 +54,8 @@ export async function GET() {
     }
 
     const vehicles = filtered.map(b => {
-      const d = b.driver!;
-      const v = d.vehicle!;
+      const d = b.driver;
+      const v = d?.vehicle;
 
       let tripStatus: "On Way" | "Active Trip" | "Returned";
       if (b.status === "COMPLETED")     tripStatus = "Returned";
@@ -63,8 +64,8 @@ export async function GET() {
 
       // Live position: prefer latest TripLocation, fall back to Driver.lat/lng
       const livePos    = latestMap.get(b.id);
-      const lat        = livePos?.lat ?? d.lat ?? 0;
-      const lng        = livePos?.lng ?? d.lng ?? 0;
+      const lat        = livePos?.lat ?? d?.lat ?? 34.0522;
+      const lng        = livePos?.lng ?? d?.lng ?? -118.2437;
 
       // Route trail: real GPS points for active trips, single-point otherwise
       const trail      = routeMap.get(b.id) ?? [[lat, lng]] as [number, number][];
@@ -72,9 +73,9 @@ export async function GET() {
       return {
         id:         b.id,
         client:     b.clientName,
-        car:        `${v.make} ${v.model}`,
-        carType:    v.tier,
-        carNumber:  v.plate,
+        car:        v ? `${v.make} ${v.model}` : b.carName,
+        carType:    v?.tier ?? b.carTier,
+        carNumber:  v?.plate ?? "SIM-001",
         status:     tripStatus,
         startDate:  new Date(b.createdAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
         endDate:    new Date(b.updatedAt).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
@@ -82,7 +83,7 @@ export async function GET() {
         distance:   "—",
         pos:        [lat, lng] as [number, number],
         route:      trail,
-        driverName: `${d.firstName} ${d.lastName}`,
+        driverName: d ? `${d.firstName} ${d.lastName}` : "Simulator",
       };
     });
 
