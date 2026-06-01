@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 
 const TrackingMap = dynamic(() => import("./TrackingMap"), {
@@ -112,38 +112,43 @@ export default function TrackingPage() {
   const[isRefreshing,setIsRefreshing]=useState(false);
   const[autoRefresh,setAutoRefresh]=useState(true);
   const pollRef=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const cancelledRef=useRef(false);
+  const refreshRef=useRef<()=>void>(()=>{});
+
+  const load=useCallback(()=>{
+    setIsRefreshing(true);
+    fetch("/api/admin/tracking")
+      .then(r=>r.json())
+      .then((data:Vehicle[])=>{
+        if(cancelledRef.current) return;
+        setVehicles(data);
+        setLastUpdated(new Date());
+        setActiveId(prev=>prev??(data.length>0?data[0].id:null));
+        // Schedule next refresh if auto-refresh is on
+        if(autoRefresh && !cancelledRef.current){
+          const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
+          pollRef.current=setTimeout(refreshRef.current,hasActive?5000:15000);
+        }
+      })
+      .catch(()=>{
+        if(autoRefresh && !cancelledRef.current){
+          pollRef.current=setTimeout(refreshRef.current,10000);
+        }
+      })
+      .finally(()=>setIsRefreshing(false));
+  },[autoRefresh]);
+
+  // Store load in ref so useEffect can access latest version
+  refreshRef.current=load;
 
   useEffect(()=>{
-    let cancelled=false;
-
-    const schedule=(delay:number)=>{
-      if(cancelled) return;
-      pollRef.current=setTimeout(()=>load(),delay);
-    };
-
-    const load=()=>{
-      setIsRefreshing(true);
-      fetch("/api/admin/tracking")
-        .then(r=>r.json())
-        .then((data:Vehicle[])=>{
-          if(cancelled) return;
-          setVehicles(data);
-          setLastUpdated(new Date());
-          setActiveId(prev=>prev??(data.length>0?data[0].id:null));
-          // Refresh faster when there are active trips in progress
-          const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
-          if(autoRefresh) schedule(hasActive?5000:15000);
-        })
-        .catch(()=>{ if(autoRefresh) schedule(10000); })
-        .finally(()=>setIsRefreshing(false));
-    };
-
+    cancelledRef.current=false;
     load();
     return()=>{
-      cancelled=true;
+      cancelledRef.current=true;
       if(pollRef.current) clearTimeout(pollRef.current);
     };
-  },[autoRefresh]);
+  },[load]);
 
   const filtered=vehicles.filter(v=>
     v.client.toLowerCase().includes(search.toLowerCase())||
@@ -222,7 +227,19 @@ export default function TrackingPage() {
               {autoRefresh ? 'Pause' : 'Resume'}
             </button>
             <button 
-              onClick={()=>{if(pollRef.current)clearTimeout(pollRef.current);load();}}
+              onClick={()=>{
+                if(pollRef.current) clearTimeout(pollRef.current);
+                if(autoRefresh) {
+                  // Reschedule after manual refresh
+                  const scheduleNext = () => {
+                    pollRef.current = setTimeout(() => {
+                      load();
+                      scheduleNext();
+                    }, 5000);
+                  };
+                }
+                load();
+              }}
               disabled={isRefreshing}
               className="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">
               Refresh Now

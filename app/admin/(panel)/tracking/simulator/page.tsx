@@ -197,9 +197,16 @@ export default function SimulatorPage() {
     addLog("Simulation stopped", "info");
   }, [addLog]);
 
-  // Simulation loop
+  // Simulation loop - runs when status is "running"
   useEffect(() => {
-    if (status !== "running") return;
+    if (status !== "running") {
+      // Clean up interval when paused or stopped
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
 
     intervalRef.current = setInterval(() => {
       setProgress((prevProgress) => {
@@ -209,7 +216,8 @@ export default function SimulatorPage() {
         if (!segmentEnd) {
           // Reached end of route
           addLog("Route completed!", "success");
-          stopSimulation();
+          // Use setTimeout to avoid state update during render
+          setTimeout(() => stopSimulation(), 0);
           return 0;
         }
 
@@ -225,13 +233,12 @@ export default function SimulatorPage() {
         if (newProgress >= 1) {
           // Move to next segment
           setCurrentSegment((prev) => prev + 1);
-          const newPosition = interpolatePosition(segmentEnd, SIMULATOR_CONFIG.routePoints[currentSegment + 2] || segmentEnd, 0);
+          const nextPoint = SIMULATOR_CONFIG.routePoints[currentSegment + 2];
+          const newPosition = interpolatePosition(segmentEnd, nextPoint || segmentEnd, 0);
           setCurrentPosition(newPosition);
 
-          const heading = calculateHeading(
-            segmentEnd,
-            SIMULATOR_CONFIG.routePoints[currentSegment + 2] || segmentEnd
-          );
+          const heading = calculateHeading(segmentEnd, nextPoint || segmentEnd);
+          // Read latest values from refs for the callback
           sendLocationUpdate(newPosition, heading, SIMULATOR_CONFIG.speedKmh);
 
           return 0;
@@ -251,6 +258,7 @@ export default function SimulatorPage() {
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [status, currentSegment, addLog, stopSimulation, sendLocationUpdate]);
