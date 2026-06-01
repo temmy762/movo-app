@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No active booking found" }, { status: 404 });
     }
 
-    // Write location snapshot only (no driver update in simulation)
+    // Write location snapshot
     await prisma.tripLocation.create({
       data: {
         bookingId,
@@ -57,6 +57,14 @@ export async function POST(req: NextRequest) {
         speed:   typeof speed   === "number" ? speed   : null,
       },
     });
+    
+    // Auto-start the trip if not already started (for simulations)
+    if (!booking.startedAt) {
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { startedAt: new Date() },
+      });
+    }
     
     // Only update driver position if we have a valid driverId (non-simulation)
     if (driverId && !isSimulation) {

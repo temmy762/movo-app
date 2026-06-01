@@ -39,6 +39,8 @@ export async function GET() {
         take:    150 * activeIds.length,
         select:  { bookingId: true, lat: true, lng: true },
       });
+      
+      console.log(`[Tracking] Found ${locs.length} location points for ${activeIds.length} active bookings`);
 
       // Group by bookingId (points arrive newest-first; cap at 150 per booking)
       for (const loc of locs) {
