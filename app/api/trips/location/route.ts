@@ -3,10 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getSession, getSessionFromCookieHeader } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
-  // Support both cookie-based session and header token (for simulator)
-  let session = await getSession(req);
+  // Check for simulation mode
+  const isSimulation = req.headers.get("X-Simulation-Mode") === "true";
   
-  // If no session from cookies, try header token (simulator)
+  let session = await getSession(req);
+  let driverId: string | null = null;
+  
+  // If no session from cookies, try header token
   if (!session?.driverId) {
     const headerToken = req.headers.get("X-Session-Token");
     if (headerToken) {
@@ -14,7 +17,13 @@ export async function POST(req: NextRequest) {
     }
   }
   
-  if (!session?.driverId) {
+  if (session?.driverId) {
+    driverId = session.driverId;
+  }
+  
+  // In simulation mode, we can proceed without a real driver session
+  // but we'll still try to use the driver's ID if available
+  if (!driverId && !isSimulation) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

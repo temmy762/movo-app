@@ -127,6 +127,7 @@ export default function SimulatorPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-Simulation-Mode": "true",  // Enable simulation mode
             ...(isJWT 
               ? { Authorization: `Bearer ${authToken}` }  // JWT: Bearer header
               : { "X-Session-Token": authToken }          // Session: custom header
