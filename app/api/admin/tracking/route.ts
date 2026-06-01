@@ -22,8 +22,9 @@ export async function GET() {
     const filtered = bookings.filter(b => b.driver?.vehicle || b.driverId === null);
 
     // For active trips, batch-fetch their GPS trail (last 150 points each)
+    // Include all CONFIRMED bookings (with or without startedAt) to support simulations
     const activeIds = filtered
-      .filter(b => b.status === "CONFIRMED" && b.startedAt)
+      .filter(b => b.status === "CONFIRMED")
       .map(b => b.id);
 
     // Map: bookingId → chronological [lat,lng] trail
@@ -56,10 +57,11 @@ export async function GET() {
     const vehicles = filtered.map(b => {
       const d = b.driver;
       const v = d?.vehicle;
+      const hasLocationData = latestMap.has(b.id);
 
       let tripStatus: "On Way" | "Active Trip" | "Returned";
       if (b.status === "COMPLETED")     tripStatus = "Returned";
-      else if (b.startedAt)             tripStatus = "Active Trip";
+      else if (b.startedAt || hasLocationData)  tripStatus = "Active Trip";
       else                              tripStatus = "On Way";
 
       // Live position: prefer latest TripLocation, fall back to Driver.lat/lng
