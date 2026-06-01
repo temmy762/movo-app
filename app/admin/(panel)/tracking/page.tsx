@@ -12,7 +12,7 @@ type TripStatus = "On Way" | "Active Trip" | "Returned";
 type Vehicle = {
   id:string; client:string; car:string; carType:string; carNumber:string;
   status:TripStatus; startDate:string; endDate:string; tripTime:string; distance:string;
-  pos:[number,number]; route:[number,number][];
+  pos:[number,number]; route:[number,number][]; heading?:number;
   driverName?:string;
 };
 
@@ -127,7 +127,7 @@ export default function TrackingPage() {
         // Schedule next refresh if auto-refresh is on
         if(autoRefresh && !cancelledRef.current){
           const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
-          pollRef.current=setTimeout(refreshRef.current,hasActive?5000:15000);
+          pollRef.current=setTimeout(refreshRef.current,hasActive?2000:10000);
         }
       })
       .catch(()=>{
@@ -328,7 +328,7 @@ export default function TrackingPage() {
 
           {/* Map */}
           <div className="flex-1 overflow-hidden">
-            <TrackingMap lat={active.pos[0]} lng={active.pos[1]} route={active.route}/>
+            <TrackingMap lat={active.pos[0]} lng={active.pos[1]} route={active.route} heading={active.heading}/>
           </div>
         </div>
       ):(

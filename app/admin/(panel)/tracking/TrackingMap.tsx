@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GoogleMap, Marker, Polyline, useJsApiLoader } from "@react-google-maps/api";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -21,9 +21,10 @@ interface TrackingMapProps {
   lat: number;
   lng: number;
   route: [number, number][];
+  heading?: number;
 }
 
-export default function TrackingMap({ lat, lng, route }: TrackingMapProps) {
+export default function TrackingMap({ lat, lng, route, heading = 0 }: TrackingMapProps) {
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
@@ -31,35 +32,39 @@ export default function TrackingMap({ lat, lng, route }: TrackingMapProps) {
   });
 
   const mapRef = useRef<google.maps.Map | null>(null);
+  const [mapType, setMapType] = useState<"roadmap" | "satellite">("satellite");
 
   useEffect(() => {
     if (mapRef.current) {
       mapRef.current.panTo({ lat, lng });
+      mapRef.current.setMapTypeId(mapType);
     }
-  }, [lat, lng]);
+  }, [lat, lng, mapType]);
 
   if (!isLoaded) {
-    return <div style={{ width: "100%", height: "100%", background: "#f1f5f9" }} />;
+    return <div style={{ width: "100%", height: "100%", background: "#1a1a1a" }} />;
   }
 
   const path = route.map(([rlat, rlng]) => ({ lat: rlat, lng: rlng }));
 
   return (
-    <GoogleMap
-      mapContainerStyle={{ width: "100%", height: "100%" }}
-      center={{ lat, lng }}
-      zoom={15}
-      onLoad={(map) => { mapRef.current = map; }}
-      options={{
-        disableDefaultUI: true,
-        zoomControl: true,
-        clickableIcons: false,
-        styles: [
-          { featureType: "poi",     stylers: [{ visibility: "off" }] },
-          { featureType: "transit", stylers: [{ visibility: "off" }] },
-        ],
-      }}
-    >
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <GoogleMap
+        mapContainerStyle={{ width: "100%", height: "100%" }}
+        center={{ lat, lng }}
+        zoom={16}
+        onLoad={(map) => { mapRef.current = map; }}
+        options={{
+          disableDefaultUI: true,
+          zoomControl: true,
+          clickableIcons: false,
+          mapTypeId: mapType,
+          styles: [
+            { featureType: "poi",     stylers: [{ visibility: "off" }] },
+            { featureType: "transit", stylers: [{ visibility: "off" }] },
+          ],
+        }}
+      >
       {path.length > 1 && (
         <Polyline
           path={path}
@@ -76,8 +81,31 @@ export default function TrackingMap({ lat, lng, route }: TrackingMapProps) {
           url: `data:image/svg+xml;charset=UTF-8,${CAR_SVG}`,
           scaledSize: new google.maps.Size(36, 36),
           anchor: new google.maps.Point(18, 18),
+          rotation: heading,
         }}
       />
-    </GoogleMap>
+      </GoogleMap>
+
+      {/* Map Type Toggle */}
+      <button
+        onClick={() => setMapType(mapType === "satellite" ? "roadmap" : "satellite")}
+        style={{
+          position: "absolute",
+          bottom: "20px",
+          right: "20px",
+          background: "white",
+          border: "1px solid #ccc",
+          borderRadius: "4px",
+          padding: "8px 12px",
+          cursor: "pointer",
+          fontSize: "12px",
+          fontWeight: "500",
+          zIndex: 10,
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        }}
+      >
+        {mapType === "satellite" ? "🗺️ Map" : "🛰️ Satellite"}
+      </button>
+    </div>
   );
 }
