@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     where: {
       id:       bookingId,
       driverId: session.driverId,
-      status:   { in: ["CONFIRMED"] },
+      status:   { in: ["CONFIRMED", "ONGOING", "ACTIVE", "IN_PROGRESS"] },
     },
   });
 
