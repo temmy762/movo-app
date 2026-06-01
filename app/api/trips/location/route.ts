@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     const booking = await prisma.booking.findFirst({
       where: {
         id:     bookingId,
-        status: { in: ["CONFIRMED", "ONGOING", "ACTIVE", "IN_PROGRESS", "PENDING", "ASSIGNED"] },
+        status: { in: ["PENDING", "CONFIRMED"] },
         ...(isSimulation ? {} : { driverId }), // Only check driverId if not simulating
       },
     });
