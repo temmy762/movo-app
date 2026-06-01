@@ -82,6 +82,7 @@ export default function SimulatorPage() {
   const [progress, setProgress] = useState(0);
   const [totalDistance, setTotalDistance] = useState(0);
   const [authToken, setAuthToken] = useState("");
+  const [bookingId, setBookingId] = useState(SIMULATOR_CONFIG.bookingId);
   const [showTokenInput, setShowTokenInput] = useState(true);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -133,7 +134,7 @@ export default function SimulatorPage() {
           },
           credentials: "include", // Always include cookies
           body: JSON.stringify({
-            bookingId: SIMULATOR_CONFIG.bookingId,
+            bookingId,
             lat: position.lat,
             lng: position.lng,
             heading,
@@ -303,6 +304,21 @@ export default function SimulatorPage() {
           </div>
         </div>
       )}
+
+      {/* Booking ID Input */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+        <h3 className="font-semibold text-blue-800 mb-2">Booking ID</h3>
+        <p className="text-sm text-blue-700 mb-3">
+          Enter the booking ID for the trip you want to simulate.
+        </p>
+        <input
+          type="text"
+          value={bookingId}
+          onChange={(e) => setBookingId(e.target.value)}
+          placeholder="e.g., cmpmpaius0000osvfcakjoxmq"
+          className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
       {/* Simulation Controls */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
