@@ -264,7 +264,7 @@ export default function SimulatorPage() {
   }, [status, currentSegment, addLog, stopSimulation, sendLocationUpdate]);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto h-full overflow-y-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">🚗 Driver Location Simulator</h1>
 
       {/* Auth Token Input */}
