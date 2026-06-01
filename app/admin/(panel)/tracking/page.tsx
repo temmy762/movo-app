@@ -108,6 +108,9 @@ export default function TrackingPage() {
   const[search,setSearch]=useState("");
   const[addOpen,setAddOpen]=useState(false);
   const[mobileView,setMobileView]=useState<"list"|"map">("map");
+  const[lastUpdated,setLastUpdated]=useState<Date|null>(null);
+  const[isRefreshing,setIsRefreshing]=useState(false);
+  const[autoRefresh,setAutoRefresh]=useState(true);
   const pollRef=useRef<ReturnType<typeof setTimeout>|null>(null);
 
   useEffect(()=>{
@@ -119,17 +122,20 @@ export default function TrackingPage() {
     };
 
     const load=()=>{
+      setIsRefreshing(true);
       fetch("/api/admin/tracking")
         .then(r=>r.json())
         .then((data:Vehicle[])=>{
           if(cancelled) return;
           setVehicles(data);
+          setLastUpdated(new Date());
           setActiveId(prev=>prev??(data.length>0?data[0].id:null));
           // Refresh faster when there are active trips in progress
           const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
-          schedule(hasActive?5000:15000);
+          if(autoRefresh) schedule(hasActive?5000:15000);
         })
-        .catch(()=>{ schedule(10000); });
+        .catch(()=>{ if(autoRefresh) schedule(10000); })
+        .finally(()=>setIsRefreshing(false));
     };
 
     load();
@@ -137,7 +143,7 @@ export default function TrackingPage() {
       cancelled=true;
       if(pollRef.current) clearTimeout(pollRef.current);
     };
-  },[]);
+  },[autoRefresh]);
 
   const filtered=vehicles.filter(v=>
     v.client.toLowerCase().includes(search.toLowerCase())||
@@ -193,6 +199,35 @@ export default function TrackingPage() {
             );
           })}
           {filtered.length===0&&<p className="text-center text-[12px] text-gray-400 py-8">No vehicles found.</p>}
+        </div>
+
+        {/* Refresh Status */}
+        <div className="px-3 pb-2 shrink-0 border-t border-gray-100 pt-2">
+          <div className="flex items-center justify-between text-[10px] text-gray-400">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-400' : 'bg-gray-400'}`}></span>
+              <span>{autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}</span>
+              {lastUpdated && (
+                <span className="text-gray-300">
+                  • {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+            {isRefreshing && <span className="text-blue-400">Updating...</span>}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <button 
+              onClick={()=>setAutoRefresh(!autoRefresh)}
+              className="flex-1 py-1.5 rounded-lg text-[11px] font-medium border border-gray-200 text-gray-600 hover:bg-gray-50">
+              {autoRefresh ? 'Pause' : 'Resume'}
+            </button>
+            <button 
+              onClick={()=>{if(pollRef.current)clearTimeout(pollRef.current);load();}}
+              disabled={isRefreshing}
+              className="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+              Refresh Now
+            </button>
+          </div>
         </div>
 
         {/* Add Car */}
