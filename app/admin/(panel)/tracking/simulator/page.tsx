@@ -161,7 +161,7 @@ export default function SimulatorPage() {
         );
       }
     },
-    [authToken, currentSegment, addLog]
+    [authToken, bookingId, currentSegment, addLog]
   );
 
   const startSimulation = useCallback(() => {
