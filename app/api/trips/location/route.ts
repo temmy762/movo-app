@@ -34,12 +34,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "bookingId, lat, lng required" }, { status: 400 });
   }
 
-  // Verify booking belongs to this driver and is active
+  // Verify booking exists and has acceptable status
+  // In simulation mode, skip driverId check
   const booking = await prisma.booking.findFirst({
     where: {
-      id:       bookingId,
-      driverId: session.driverId,
-      status:   { in: ["CONFIRMED", "ONGOING", "ACTIVE", "IN_PROGRESS"] },
+      id:     bookingId,
+      status: { in: ["CONFIRMED", "ONGOING", "ACTIVE", "IN_PROGRESS", "PENDING", "ASSIGNED"] },
+      ...(isSimulation ? {} : { driverId }), // Only check driverId if not simulating
     },
   });
 
@@ -47,8 +48,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No active booking found" }, { status: 404 });
   }
 
-  // Write location snapshot + update driver's live position in parallel
-  await Promise.all([
+  // Write location snapshot
+  const promises: Promise<any>[] = [
     prisma.tripLocation.create({
       data: {
         bookingId,
@@ -58,11 +59,19 @@ export async function POST(req: NextRequest) {
         speed:   typeof speed   === "number" ? speed   : null,
       },
     }),
-    prisma.driver.update({
-      where: { id: session.driverId },
-      data:  { lat, lng },
-    }),
-  ]);
+  ];
+  
+  // Only update driver position if we have a valid driverId
+  if (driverId) {
+    promises.push(
+      prisma.driver.update({
+        where: { id: driverId },
+        data:  { lat, lng },
+      })
+    );
+  }
+  
+  await Promise.all(promises);
 
   return NextResponse.json({ ok: true });
 }
