@@ -36,10 +36,16 @@ export default function TrackingMap({ lat, lng, route, heading = 0 }: TrackingMa
 
   useEffect(() => {
     if (mapRef.current) {
+      console.log(`[Map] Panning to:`, { lat, lng });
       mapRef.current.panTo({ lat, lng });
       mapRef.current.setMapTypeId(mapType);
     }
   }, [lat, lng, mapType]);
+  
+  // Force re-render when route changes
+  useEffect(() => {
+    console.log(`[Map] Route updated:`, route?.length, "points");
+  }, [route]);
 
   if (!isLoaded) {
     return <div style={{ width: "100%", height: "100%", background: "#1a1a1a" }} />;

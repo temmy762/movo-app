@@ -163,7 +163,20 @@ export default function TrackingPage() {
     v.client.toLowerCase().includes(search.toLowerCase())||
     v.car.toLowerCase().includes(search.toLowerCase())
   );
+  // Always get the latest active vehicle data
   const active=vehicles.find(v=>v.id===activeId);
+  
+  // Debug: log when active vehicle updates
+  useEffect(() => {
+    if (active) {
+      console.log(`[Tracking] Active vehicle updated:`, {
+        id: active.id,
+        pos: active.pos,
+        route: active.route?.length,
+        status: active.status,
+      });
+    }
+  }, [active]);
 
   const handleAdd=(d:Omit<Vehicle,"id"|"pos"|"route">)=>{
     const pos:[number,number]=[34.0430+(Math.random()-0.5)*0.04, -118.2500+(Math.random()-0.5)*0.04];
@@ -337,7 +350,15 @@ export default function TrackingPage() {
 
           {/* Map */}
           <div className="flex-1 overflow-hidden">
-            <TrackingMap lat={active.pos[0]} lng={active.pos[1]} route={active.route} heading={active.heading}/>
+            {active && (
+              <TrackingMap 
+                key={`${active.id}-${active.pos[0]}-${active.pos[1]}`}
+                lat={active.pos[0]} 
+                lng={active.pos[1]} 
+                route={active.route} 
+                heading={active.heading}
+              />
+            )}
           </div>
         </div>
       ):(
