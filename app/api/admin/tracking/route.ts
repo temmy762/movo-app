@@ -82,63 +82,65 @@ export async function GET(req: NextRequest) {
     }
 
     // Format response
-    const vehicles = bookings.map(b => {
-      const d = b.driver!;
-      const v = d.vehicle!;
-      const hasLocationData = latestMap.has(b.id);
+    const vehicles = bookings
+      .filter(b => b.driver && b.driver.vehicle) // Only include bookings with driver AND vehicle
+      .map(b => {
+        const d = b.driver!;
+        const v = d.vehicle!;
+        const hasLocationData = latestMap.has(b.id);
 
-      let tripStatus: "On Way" | "Active Trip" | "Returned";
-      if (b.status === "COMPLETED") tripStatus = "Returned";
-      else if (b.startedAt || hasLocationData) tripStatus = "Active Trip";
-      else tripStatus = "On Way";
+        let tripStatus: "On Way" | "Active Trip" | "Returned";
+        if (b.status === "COMPLETED") tripStatus = "Returned";
+        else if (b.startedAt || hasLocationData) tripStatus = "Active Trip";
+        else tripStatus = "On Way";
 
-      // Live position: prefer latest TripLocation, fall back to Driver.lat/lng, fall back to booking coordinates
-      const livePos = latestMap.get(b.id);
-      const lat = livePos?.lat ?? d.lat ?? b.pickupLat ?? 0;
-      const lng = livePos?.lng ?? d.lng ?? b.pickupLng ?? 0;
-      const heading = livePos?.heading ?? 0;
+        // Live position: prefer latest TripLocation, fall back to Driver.lat/lng, fall back to booking coordinates
+        const livePos = latestMap.get(b.id);
+        const lat = livePos?.lat ?? d.lat ?? b.pickupLat ?? 0;
+        const lng = livePos?.lng ?? d.lng ?? b.pickupLng ?? 0;
+        const heading = livePos?.heading ?? 0;
 
-      // Route trail: real GPS points for active trips, single-point otherwise
-      const trail = routeMap.get(b.id) ?? [[lat, lng]];
+        // Route trail: real GPS points for active trips, single-point otherwise
+        const trail = routeMap.get(b.id) ?? [[lat, lng]];
 
-      return {
-        id: b.id,
-        client: b.clientName,
-        car: `${v.make} ${v.model}`,
-        carType: v.tier,
-        carNumber: v.plate,
-        status: tripStatus,
-        startDate: new Date(b.createdAt).toLocaleDateString("en-US", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
-        endDate: new Date(b.updatedAt).toLocaleDateString("en-US", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
-        tripTime: b.startedAt
-          ? `Started ${new Date(b.startedAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}`
-          : "—",
-        distance: "—",
-        pos: [lat, lng] as [number, number],
-        route: trail,
-        heading,
-        driverName: `${d.firstName} ${d.lastName}`,
-        driverId: d.id,
-        isOnline: d.isOnline,
-        pickupLat: b.pickupLat,
-        pickupLng: b.pickupLng,
-        dropoffLat: b.dropoffLat,
-        dropoffLng: b.dropoffLng,
-      };
-    });
+        return {
+          id: b.id,
+          client: b.clientName,
+          car: `${v.make} ${v.model}`,
+          carType: v.tier,
+          carNumber: v.plate,
+          status: tripStatus,
+          startDate: new Date(b.createdAt).toLocaleDateString("en-US", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+          endDate: new Date(b.updatedAt).toLocaleDateString("en-US", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+          tripTime: b.startedAt
+            ? `Started ${new Date(b.startedAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}`
+            : "—",
+          distance: "—",
+          pos: [lat, lng] as [number, number],
+          route: trail,
+          heading,
+          driverName: `${d.firstName} ${d.lastName}`,
+          driverId: d.id,
+          isOnline: d.isOnline,
+          pickupLat: b.pickupLat,
+          pickupLng: b.pickupLng,
+          dropoffLat: b.dropoffLat,
+          dropoffLng: b.dropoffLng,
+        };
+      });
 
     return NextResponse.json(vehicles);
   } catch (e) {
