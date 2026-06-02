@@ -144,8 +144,17 @@ export default function TrackingPage() {
   useEffect(()=>{
     cancelledRef.current=false;
     load();
+    
+    // Auto-refresh every 2 seconds for live tracking
+    const interval = setInterval(() => {
+      if (!cancelledRef.current) {
+        load();
+      }
+    }, 2000);
+    
     return()=>{
       cancelledRef.current=true;
+      clearInterval(interval);
       if(pollRef.current) clearTimeout(pollRef.current);
     };
   },[load]);
