@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GoogleMap, Marker, Polyline, useJsApiLoader } from "@react-google-maps/api";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -23,6 +23,17 @@ interface TrackingMapProps {
   driverHeading?: number;
 }
 
+interface AnimationState {
+  currentLat: number;
+  currentLng: number;
+  currentHeading: number;
+  targetLat: number;
+  targetLng: number;
+  targetHeading: number;
+  startTime: number;
+  duration: number;
+}
+
 export default function TrackingMap({
   driverLat,
   driverLng,
@@ -37,12 +48,111 @@ export default function TrackingMap({
   });
 
   const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const animationRef = useRef<AnimationState>({
+    currentLat: driverLat,
+    currentLng: driverLng,
+    currentHeading: driverHeading,
+    targetLat: driverLat,
+    targetLng: driverLng,
+    targetHeading: driverHeading,
+    startTime: 0,
+    duration: 4500, // 4.5 seconds (leaves 0.5s buffer before next update)
+  });
+  const animationFrameRef = useRef<number | null>(null);
+  const [displayPosition, setDisplayPosition] = useState({
+    lat: driverLat,
+    lng: driverLng,
+    heading: driverHeading,
+  });
 
-  useEffect(() => {
-    if (mapRef.current && driverLat && driverLng) {
-      mapRef.current.panTo({ lat: driverLat, lng: driverLng });
+  // Smooth interpolation function (easing)
+  const easeInOutQuad = (t: number): number => {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  };
+
+  // Interpolate heading smoothly (handles 360-degree wrapping)
+  const interpolateHeading = (start: number, end: number, progress: number): number => {
+    let diff = end - start;
+    
+    // Handle 360-degree wrapping
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
     }
-  }, [driverLat, driverLng]);
+    
+    return (start + diff * progress) % 360;
+  };
+
+  // Animation loop using requestAnimationFrame
+  const animate = (timestamp: number) => {
+    const state = animationRef.current;
+
+    if (state.startTime === 0) {
+      state.startTime = timestamp;
+    }
+
+    const elapsed = timestamp - state.startTime;
+    const progress = Math.min(elapsed / state.duration, 1);
+    const easedProgress = easeInOutQuad(progress);
+
+    // Interpolate position
+    const newLat = state.currentLat + (state.targetLat - state.currentLat) * easedProgress;
+    const newLng = state.currentLng + (state.targetLng - state.currentLng) * easedProgress;
+    const newHeading = interpolateHeading(state.currentHeading, state.targetHeading, easedProgress);
+
+    // Update display state
+    setDisplayPosition({
+      lat: newLat,
+      lng: newLng,
+      heading: newHeading,
+    });
+
+    // Pan map to follow driver (smooth)
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat: newLat, lng: newLng });
+    }
+
+    // Continue animation if not complete
+    if (progress < 1) {
+      animationFrameRef.current = requestAnimationFrame(animate);
+    } else {
+      // Animation complete
+      state.currentLat = state.targetLat;
+      state.currentLng = state.targetLng;
+      state.currentHeading = state.targetHeading;
+      state.startTime = 0;
+      animationFrameRef.current = null;
+    }
+  };
+
+  // Update animation target when new position received
+  useEffect(() => {
+    const state = animationRef.current;
+
+    // Only animate if position actually changed
+    if (state.targetLat !== driverLat || state.targetLng !== driverLng) {
+      state.targetLat = driverLat;
+      state.targetLng = driverLng;
+      state.targetHeading = driverHeading;
+      state.startTime = 0; // Reset animation
+
+      // Start animation if not already running
+      if (animationFrameRef.current === null) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
+    }
+  }, [driverLat, driverLng, driverHeading]);
+
+  // Cleanup animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
 
   if (!isLoaded) {
     return <div className="w-full h-96 bg-gray-200 rounded-lg" />;
@@ -110,16 +220,16 @@ export default function TrackingMap({
         }}
       />
 
-      {/* Driver marker (car icon) */}
-      {driverLat && driverLng && (
+      {/* Driver marker (car icon) - uses animated position */}
+      {displayPosition.lat && displayPosition.lng && (
         <Marker
-          position={{ lat: driverLat, lng: driverLng }}
+          position={{ lat: displayPosition.lat, lng: displayPosition.lng }}
           title="Your Driver"
           icon={{
             url: `data:image/svg+xml;charset=UTF-8,${CAR_ICON}`,
             scaledSize: new google.maps.Size(32, 32),
             anchor: new google.maps.Point(16, 16),
-            rotation: driverHeading,
+            rotation: displayPosition.heading,
           }}
         />
       )}
