@@ -202,6 +202,10 @@ model Booking {
   clientName            String
   pickup                String
   dropoff               String
+  pickupLat             Float?
+  pickupLng             Float?
+  dropoffLat            Float?
+  dropoffLng            Float?
   carTier               String
   carName               String
   fare                  Float

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { geocodeAddresses } from "@/lib/geocoding";
 import { PaymentStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
@@ -50,6 +51,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // Geocode addresses to get coordinates
+    const coordinates = await geocodeAddresses(pickup, dropoff);
+    
+    if (!coordinates) {
+      return NextResponse.json(
+        { error: "Could not geocode addresses. Please verify pickup and dropoff locations." },
+        { status: 400 }
+      );
+    }
+
     const resolvedPaymentStatus: PaymentStatus =
       paymentStatus && VALID_PAYMENT_STATUSES.includes(paymentStatus)
         ? paymentStatus
@@ -63,6 +74,10 @@ export async function POST(req: NextRequest) {
         clientName,
         pickup,
         dropoff,
+        pickupLat: coordinates.pickupLat,
+        pickupLng: coordinates.pickupLng,
+        dropoffLat: coordinates.dropoffLat,
+        dropoffLng: coordinates.dropoffLng,
         carTier,
         carName,
         fare: Number(fare),
@@ -75,7 +90,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(booking, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("Booking creation error:", error);
     return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
   }
 }
