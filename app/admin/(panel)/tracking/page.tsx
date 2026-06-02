@@ -168,11 +168,17 @@ export default function TrackingPage() {
 
   useEffect(()=>{
     cancelledRef.current=false;
+    
+    // Don't start polling if auto-refresh is off
+    if (!autoRefresh) {
+      return;
+    }
+    
     load();
     
     // Auto-refresh every 2 seconds for live tracking
     const interval = setInterval(() => {
-      if (!cancelledRef.current) {
+      if (!cancelledRef.current && autoRefresh) {
         load();
       }
     }, 2000);
@@ -182,7 +188,7 @@ export default function TrackingPage() {
       clearInterval(interval);
       if(pollRef.current) clearTimeout(pollRef.current);
     };
-  },[load]);
+  },[load, autoRefresh]);
 
   const filtered=vehicles.filter(v=>
     v.client.toLowerCase().includes(search.toLowerCase())||
