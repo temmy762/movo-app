@@ -7,16 +7,32 @@ export async function POST(req: NextRequest) {
     // Verify admin access
     const session = await getSession(req);
     if (session?.role !== "ADMIN") {
+      console.warn("[Admin Vehicles] Unauthorized access attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const body = await req.json();
     const { clientName, carMake, carModel, carType, carPlate } = body;
 
+    console.log("[Admin Vehicles] Creating vehicle with:", {
+      clientName,
+      carMake,
+      carModel,
+      carType,
+      carPlate,
+    });
+
     // Validate required fields
     if (!clientName || !carMake || !carModel || !carPlate) {
+      const missing = [];
+      if (!clientName) missing.push("clientName");
+      if (!carMake) missing.push("carMake");
+      if (!carModel) missing.push("carModel");
+      if (!carPlate) missing.push("carPlate");
+      
+      console.warn("[Admin Vehicles] Missing fields:", missing);
       return NextResponse.json(
-        { error: "Missing required fields: clientName, carMake, carModel, carPlate" },
+        { error: `Missing required fields: ${missing.join(", ")}` },
         { status: 400 }
       );
     }
@@ -33,6 +49,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log("[Admin Vehicles] Vehicle created successfully:", {
+      id: vehicle.id,
+      make: vehicle.make,
+      model: vehicle.model,
+      plate: vehicle.plate,
+    });
+
     return NextResponse.json({
       id: vehicle.id,
       make: vehicle.make,
@@ -41,9 +64,12 @@ export async function POST(req: NextRequest) {
       tier: vehicle.tier,
     });
   } catch (e) {
-    console.error("Admin vehicle creation error:", e);
+    console.error("[Admin Vehicles] Error creating vehicle:", {
+      error: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+    });
     return NextResponse.json(
-      { error: "Failed to create vehicle" },
+      { error: e instanceof Error ? e.message : "Failed to create vehicle" },
       { status: 500 }
     );
   }
