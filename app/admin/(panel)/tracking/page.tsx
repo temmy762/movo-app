@@ -190,10 +190,38 @@ export default function TrackingPage() {
     }
   }, [active]);
 
-  const handleAdd=(d:Omit<Vehicle,"id"|"pos"|"route">)=>{
-    const pos:[number,number]=[34.0430+(Math.random()-0.5)*0.04, -118.2500+(Math.random()-0.5)*0.04];
-    setVehicles(p=>[...p,{...d,id:crypto.randomUUID(),pos,route:[pos]}]);
-    setAddOpen(false);
+  const handleAdd=async(d:Omit<Vehicle,"id"|"pos"|"route">)=>{
+    try {
+      // Parse car model to extract make and model
+      const carParts = d.car.split(" ");
+      const carMake = carParts[0] || "Unknown";
+      const carModel = carParts.slice(1).join(" ") || "Unknown";
+
+      const response = await fetch("/api/admin/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: d.client,
+          carMake,
+          carModel,
+          carType: d.carType,
+          carPlate: d.carNumber,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(`Error: ${error.error || "Failed to create vehicle"}`);
+        return;
+      }
+
+      // Vehicle created successfully, refresh the list
+      setAddOpen(false);
+      load(); // Refresh tracking data
+    } catch (err) {
+      console.error("Failed to add vehicle:", err);
+      alert("Failed to add vehicle. Please try again.");
+    }
   };
 
   return(
