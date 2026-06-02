@@ -1,8 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // Check if this is a simple list request (for dropdown)
+    const url = new URL(req.url);
+    const simple = url.searchParams.get("simple") === "true";
+
+    if (simple) {
+      // Return simple list for dropdown
+      const drivers = await prisma.driver.findMany({
+        where: { status: "ACTIVE" }, // Only show active drivers
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          vehicle: {
+            select: { id: true },
+          },
+        },
+        orderBy: { firstName: "asc" },
+      });
+
+      // Filter out drivers that already have vehicles
+      const availableDrivers = drivers.filter(d => !d.vehicle);
+
+      return NextResponse.json(
+        availableDrivers.map(d => ({
+          id: d.id,
+          firstName: d.firstName,
+          lastName: d.lastName,
+        }))
+      );
+    }
+
+    // Return full detailed list
     const drivers = await prisma.driver.findMany({
       orderBy: { createdAt: "desc" },
       include: {

@@ -41,8 +41,8 @@ function CarThumb({color="#94a3b8"}:{color?:string}){
 }
 
 // ── Add Car Modal ─────────────────────────────────────────────────────────────
-function AddCarModal({ onSave, onClose }: { onSave:(v:Omit<Vehicle,"id"|"pos"|"route">)=>void; onClose:()=>void; }) {
-  const[f,setF]=useState({client:"",car:"",carType:"SUV",carNumber:"",status:"On Trip" as TripStatus,startDate:"",endDate:"",tripTime:"",distance:""});
+function AddCarModal({ onSave, onClose, drivers=[] }: { onSave:(v:Omit<Vehicle,"id"|"pos"|"route">,driverId?:string)=>void; onClose:()=>void; drivers?:any[] }) {
+  const[f,setF]=useState({client:"",car:"",carType:"SUV",carNumber:"",status:"On Trip" as TripStatus,startDate:"",endDate:"",tripTime:"",distance:"",driverId:""});
   const s=(k:string,v:string)=>setF(p=>({...p,[k]:v}));
   return(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -68,9 +68,11 @@ function AddCarModal({ onSave, onClose }: { onSave:(v:Omit<Vehicle,"id"|"pos"|"r
             <div><p className="text-[11px] text-gray-500 font-medium mb-1">Car Number *</p>
               <input value={f.carNumber} onChange={e=>s("carNumber",e.target.value)} placeholder="e.g. C02345"
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none placeholder-gray-300"/></div>
-            <div><p className="text-[11px] text-gray-500 font-medium mb-1">Status</p>
-              <select value={f.status} onChange={e=>s("status",e.target.value as TripStatus)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none" suppressHydrationWarning>
-                <option>On Trip</option><option>Returned</option></select></div>
+            <div><p className="text-[11px] text-gray-500 font-medium mb-1">Driver *</p>
+              <select value={f.driverId} onChange={e=>s("driverId",e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] focus:outline-none" suppressHydrationWarning>
+                <option value="">Select driver...</option>
+                {drivers.map(d=><option key={d.id} value={d.id}>{d.firstName} {d.lastName}</option>)}
+              </select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><p className="text-[11px] text-gray-500 font-medium mb-1">Start Date</p>
@@ -89,10 +91,10 @@ function AddCarModal({ onSave, onClose }: { onSave:(v:Omit<Vehicle,"id"|"pos"|"r
         </div>
         <div className="flex gap-2.5 mt-5">
           <button onClick={onClose} className="no-hover-fx flex-1 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 border border-gray-200">Cancel</button>
-          <button onClick={()=>f.client.trim()&&f.car.trim()&&onSave({...f})}
-            disabled={!f.client.trim()||!f.car.trim()}
+          <button onClick={()=>f.car.trim()&&f.carNumber.trim()&&f.driverId&&onSave({...f},f.driverId)}
+            disabled={!f.car.trim()||!f.carNumber.trim()||!f.driverId}
             className="no-hover-fx flex-1 py-2.5 rounded-xl text-[13px] font-semibold text-white"
-            style={{background:f.client.trim()&&f.car.trim()?"#ef4444":"#fca5a5"}}>
+            style={{background:f.car.trim()&&f.carNumber.trim()&&f.driverId?"#ef4444":"#fca5a5"}}>
             Add Car
           </button>
         </div>
@@ -104,6 +106,7 @@ function AddCarModal({ onSave, onClose }: { onSave:(v:Omit<Vehicle,"id"|"pos"|"r
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function TrackingPage() {
   const[vehicles,setVehicles]=useState<Vehicle[]>([]);
+  const[drivers,setDrivers]=useState<any[]>([]);
   const[activeId,setActiveId]=useState<string|null>(null);
   const[search,setSearch]=useState("");
   const[addOpen,setAddOpen]=useState(false);
@@ -153,6 +156,16 @@ export default function TrackingPage() {
   // Store load in ref so useEffect can access latest version
   refreshRef.current=load;
 
+  // Fetch available drivers for the Add Car modal
+  useEffect(()=>{
+    fetch("/api/admin/drivers?simple=true")
+      .then(r=>r.json())
+      .then(data=>{
+        if(Array.isArray(data)) setDrivers(data);
+      })
+      .catch(err=>console.error("Failed to fetch drivers:", err));
+  },[]);
+
   useEffect(()=>{
     cancelledRef.current=false;
     load();
@@ -190,8 +203,13 @@ export default function TrackingPage() {
     }
   }, [active]);
 
-  const handleAdd=async(d:Omit<Vehicle,"id"|"pos"|"route">)=>{
+  const handleAdd=async(d:Omit<Vehicle,"id"|"pos"|"route">,driverId?:string)=>{
     try {
+      if (!driverId) {
+        alert("Please select a driver");
+        return;
+      }
+
       // Parse car model to extract make and model
       const carParts = d.car.split(" ");
       const carMake = carParts[0] || "Unknown";
@@ -206,6 +224,7 @@ export default function TrackingPage() {
           carModel,
           carType: d.carType,
           carPlate: d.carNumber,
+          driverId,
         }),
       });
 
@@ -436,7 +455,7 @@ export default function TrackingPage() {
         </div>
       )}
 
-      {addOpen&&<AddCarModal onSave={handleAdd} onClose={()=>setAddOpen(false)}/>}
+      {addOpen&&<AddCarModal onSave={handleAdd} onClose={()=>setAddOpen(false)} drivers={drivers}/>}
     </div>
   );
 }

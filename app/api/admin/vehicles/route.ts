@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { clientName, carMake, carModel, carType, carPlate } = body;
+    const { clientName, carMake, carModel, carType, carPlate, driverId } = body;
 
     console.log("[Admin Vehicles] Creating vehicle with:", {
       clientName,
@@ -20,12 +20,12 @@ export async function POST(req: NextRequest) {
       carModel,
       carType,
       carPlate,
+      driverId,
     });
 
     // Validate required fields
-    if (!clientName || !carMake || !carModel || !carPlate) {
-      const missing = [];
-      if (!clientName) missing.push("clientName");
+    if (!carMake || !carModel || !carPlate) {
+      const missing: string[] = [];
       if (!carMake) missing.push("carMake");
       if (!carModel) missing.push("carModel");
       if (!carPlate) missing.push("carPlate");
@@ -33,6 +33,41 @@ export async function POST(req: NextRequest) {
       console.warn("[Admin Vehicles] Missing fields:", missing);
       return NextResponse.json(
         { error: `Missing required fields: ${missing.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    // If driverId is provided, verify the driver exists
+    if (driverId) {
+      const driver = await prisma.driver.findUnique({
+        where: { id: driverId },
+      });
+
+      if (!driver) {
+        console.warn("[Admin Vehicles] Driver not found:", driverId);
+        return NextResponse.json(
+          { error: "Driver not found" },
+          { status: 404 }
+        );
+      }
+
+      // Check if driver already has a vehicle
+      const existingVehicle = await prisma.vehicle.findUnique({
+        where: { driverId },
+      });
+
+      if (existingVehicle) {
+        console.warn("[Admin Vehicles] Driver already has a vehicle:", driverId);
+        return NextResponse.json(
+          { error: "Driver already has a vehicle assigned" },
+          { status: 400 }
+        );
+      }
+    } else {
+      // If no driverId provided, we need to create a temporary driver or return error
+      console.warn("[Admin Vehicles] No driverId provided - cannot create vehicle without driver");
+      return NextResponse.json(
+        { error: "driverId is required. Please assign a driver to this vehicle." },
         { status: 400 }
       );
     }
@@ -45,7 +80,7 @@ export async function POST(req: NextRequest) {
         plate: carPlate,
         tier: carType || "ECONOMY",
         year: new Date().getFullYear(),
-        color: "Unknown",
+        driverId: driverId,
       },
     });
 
@@ -54,6 +89,7 @@ export async function POST(req: NextRequest) {
       make: vehicle.make,
       model: vehicle.model,
       plate: vehicle.plate,
+      driverId: vehicle.driverId,
     });
 
     return NextResponse.json({
@@ -62,6 +98,7 @@ export async function POST(req: NextRequest) {
       model: vehicle.model,
       plate: vehicle.plate,
       tier: vehicle.tier,
+      driverId: vehicle.driverId,
     });
   } catch (e) {
     console.error("[Admin Vehicles] Error creating vehicle:", {
