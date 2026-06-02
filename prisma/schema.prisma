@@ -273,6 +273,7 @@ model DriverOnboarding {
   currentStep    Int                   @default(1)
   completedSteps Int[]                 @default([])
 
+  // Individual driver fields
   profilePhotoUrl   String?
   dob               String?
   licenseNumber     String?
@@ -282,6 +283,34 @@ model DriverOnboarding {
   vehiclePlate      String?
   vehicleTier       String?
   vehicleColor      String?
+
+  // Fleet partner fields
+  companyName       String?
+  legalForm         String?
+  country           String?
+  city              String?
+  street            String?
+  postalCode        String?
+  taxId             String?
+  vatId             String?
+  registrationNumber String?
+  fleetSize         String?
+  vehicleDescriptions String?
+  
+  // First vehicle info (for fleet)
+  firstVehicleYear  String?
+  firstVehicleBrand String?
+  firstVehicleModel String?
+  firstVehicleClass String?
+  firstVehicleColor String?
+  firstVehiclePlate String?
+  firstVehicleVin   String?
+  
+  // First chauffeur info (for fleet)
+  firstChauffeurFirstName String?
+  firstChauffeurLastName  String?
+  firstChauffeurEmail     String?
+  firstChauffeurPhone     String?
 
   bankAccountName   String?
   bankInstitution   String?
@@ -298,6 +327,7 @@ model DriverOnboarding {
   adminStatus        OnboardingAdminStatus @default(PENDING)
   adminNote          String?
   reviewedAt         DateTime?
+  reviewedBy         String?
 
   submittedAt        DateTime?
   createdAt          DateTime              @default(now())
