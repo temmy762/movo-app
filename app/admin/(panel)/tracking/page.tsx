@@ -118,19 +118,31 @@ export default function TrackingPage() {
   const load=useCallback(()=>{
     setIsRefreshing(true);
     fetch("/api/admin/tracking")
-      .then(r=>r.json())
-      .then((data:Vehicle[])=>{
+      .then(r=>{
+        if(!r.ok) throw new Error(`API error: ${r.status}`);
+        return r.json();
+      })
+      .then((data)=>{
         if(cancelledRef.current) return;
-        setVehicles(data);
-        setLastUpdated(new Date());
-        setActiveId(prev=>prev??(data.length>0?data[0].id:null));
-        // Schedule next refresh if auto-refresh is on
-        if(autoRefresh && !cancelledRef.current){
-          const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
-          pollRef.current=setTimeout(refreshRef.current,hasActive?2000:10000);
+        // Handle both Vehicle[] and error responses
+        if(Array.isArray(data)){
+          setVehicles(data);
+          setLastUpdated(new Date());
+          setActiveId(prev=>prev??(data.length>0?data[0].id:null));
+          // Schedule next refresh if auto-refresh is on
+          if(autoRefresh && !cancelledRef.current){
+            const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
+            pollRef.current=setTimeout(refreshRef.current,hasActive?2000:10000);
+          }
+        }else{
+          console.error("Invalid API response:", data);
+          setVehicles([]);
         }
       })
-      .catch(()=>{
+      .catch((err)=>{
+        console.error("Tracking API error:", err);
+        if(cancelledRef.current) return;
+        setVehicles([]);
         if(autoRefresh && !cancelledRef.current){
           pollRef.current=setTimeout(refreshRef.current,10000);
         }
