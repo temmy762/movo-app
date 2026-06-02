@@ -44,6 +44,8 @@ export async function startLocationTracking(
   onError?: (error: string) => void
 ): Promise<() => void> {
   let watchId: number | null = null;
+  let lastPublishTime = 0;
+  const PUBLISH_INTERVAL = 5000; // 5 seconds
 
   if (!navigator.geolocation) {
     const error = "Geolocation not supported";
@@ -54,6 +56,15 @@ export async function startLocationTracking(
 
   watchId = navigator.geolocation.watchPosition(
     async (position) => {
+      const now = Date.now();
+
+      // Only publish every 5 seconds
+      if (now - lastPublishTime < PUBLISH_INTERVAL) {
+        return;
+      }
+
+      lastPublishTime = now;
+
       const { latitude, longitude, heading, speed, accuracy } = position.coords;
 
       const location: LocationUpdate = {
@@ -70,6 +81,8 @@ export async function startLocationTracking(
 
       if (success) {
         onLocationUpdate?.(location);
+      } else {
+        console.warn("Failed to publish location, will retry on next interval");
       }
     },
     (error) => {
