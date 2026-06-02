@@ -81,9 +81,33 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Format response
+    // Debug: Log booking relation check
+    console.log(
+      "[Admin Tracking] Booking relation check:",
+      bookings.map(b => ({
+        bookingId: b.id,
+        hasDriver: !!b.driver,
+        hasVehicle: !!b.driver?.vehicle,
+        driverName: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : "NO_DRIVER",
+        vehicleInfo: b.driver?.vehicle ? `${b.driver.vehicle.make} ${b.driver.vehicle.model}` : "NO_VEHICLE",
+      }))
+    );
+
+    // Format response - filter out invalid bookings
     const vehicles = bookings
-      .filter(b => b.driver && b.driver.vehicle) // Only include bookings with driver AND vehicle
+      .filter(b => {
+        // Skip if no driver
+        if (!b.driver) {
+          console.warn(`[Admin Tracking] Booking ${b.id} has no driver assigned`);
+          return false;
+        }
+        // Skip if driver has no vehicle
+        if (!b.driver.vehicle) {
+          console.warn(`[Admin Tracking] Booking ${b.id} (driver: ${b.driver.id}) has no vehicle assigned`);
+          return false;
+        }
+        return true;
+      })
       .map(b => {
         const d = b.driver!;
         const v = d.vehicle!;
@@ -106,9 +130,9 @@ export async function GET(req: NextRequest) {
         return {
           id: b.id,
           client: b.clientName,
-          car: `${v.make} ${v.model}`,
-          carType: v.tier,
-          carNumber: v.plate,
+          car: `${v.make ?? "Unknown"} ${v.model ?? ""}`.trim(),
+          carType: v.tier ?? "Unknown",
+          carNumber: v.plate ?? "—",
           status: tripStatus,
           startDate: new Date(b.createdAt).toLocaleDateString("en-US", {
             weekday: "short",
@@ -132,13 +156,13 @@ export async function GET(req: NextRequest) {
           pos: [lat, lng] as [number, number],
           route: trail,
           heading,
-          driverName: `${d.firstName} ${d.lastName}`,
+          driverName: `${d.firstName ?? "Unknown"} ${d.lastName ?? ""}`.trim(),
           driverId: d.id,
-          isOnline: d.isOnline,
-          pickupLat: b.pickupLat,
-          pickupLng: b.pickupLng,
-          dropoffLat: b.dropoffLat,
-          dropoffLng: b.dropoffLng,
+          isOnline: d.isOnline ?? false,
+          pickupLat: b.pickupLat ?? 0,
+          pickupLng: b.pickupLng ?? 0,
+          dropoffLat: b.dropoffLat ?? 0,
+          dropoffLng: b.dropoffLng ?? 0,
         };
       });
 
