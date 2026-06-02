@@ -35,16 +35,23 @@ export default function TrackingMap({ lat, lng, route, heading = 0 }: TrackingMa
   const [mapType, setMapType] = useState<"roadmap" | "satellite">("satellite");
 
   useEffect(() => {
-    if (mapRef.current) {
-      console.log(`[Map] Panning to:`, { lat, lng });
+    if (mapRef.current && (lat !== 0 || lng !== 0)) {
+      // Use panTo for smooth movement instead of jumping
       mapRef.current.panTo({ lat, lng });
+    }
+  }, [lat, lng]);
+  
+  useEffect(() => {
+    if (mapRef.current) {
       mapRef.current.setMapTypeId(mapType);
     }
-  }, [lat, lng, mapType]);
+  }, [mapType]);
   
   // Force re-render when route changes
   useEffect(() => {
-    console.log(`[Map] Route updated:`, route?.length, "points");
+    if (route && route.length > 0) {
+      console.log(`[Map] Route updated:`, route.length, "points");
+    }
   }, [route]);
 
   if (!isLoaded) {
@@ -71,16 +78,40 @@ export default function TrackingMap({ lat, lng, route, heading = 0 }: TrackingMa
           ],
         }}
       >
+      {/* Route trail with gradient effect */}
       {path.length > 1 && (
-        <Polyline
-          path={path}
-          options={{
-            strokeColor: "#1e2d45",
-            strokeWeight: 4,
-            strokeOpacity: 0.85,
-          }}
-        />
+        <>
+          <Polyline
+            path={path}
+            options={{
+              strokeColor: "#3b82f6",
+              strokeWeight: 3,
+              strokeOpacity: 0.7,
+              geodesic: true,
+            }}
+          />
+          {/* Waypoint markers for every 5th point to avoid clutter */}
+          {path.map((point, idx) => {
+            if (idx % 5 !== 0 || idx === path.length - 1) return null;
+            return (
+              <Marker
+                key={`waypoint-${idx}`}
+                position={point}
+                icon={{
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 4,
+                  fillColor: "#60a5fa",
+                  fillOpacity: 0.6,
+                  strokeColor: "#1e40af",
+                  strokeWeight: 1,
+                }}
+              />
+            );
+          })}
+        </>
       )}
+      
+      {/* Current car position marker */}
       <Marker
         position={{ lat, lng }}
         icon={{
@@ -89,6 +120,7 @@ export default function TrackingMap({ lat, lng, route, heading = 0 }: TrackingMa
           anchor: new google.maps.Point(18, 18),
           rotation: heading,
         }}
+        title={`Current Position: ${lat.toFixed(4)}, ${lng.toFixed(4)}`}
       />
       </GoogleMap>
 

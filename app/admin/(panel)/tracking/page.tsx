@@ -348,6 +348,35 @@ export default function TrackingPage() {
           </div>
           </div>
 
+          {/* Route Statistics */}
+          <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-3 text-[11px]">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-gray-400">Total Waypoints</p>
+                  <p className="font-bold text-gray-900 text-[13px]">{active.route?.length || 0}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Current Position</p>
+                  <p className="font-mono text-gray-700 text-[10px]">{active.pos[0].toFixed(4)}, {active.pos[1].toFixed(4)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Status</p>
+                  <p className="font-bold text-gray-900">{active.status}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  const coords = active.route?.map(p => `${p[0].toFixed(4)},${p[1].toFixed(4)}`).join('\n');
+                  navigator.clipboard.writeText(coords || '');
+                  alert('Route coordinates copied to clipboard!');
+                }}
+                className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-[10px] font-medium">
+                Copy Route
+              </button>
+            </div>
+          </div>
+
           {/* Map */}
           <div className="flex-1 overflow-hidden">
             {active && (
