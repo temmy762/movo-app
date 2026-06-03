@@ -175,7 +175,7 @@ model Vehicle {
   make      String
   model     String
   year      Int
-  plate     String
+  plate     String   @unique
   tier      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -285,32 +285,32 @@ model DriverOnboarding {
   vehicleColor      String?
 
   // Fleet partner fields
-  companyName       String?
-  legalForm         String?
-  country           String?
-  city              String?
-  street            String?
-  postalCode        String?
-  taxId             String?
-  vatId             String?
-  registrationNumber String?
-  fleetSize         String?
-  vehicleDescriptions String?
+  companyName       String
+  legalForm         String
+  country           String
+  city              String
+  street            String
+  postalCode        String
+  taxId             String
+  vatId             String
+  registrationNumber String
+  fleetSize         String
+  vehicleDescriptions String
   
   // First vehicle info (for fleet)
-  firstVehicleYear  String?
-  firstVehicleBrand String?
-  firstVehicleModel String?
-  firstVehicleClass String?
-  firstVehicleColor String?
-  firstVehiclePlate String?
-  firstVehicleVin   String?
+  firstVehicleYear  String
+  firstVehicleBrand String
+  firstVehicleModel String
+  firstVehicleClass String
+  firstVehicleColor String
+  firstVehiclePlate String
+  firstVehicleVin   String
   
   // First chauffeur info (for fleet)
-  firstChauffeurFirstName String?
-  firstChauffeurLastName  String?
-  firstChauffeurEmail     String?
-  firstChauffeurPhone     String?
+  firstChauffeurFirstName String
+  firstChauffeurLastName  String
+  firstChauffeurEmail     String
+  firstChauffeurPhone     String
 
   bankAccountName   String?
   bankInstitution   String?

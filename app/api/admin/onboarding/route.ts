@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
+  // CRITICAL: Authorization check
+  const session = await getSession(req);
+  if (session?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") ?? undefined;
   const type   = searchParams.get("type")   ?? undefined;

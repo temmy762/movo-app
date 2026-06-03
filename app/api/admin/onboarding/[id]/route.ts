@@ -1,15 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // CRITICAL: Authorization check
+  const session = await getSession(req);
+  if (session?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { adminStatus, adminNote, activateDriver } = body;
 
   if (!adminStatus) {
     return NextResponse.json({ error: "adminStatus required" }, { status: 400 });
+  }
+
+  // Check if already approved (prevent double approval)
+  const existingOnboarding = await prisma.driverOnboarding.findUnique({
+    where: { id: params.id },
+  });
+
+  if (existingOnboarding?.adminStatus === "APPROVED") {
+    return NextResponse.json(
+      { error: "Application already approved" },
+      { status: 400 }
+    );
   }
 
   const onboarding = await prisma.driverOnboarding.update({
@@ -24,28 +43,35 @@ export async function PATCH(
 
   // When approved, activate the driver account and create vehicle for fleet partners
   if (adminStatus === "APPROVED" || activateDriver) {
-    await prisma.driver.update({
-      where: { id: onboarding.driverId },
-      data:  { status: "ACTIVE" },
-    });
-
-    // If fleet partner, create the first vehicle
-    if (onboarding.type === "FLEET" && onboarding.firstVehicleBrand && onboarding.firstVehicleModel && onboarding.firstVehiclePlate) {
-      try {
-        await prisma.vehicle.create({
-          data: {
-            driverId: onboarding.driverId,
-            make: onboarding.firstVehicleBrand,
-            model: onboarding.firstVehicleModel,
-            year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
-            plate: onboarding.firstVehiclePlate,
-            tier: onboarding.firstVehicleClass || "ECONOMY",
-          },
+    try {
+      // Use transaction to ensure both operations succeed or both fail
+      await prisma.$transaction(async (tx) => {
+        // Update driver
+        await tx.driver.update({
+          where: { id: onboarding.driverId },
+          data:  { status: "ACTIVE" },
         });
-      } catch (err) {
-        console.error("Failed to create vehicle for fleet partner:", err);
-        // Don't fail the approval if vehicle creation fails
-      }
+
+        // Create vehicle if fleet partner
+        if (onboarding.type === "FLEET" && onboarding.firstVehicleBrand && onboarding.firstVehicleModel && onboarding.firstVehiclePlate) {
+          await tx.vehicle.create({
+            data: {
+              driverId: onboarding.driverId,
+              make: onboarding.firstVehicleBrand,
+              model: onboarding.firstVehicleModel,
+              year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
+              plate: onboarding.firstVehiclePlate,
+              tier: onboarding.firstVehicleClass || "ECONOMY",
+            },
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Approval transaction failed:", err);
+      return NextResponse.json(
+        { error: "Failed to complete approval. Please try again." },
+        { status: 500 }
+      );
     }
   }
 
