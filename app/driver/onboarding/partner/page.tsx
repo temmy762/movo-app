@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useFleetOnboarding } from "./context";
 
 const TOTAL_STEPS = 9;
 
@@ -55,21 +56,23 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
   );
 }
 
-function TextInput({ placeholder = "" }: { placeholder?: string }) {
+function TextInput({ placeholder = "", value = "", onChange }: { placeholder?: string; value?: string; onChange?: (val: string) => void }) {
   return (
     <input
       type="text"
       placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange?.(e.target.value)}
       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none placeholder-gray-300"
       suppressHydrationWarning
     />
   );
 }
 
-function SelectInput({ children }: { children: React.ReactNode }) {
+function SelectInput({ children, value = "", onChange }: { children: React.ReactNode; value?: string; onChange?: (val: string) => void }) {
   return (
     <div className="relative" suppressHydrationWarning>
-      <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white" suppressHydrationWarning>
+      <select value={value} onChange={(e) => onChange?.(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white" suppressHydrationWarning>
         {children}
       </select>
       <svg className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5">
@@ -81,6 +84,7 @@ function SelectInput({ children }: { children: React.ReactNode }) {
 
 export default function PartnerOnboardingStep1() {
   const router = useRouter();
+  const { data, updateData } = useFleetOnboarding();
   const [_username] = useState("Mohammed");
   const [_city] = useState("California");
 
@@ -142,19 +146,13 @@ export default function PartnerOnboardingStep1() {
 
           <div className="flex flex-col gap-3 mb-5">
             <div>
-              <FieldLabel>Company Information</FieldLabel>
-              <SelectInput>
-                <option value="">Select company type</option>
-                <option>Sole Proprietorship</option>
-                <option>Partnership</option>
-                <option>Corporation</option>
-                <option>LLC</option>
-              </SelectInput>
+              <FieldLabel>Company Name</FieldLabel>
+              <TextInput placeholder="Enter company name" value={data.companyName} onChange={(val) => updateData({ companyName: val })} />
             </div>
 
             <div>
               <FieldLabel>Company Type (Legal Form)</FieldLabel>
-              <SelectInput>
+              <SelectInput value={data.legalForm} onChange={(val) => updateData({ legalForm: val })}>
                 <option value="">Select legal form</option>
                 <option>Inc.</option>
                 <option>Ltd.</option>
@@ -170,7 +168,7 @@ export default function PartnerOnboardingStep1() {
           <div className="flex flex-col gap-3 mb-5">
             <div>
               <FieldLabel>Country</FieldLabel>
-              <SelectInput>
+              <SelectInput value={data.country} onChange={(val) => updateData({ country: val })}>
                 <option value="">Select country</option>
                 <option>Canada</option>
                 <option>United States</option>
@@ -181,22 +179,22 @@ export default function PartnerOnboardingStep1() {
 
             <div>
               <FieldLabel>Street</FieldLabel>
-              <TextInput />
+              <TextInput placeholder="Enter street address" value={data.street} onChange={(val) => updateData({ street: val })} />
             </div>
 
             <div>
               <FieldLabel>Zip/Postal code</FieldLabel>
-              <TextInput />
+              <TextInput placeholder="Enter postal code" value={data.postalCode} onChange={(val) => updateData({ postalCode: val })} />
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <FieldLabel>City</FieldLabel>
-                <TextInput />
+                <TextInput placeholder="Enter city" value={data.city} onChange={(val) => updateData({ city: val })} />
               </div>
               <div>
                 <FieldLabel>State/Province</FieldLabel>
-                <SelectInput>
+                <SelectInput value={data.city} onChange={(val) => updateData({ city: val })}>
                   <option value=""></option>
                   <option>Ontario</option>
                   <option>Quebec</option>
@@ -210,17 +208,17 @@ export default function PartnerOnboardingStep1() {
 
             <div>
               <FieldLabel required>Tax Identification Number</FieldLabel>
-              <TextInput />
+              <TextInput placeholder="Enter Tax ID" value={data.taxId} onChange={(val) => updateData({ taxId: val })} />
             </div>
 
             <div>
               <FieldLabel required>VAT ID/Number</FieldLabel>
-              <TextInput />
+              <TextInput placeholder="Enter VAT ID" value={data.vatId} onChange={(val) => updateData({ vatId: val })} />
             </div>
 
             <div>
               <FieldLabel required>Business Registration Number</FieldLabel>
-              <TextInput />
+              <TextInput placeholder="Enter registration number" value={data.registrationNumber} onChange={(val) => updateData({ registrationNumber: val })} />
             </div>
           </div>
 

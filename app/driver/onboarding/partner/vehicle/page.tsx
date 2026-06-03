@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useFleetOnboarding } from "../context";
 
 const TOTAL_STEPS = 9;
 
@@ -29,12 +31,12 @@ function ProgressBar({ step }: { step: number }) {
   );
 }
 
-function SelectField({ label, options }: { label: string; options: string[] }) {
+function SelectField({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (val: string) => void }) {
   return (
     <div>
       <p className="text-[12px] text-gray-500 mb-1"><span className="text-red-400 mr-0.5">*</span>{label}</p>
       <div className="relative" suppressHydrationWarning>
-        <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white" suppressHydrationWarning>
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white" suppressHydrationWarning>
           <option value=""></option>
           {options.map((o) => <option key={o}>{o}</option>)}
         </select>
@@ -46,11 +48,11 @@ function SelectField({ label, options }: { label: string; options: string[] }) {
   );
 }
 
-function TextField({ label }: { label: string }) {
+function TextField({ label, value, onChange }: { label: string; value: string; onChange: (val: string) => void }) {
   return (
     <div>
       <p className="text-[12px] text-gray-500 mb-1"><span className="text-red-400 mr-0.5">*</span>{label}</p>
-      <input type="text" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none" suppressHydrationWarning />
+      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none" suppressHydrationWarning />
     </div>
   );
 }
@@ -62,6 +64,70 @@ const brands = ["Mercedes-Benz", "BMW", "Audi", "Lexus", "Cadillac", "Lincoln", 
 
 export default function VehicleInformationPage() {
   const router = useRouter();
+  const { data, updateData } = useFleetOnboarding();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    setError("");
+    
+    // Validate all required fields
+    const requiredFields = [
+      { key: "companyName", label: "Company Name" },
+      { key: "legalForm", label: "Legal Form" },
+      { key: "country", label: "Country" },
+      { key: "city", label: "City" },
+      { key: "street", label: "Street" },
+      { key: "postalCode", label: "Postal Code" },
+      { key: "taxId", label: "Tax ID" },
+      { key: "vatId", label: "VAT ID" },
+      { key: "registrationNumber", label: "Registration Number" },
+      { key: "fleetSize", label: "Fleet Size" },
+      { key: "vehicleDescriptions", label: "Vehicle Descriptions" },
+      { key: "firstVehicleYear", label: "Vehicle Year" },
+      { key: "firstVehicleBrand", label: "Vehicle Brand" },
+      { key: "firstVehicleClass", label: "Vehicle Class" },
+      { key: "firstVehicleColor", label: "Vehicle Color" },
+      { key: "firstVehiclePlate", label: "License Plate" },
+      { key: "firstVehicleVin", label: "Vehicle VIN" },
+      { key: "firstChauffeurFirstName", label: "Chauffeur First Name" },
+      { key: "firstChauffeurLastName", label: "Chauffeur Last Name" },
+      { key: "firstChauffeurEmail", label: "Chauffeur Email" },
+      { key: "firstChauffeurPhone", label: "Chauffeur Phone" },
+    ];
+
+    const missing = requiredFields.filter((field) => !data[field.key as keyof typeof data]);
+    if (missing.length > 0) {
+      setError(`Missing required fields: ${missing.map((f) => f.label).join(", ")}`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/driver/onboarding/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "FLEET",
+          ...data,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to submit onboarding");
+        return;
+      }
+
+      // Success - redirect to success page
+      router.push("/driver/onboarding/success");
+    } catch (err) {
+      console.error("Submission error:", err);
+      setError(err instanceof Error ? err.message : "Failed to submit onboarding");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -80,20 +146,54 @@ export default function VehicleInformationPage() {
 
           <p className="text-[13px] font-bold text-gray-800 mb-4">First Vehicle Information</p>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-[12px] text-red-600">{error}</p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3 mb-4">
-            <SelectField label="Vehicle Year of Manufacture (YOM)" options={years} />
-            <SelectField label="Vehicle Brand and Model" options={brands} />
+            <SelectField 
+              label="Vehicle Year of Manufacture (YOM)" 
+              options={years}
+              value={data.firstVehicleYear}
+              onChange={(val) => updateData({ firstVehicleYear: val })}
+            />
+            <SelectField 
+              label="Vehicle Brand and Model" 
+              options={brands}
+              value={data.firstVehicleBrand}
+              onChange={(val) => updateData({ firstVehicleBrand: val })}
+            />
 
             {/* Class + Color side by side */}
             <div className="grid grid-cols-2 gap-2">
-              <SelectField label="Vehicle Class" options={vehicleClasses} />
-              <SelectField label="Vehicle Color" options={colors} />
+              <SelectField 
+                label="Vehicle Class" 
+                options={vehicleClasses}
+                value={data.firstVehicleClass}
+                onChange={(val) => updateData({ firstVehicleClass: val })}
+              />
+              <SelectField 
+                label="Vehicle Color" 
+                options={colors}
+                value={data.firstVehicleColor}
+                onChange={(val) => updateData({ firstVehicleColor: val })}
+              />
             </div>
 
             {/* Plate + VIN side by side */}
             <div className="grid grid-cols-2 gap-2">
-              <TextField label="License Number Plate" />
-              <TextField label="Vehicle VIN" />
+              <TextField 
+                label="License Number Plate"
+                value={data.firstVehiclePlate}
+                onChange={(val) => updateData({ firstVehiclePlate: val })}
+              />
+              <TextField 
+                label="Vehicle VIN"
+                value={data.firstVehicleVin}
+                onChange={(val) => updateData({ firstVehicleVin: val })}
+              />
             </div>
           </div>
 
@@ -120,17 +220,19 @@ export default function VehicleInformationPage() {
             <button
               type="button"
               onClick={() => router.push("/driver/onboarding/partner/fleet")}
-              className="flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-600"
+              disabled={isSubmitting}
+              className="flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-600 disabled:opacity-50"
             >
               Previous
             </button>
             <button
               type="button"
-              onClick={() => router.push("/driver/onboarding/partner/program")}
-              className="flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex-1 py-3 rounded-xl text-white font-bold text-[14px] disabled:opacity-50"
               style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
             >
-              Next
+              {isSubmitting ? "Submitting..." : "Submit for Review"}
             </button>
           </div>
 
