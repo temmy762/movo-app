@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       orderBy: { submittedAt: "desc" },
       take: limit,
       skip: offset,
-    });
+    }) as any;
 
     // Get total count
     const total = await prisma.driverOnboarding.count({
@@ -65,8 +65,13 @@ export async function GET(req: NextRequest) {
       
       driver: ob.driver,
       
-      // Fleet partner info
+      // Fleet partner info - map to vehicle fields for compatibility
       ...(ob.type === "FLEET" && {
+        vehicleMake: ob.firstVehicleBrand,
+        vehicleModel: ob.firstVehicleModel,
+        vehicleYear: ob.firstVehicleYear,
+        vehiclePlate: ob.firstVehiclePlate,
+        vehicleTier: ob.firstVehicleClass,
         company: {
           name: ob.companyName,
           legalForm: ob.legalForm,
