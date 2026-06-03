@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FleetOnboardingProvider } from "./partner/provider";
 
 export const metadata: Metadata = {
   title: "MOVO PRIVÉ — Driver",
@@ -11,8 +12,10 @@ export default function DriverOnboardingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen w-full flex flex-col">
-      {children}
-    </div>
+    <FleetOnboardingProvider>
+      <div className="h-screen w-full flex flex-col">
+        {children}
+      </div>
+    </FleetOnboardingProvider>
   );
 }
