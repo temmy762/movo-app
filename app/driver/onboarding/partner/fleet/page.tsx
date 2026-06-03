@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useFleetOnboarding } from "../context";
 
 const TOTAL_STEPS = 9;
 
@@ -66,12 +67,12 @@ function RadioGroup({
   );
 }
 
-function SelectInput({ label, options }: { label: string; options: string[] }) {
+function SelectInput({ label, options, value, onChange }: { label: string; options: string[]; value: string; onChange: (val: string) => void }) {
   return (
     <div className="mb-3">
       <p className="text-[12px] text-gray-500 mb-1"><span className="text-red-400 mr-0.5">*</span>{label}</p>
       <div className="relative" suppressHydrationWarning>
-        <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white" suppressHydrationWarning>
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-600 focus:outline-none appearance-none bg-white" suppressHydrationWarning>
           <option value=""></option>
           {options.map((o) => <option key={o}>{o}</option>)}
         </select>
@@ -83,20 +84,18 @@ function SelectInput({ label, options }: { label: string; options: string[] }) {
   );
 }
 
-function NumberInput({ label }: { label: string }) {
+function NumberInput({ label, value, onChange }: { label: string; value: string; onChange: (val: string) => void }) {
   return (
     <div className="mb-3">
       <p className="text-[12px] text-gray-500 mb-1"><span className="text-red-400 mr-0.5">*</span>{label}</p>
-      <input type="number" min={0} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none" suppressHydrationWarning />
+      <input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none" suppressHydrationWarning />
     </div>
   );
 }
 
 export default function FleetInformationPage() {
   const router = useRouter();
-  const [luxeMotion, setLuxeMotion] = useState("No");
-  const [electric, setElectric] = useState("No");
-  const [women, setWomen] = useState("No");
+  const { data, updateData } = useFleetOnboarding();
 
   return (
     <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -116,25 +115,21 @@ export default function FleetInformationPage() {
           <p className="text-[13px] font-bold text-gray-800 mb-1">Fleet Information</p>
           <p className="text-[12px] text-gray-500 mb-4">Please provide the following information about your fleet:</p>
 
-          {/* Radio questions */}
-          <RadioGroup label="Have you worked with Luxe Motion before?" name="luxe" value={luxeMotion} onChange={setLuxeMotion} />
-          <RadioGroup label="Are there electric vehicles in your fleet?" name="electric" value={electric} onChange={setElectric} />
-          <RadioGroup label="Do you have women serving as chauffeurs?" name="women" value={women} onChange={setWomen} />
-
           {/* Fleet size */}
           <SelectInput
             label="What is the total number of chauffeurs you employ"
             options={["1–5", "6–10", "11–20", "21–50", "50+"]}
+            value={data.fleetSize}
+            onChange={(val) => updateData({ fleetSize: val })}
           />
-          <NumberInput label="What is the total number of first-class vehicles in your fleet?" />
-          <NumberInput label="How many business class vehicles are at your disposal?" />
-          <NumberInput label="How many business class vans do you operate?" />
 
           {/* Fleet description */}
           <div className="mb-6">
             <p className="text-[12px] text-gray-500 mb-1"><span className="text-red-400 mr-0.5">*</span>Describe your fleet's vehicles briefly (brand, model, year)</p>
             <textarea
               rows={3}
+              value={data.vehicleDescriptions}
+              onChange={(e) => updateData({ vehicleDescriptions: e.target.value })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none resize-none"
               suppressHydrationWarning
             />

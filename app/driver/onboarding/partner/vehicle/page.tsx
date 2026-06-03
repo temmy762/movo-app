@@ -144,7 +144,7 @@ export default function VehicleInformationPage() {
           <h1 className="text-[20px] font-bold text-gray-900 mt-1 text-center">Fleet Partner Onboarding</h1>
           <ProgressBar step={3} />
 
-          <p className="text-[13px] font-bold text-gray-800 mb-4">First Vehicle Information</p>
+          <p className="text-[13px] font-bold text-gray-800 mb-4">First Vehicle & Chauffeur Information</p>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -195,6 +195,32 @@ export default function VehicleInformationPage() {
                 onChange={(val) => updateData({ firstVehicleVin: val })}
               />
             </div>
+          </div>
+
+          {/* Chauffeur Information */}
+          <p className="text-[13px] font-bold text-gray-800 mb-4 mt-6">First Chauffeur Information</p>
+
+          <div className="flex flex-col gap-3 mb-4">
+            <TextField 
+              label="Chauffeur First Name"
+              value={data.firstChauffeurFirstName}
+              onChange={(val) => updateData({ firstChauffeurFirstName: val })}
+            />
+            <TextField 
+              label="Chauffeur Last Name"
+              value={data.firstChauffeurLastName}
+              onChange={(val) => updateData({ firstChauffeurLastName: val })}
+            />
+            <TextField 
+              label="Chauffeur Email"
+              value={data.firstChauffeurEmail}
+              onChange={(val) => updateData({ firstChauffeurEmail: val })}
+            />
+            <TextField 
+              label="Chauffeur Phone"
+              value={data.firstChauffeurPhone}
+              onChange={(val) => updateData({ firstChauffeurPhone: val })}
+            />
           </div>
 
           {/* Review notice */}
