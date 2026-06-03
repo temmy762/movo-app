@@ -163,7 +163,7 @@ export default function VehicleInformationPage() {
               label="Vehicle Brand and Model" 
               options={brands}
               value={data.firstVehicleBrand}
-              onChange={(val) => updateData({ firstVehicleBrand: val })}
+              onChange={(val) => updateData({ firstVehicleBrand: val, firstVehicleModel: val })}
             />
 
             {/* Class + Color side by side */}
