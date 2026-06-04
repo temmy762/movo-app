@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { resetTokens } from "../forgot-password/route";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,17 +20,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const tokenData = resetTokens.get(token);
+    const resetToken = await prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
 
-    if (!tokenData) {
+    if (!resetToken) {
       return NextResponse.json(
         { error: "Invalid or expired token" },
         { status: 400 }
       );
     }
 
-    if (Date.now() > tokenData.expires) {
-      resetTokens.delete(token);
+    if (new Date() > resetToken.expiresAt) {
+      await prisma.passwordResetToken.delete({
+        where: { token },
+      });
       return NextResponse.json(
         { error: "Token expired" },
         { status: 400 }
@@ -41,11 +44,13 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await prisma.user.update({
-      where: { email: tokenData.email },
+      where: { email: resetToken.email },
       data: { password: hashedPassword },
     });
 
-    resetTokens.delete(token);
+    await prisma.passwordResetToken.delete({
+      where: { token },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

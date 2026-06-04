@@ -8,22 +8,34 @@ import { useJsApiLoader } from "@react-google-maps/api";
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
-const CAR_CONFIGS = [
-  { tier: "classic", name: "Movo Classic",     specs: "Automatic | 4 seats | Octane", img: "/images/movo classic.png" },
-  { tier: "premium", name: "Movo Premium",     specs: "Automatic | 4 seats | Octane", img: "/images/movo premium.png" },
-  { tier: "black",   name: "Movo Privé Black", specs: "Automatic | 4 seats | Octane", img: "/images/prive black.png" },
-];
+interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  year: number;
+  plate: string;
+  tier: string;
+  driverId: string;
+}
 
 interface NearbyDriver {
   id: string;
+  firstName: string;
+  lastName: string;
   lat: number;
   lng: number;
-  vehicle?: { tier: string } | null;
+  vehicle?: Vehicle | null;
 }
 
 interface CarCard {
+  vehicleId: string;
+  driverId: string;
+  driverName: string;
   tier: string;
-  name: string;
+  make: string;
+  model: string;
+  year: number;
+  plate: string;
   specs: string;
   img: string;
   etaLabel: string;
@@ -64,9 +76,6 @@ function AvailableCarsContent() {
     if (!isLoaded || computedRef.current) return;
     computedRef.current = true;
 
-    const tiersToShow =
-      tier === "all" ? ["classic", "premium", "black"] : [tier];
-
     const run = async (userLat: number, userLng: number) => {
       setStatusMsg("Finding nearby drivers…");
       let drivers: NearbyDriver[] = [];
@@ -80,71 +89,103 @@ function AvailableCarsContent() {
 
       const results: CarCard[] = [];
 
-      for (const t of tiersToShow) {
-        const config = CAR_CONFIGS.find((c) => c.tier === t)!;
-        const tieredDrivers = drivers.filter(
-          (d) => d.vehicle?.tier === t && d.lat != null && d.lng != null
+      // Filter drivers by tier if specified
+      const filteredDrivers = tier === "all" 
+        ? drivers 
+        : drivers.filter((d) => d.vehicle?.tier === tier);
+
+      // If no drivers available, show empty state
+      if (filteredDrivers.length === 0) {
+        setStatusMsg("No drivers available");
+        setCards([]);
+        setLoading(false);
+        return;
+      }
+
+      // Sort by straight-line distance and take 10 closest
+      const sorted = [...filteredDrivers].sort(
+        (a, b) =>
+          haversineKm(a.lat, a.lng, userLat, userLng) -
+          haversineKm(b.lat, b.lng, userLat, userLng)
+      );
+      const nearest = sorted.slice(0, 10);
+
+      try {
+        const matrix = await new Promise<google.maps.DistanceMatrixResponse>(
+          (resolve, reject) => {
+            service.getDistanceMatrix(
+              {
+                origins: nearest.map(
+                  (d) => new google.maps.LatLng(d.lat, d.lng)
+                ),
+                destinations: [userLatLng],
+                travelMode: google.maps.TravelMode.DRIVING,
+                unitSystem: google.maps.UnitSystem.METRIC,
+              },
+              (result, status) => {
+                if (status === "OK" && result) resolve(result);
+                else reject(new Error(status));
+              }
+            );
+          }
         );
 
-        if (tieredDrivers.length === 0) {
-          results.push({ ...config, etaLabel: "No drivers nearby", available: false });
-          continue;
-        }
+        nearest.forEach((driver, idx) => {
+          if (!driver.vehicle) return;
+          
+          const el = matrix.rows[idx]?.elements[0];
+          let etaLabel = "–";
+          
+          if (el?.status === "OK") {
+            etaLabel = `${el.distance.text} (${el.duration.text} away)`;
+          } else {
+            const km = haversineKm(driver.lat, driver.lng, userLat, userLng);
+            const m = Math.round(km * 1000);
+            const distStr = m < 1000 ? `${m} m` : `${km.toFixed(1)} km`;
+            const estMins = Math.max(1, Math.round((km / 30) * 60));
+            etaLabel = `${distStr} (~${estMins} min away)`;
+          }
 
-        /* Sort by straight-line distance first; only query the 3 closest */
-        const sorted = [...tieredDrivers].sort(
-          (a, b) =>
-            haversineKm(a.lat, a.lng, userLat, userLng) -
-            haversineKm(b.lat, b.lng, userLat, userLng)
-        );
-        const nearest = sorted.slice(0, 3);
-
-        try {
-          const matrix = await new Promise<google.maps.DistanceMatrixResponse>(
-            (resolve, reject) => {
-              service.getDistanceMatrix(
-                {
-                  origins: nearest.map(
-                    (d) => new google.maps.LatLng(d.lat, d.lng)
-                  ),
-                  destinations: [userLatLng],
-                  travelMode: google.maps.TravelMode.DRIVING,
-                  unitSystem: google.maps.UnitSystem.METRIC,
-                },
-                (result, status) => {
-                  if (status === "OK" && result) resolve(result);
-                  else reject(new Error(status));
-                }
-              );
-            }
-          );
-
-          let bestSecs = Infinity;
-          let bestLabel = "–";
-
-          matrix.rows.forEach((row) => {
-            const el = row.elements[0];
-            if (el.status === "OK" && el.duration.value < bestSecs) {
-              bestSecs = el.duration.value;
-              bestLabel = `${el.distance.text} (${el.duration.text} away)`;
-            }
+          results.push({
+            vehicleId: driver.vehicle.id,
+            driverId: driver.id,
+            driverName: `${driver.firstName} ${driver.lastName}`,
+            tier: driver.vehicle.tier,
+            make: driver.vehicle.make,
+            model: driver.vehicle.model,
+            year: driver.vehicle.year,
+            plate: driver.vehicle.plate,
+            specs: `${driver.vehicle.make} ${driver.vehicle.model} | ${driver.vehicle.year}`,
+            img: "/images/movo classic.png",
+            etaLabel,
+            available: true,
           });
-
-          results.push({ ...config, etaLabel: bestLabel, available: true });
-        } catch {
-          /* Distance Matrix failed — fall back to straight-line */
-          const km = haversineKm(
-            nearest[0].lat, nearest[0].lng, userLat, userLng
-          );
+        });
+      } catch {
+        // Fallback to straight-line distance
+        nearest.forEach((driver) => {
+          if (!driver.vehicle) return;
+          
+          const km = haversineKm(driver.lat, driver.lng, userLat, userLng);
           const m = Math.round(km * 1000);
           const distStr = m < 1000 ? `${m} m` : `${km.toFixed(1)} km`;
           const estMins = Math.max(1, Math.round((km / 30) * 60));
+
           results.push({
-            ...config,
+            vehicleId: driver.vehicle.id,
+            driverId: driver.id,
+            driverName: `${driver.firstName} ${driver.lastName}`,
+            tier: driver.vehicle.tier,
+            make: driver.vehicle.make,
+            model: driver.vehicle.model,
+            year: driver.vehicle.year,
+            plate: driver.vehicle.plate,
+            specs: `${driver.vehicle.make} ${driver.vehicle.model} | ${driver.vehicle.year}`,
+            img: "/images/movo classic.png",
             etaLabel: `${distStr} (~${estMins} min away)`,
             available: true,
           });
-        }
+        });
       }
 
       setCards(results);
@@ -154,11 +195,6 @@ function AvailableCarsContent() {
     /* Get device location first */
     if (!navigator.geolocation) {
       setStatusMsg("Geolocation not supported — showing all cars");
-      setCards(
-        CAR_CONFIGS.filter((c) =>
-          tier === "all" ? true : c.tier === tier
-        ).map((c) => ({ ...c, etaLabel: "Enable location for ETA", available: true }))
-      );
       setLoading(false);
       return;
     }
@@ -166,12 +202,7 @@ function AvailableCarsContent() {
     navigator.geolocation.getCurrentPosition(
       (pos) => run(pos.coords.latitude, pos.coords.longitude),
       () => {
-        setStatusMsg("Location access denied — showing all cars");
-        setCards(
-          CAR_CONFIGS.filter((c) =>
-            tier === "all" ? true : c.tier === tier
-          ).map((c) => ({ ...c, etaLabel: "Enable location for ETA", available: true }))
-        );
+        setStatusMsg("Location access denied");
         setLoading(false);
       },
       { timeout: 10000 }
@@ -233,8 +264,9 @@ function AvailableCarsContent() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-bold text-gray-900">{car.name}</p>
+                      <p className="text-[15px] font-bold text-gray-900">{car.make} {car.model}</p>
                       <p className="text-[12px] text-gray-400 mt-0.5">{car.specs}</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Driver: {car.driverName}</p>
                       <div className="flex items-center gap-1 mt-1">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
                           <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
@@ -246,7 +278,7 @@ function AvailableCarsContent() {
                       </div>
                     </div>
                     <div className="relative w-24 h-16 shrink-0">
-                      <Image src={car.img} alt={car.name} fill className="object-contain" />
+                      <Image src={car.img} alt={`${car.make} ${car.model}`} fill className="object-contain" />
                     </div>
                   </div>
 
@@ -254,7 +286,13 @@ function AvailableCarsContent() {
                     type="button"
                     disabled={!car.available}
                     onClick={() => {
-                      const params = new URLSearchParams({ pickup, dropoff, car: car.name });
+                      const params = new URLSearchParams({ 
+                        pickup, 
+                        dropoff, 
+                        car: `${car.make} ${car.model}`,
+                        vehicleId: car.vehicleId,
+                        driverId: car.driverId,
+                      });
                       router.push(`/home/ride?${params.toString()}`);
                     }}
                     className="w-full py-2.5 rounded-lg text-white font-bold text-[13px] tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"

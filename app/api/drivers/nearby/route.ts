@@ -11,9 +11,20 @@ export async function GET() {
     },
     select: {
       id: true,
+      firstName: true,
+      lastName: true,
       lat: true,
       lng: true,
-      vehicle: { select: { tier: true } },
+      vehicle: { 
+        select: { 
+          id: true,
+          make: true,
+          model: true,
+          year: true,
+          plate: true,
+          tier: true,
+        } 
+      },
     },
   });
 

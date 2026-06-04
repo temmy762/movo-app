@@ -3,8 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { sendNotification } from "@/lib/notifications";
 import crypto from "crypto";
 
-const resetTokens = new Map<string, { email: string; expires: number }>();
-
 export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json();
@@ -25,9 +23,15 @@ export async function POST(req: NextRequest) {
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const expires = Date.now() + 30 * 60 * 1000;
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-    resetTokens.set(resetToken, { email, expires });
+    await prisma.passwordResetToken.create({
+      data: {
+        email,
+        token: resetToken,
+        expiresAt,
+      },
+    });
 
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/onboarding/reset-password?token=${resetToken}`;
 
@@ -42,7 +46,7 @@ export async function POST(req: NextRequest) {
       data: {
         resetToken,
         resetUrl,
-        expiresAt: new Date(expires).toLocaleString(),
+        expiresAt: expiresAt.toLocaleString(),
       },
     });
 
@@ -55,5 +59,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-export { resetTokens };
