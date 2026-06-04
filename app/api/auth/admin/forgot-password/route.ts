@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-// In-memory OTP store - in production, use Redis or database
-const otpStore = new Map<string, { code: string; expires: number }>();
-
 function generateOTP(): string {
   return crypto.randomInt(100000, 999999).toString();
 }
@@ -31,15 +28,26 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate OTP
-    const code = generateOTP();
-    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP
-    otpStore.set(phone, { code, expires });
+    // Delete any existing OTP for this phone
+    await prisma.adminOTP.deleteMany({
+      where: { phone },
+    });
+
+    // Store OTP in database
+    await prisma.adminOTP.create({
+      data: {
+        phone,
+        otp,
+        expiresAt,
+      },
+    });
 
     // TODO: Send SMS with OTP
     // For now, log to console (replace with actual SMS service like Twilio, AWS SNS, etc.)
-    console.log(`[ADMIN OTP] Phone: ${phone}, Code: ${code}`);
+    console.log(`[ADMIN OTP] Phone: ${phone}, Code: ${otp}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -50,6 +58,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-// Export for use in verify endpoint
-export { otpStore };

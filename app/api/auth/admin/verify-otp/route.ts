@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { otpStore } from "../forgot-password/route";
-
-// In-memory reset token store
-const resetTokens = new Map<string, { phone: string; expires: number }>();
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,25 +13,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get stored OTP
-    const stored = otpStore.get(phone);
+    // Get stored OTP from database
+    const storedOTP = await prisma.adminOTP.findFirst({
+      where: { phone },
+      orderBy: { createdAt: "desc" },
+    });
 
-    if (!stored) {
+    if (!storedOTP) {
       return NextResponse.json(
         { error: "Code expired or not requested" },
         { status: 400 }
       );
     }
 
-    if (Date.now() > stored.expires) {
-      otpStore.delete(phone);
+    if (new Date() > storedOTP.expiresAt) {
+      await prisma.adminOTP.delete({
+        where: { id: storedOTP.id },
+      });
       return NextResponse.json(
         { error: "Code expired" },
         { status: 400 }
       );
     }
 
-    if (stored.code !== code) {
+    if (storedOTP.otp !== code) {
+      // Increment attempts
+      await prisma.adminOTP.update({
+        where: { id: storedOTP.id },
+        data: { attempts: storedOTP.attempts + 1 },
+      });
       return NextResponse.json(
         { error: "Invalid code" },
         { status: 400 }
@@ -42,13 +49,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Clear OTP
-    otpStore.delete(phone);
+    await prisma.adminOTP.delete({
+      where: { id: storedOTP.id },
+    });
 
-    // Generate reset token
+    // Generate and store reset token in database
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const expires = Date.now() + 30 * 60 * 1000; // 30 minutes
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
-    resetTokens.set(resetToken, { phone, expires });
+    await prisma.adminResetToken.create({
+      data: {
+        phone,
+        token: resetToken,
+        expiresAt,
+      },
+    });
 
     return NextResponse.json({ resetToken });
   } catch (error) {
@@ -59,5 +74,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-export { resetTokens };

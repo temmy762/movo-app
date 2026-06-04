@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { resetTokens } from "../verify-otp/route";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,18 +20,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate token
-    const tokenData = resetTokens.get(token);
+    // Validate token from database
+    const resetToken = await prisma.adminResetToken.findUnique({
+      where: { token },
+    });
 
-    if (!tokenData) {
+    if (!resetToken) {
       return NextResponse.json(
         { error: "Invalid or expired token" },
         { status: 400 }
       );
     }
 
-    if (Date.now() > tokenData.expires) {
-      resetTokens.delete(token);
+    if (new Date() > resetToken.expiresAt) {
+      await prisma.adminResetToken.delete({
+        where: { token },
+      });
       return NextResponse.json(
         { error: "Token expired" },
         { status: 400 }
@@ -44,12 +47,14 @@ export async function POST(req: NextRequest) {
 
     // Update admin password
     await prisma.user.update({
-      where: { phone: tokenData.phone },
+      where: { phone: resetToken.phone },
       data: { password: hashedPassword },
     });
 
     // Clear token
-    resetTokens.delete(token);
+    await prisma.adminResetToken.delete({
+      where: { token },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

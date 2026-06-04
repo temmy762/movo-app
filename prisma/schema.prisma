@@ -526,3 +526,39 @@ model AdminNotification {
   @@index([notificationId])
   @@index([adminEmail, readAt])
 }
+
+// ─── Authentication Tokens ────────────────────────────────────────────────────
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email, expiresAt])
+  @@index([token])
+}
+
+model AdminOTP {
+  id        String   @id @default(cuid())
+  phone     String
+  otp       String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone, expiresAt])
+  @@index([otp])
+}
+
+model AdminResetToken {
+  id        String   @id @default(cuid())
+  phone     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, expiresAt])
+  @@index([token])
+}
