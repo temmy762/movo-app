@@ -562,3 +562,13 @@ model AdminResetToken {
   @@index([phone, expiresAt])
   @@index([token])
 }
+
+model VehicleTierConfig {
+  id        String   @id @default(cuid())
+  tier      String   @unique
+  name      String
+  image     String
+  price     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

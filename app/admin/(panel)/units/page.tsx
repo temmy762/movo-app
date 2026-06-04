@@ -219,6 +219,15 @@ function UnitGridCard({ unit, onEdit, onDelete }: { unit: Unit; onEdit: () => vo
   );
 }
 
+// ── Types for Vehicle Creation ────────────────────────────────────────────────
+interface Driver {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+}
+
 // ── Add / Edit Modal ──────────────────────────────────────────────────────────
 type UnitForm = { brand: string; model: string; transmission: "Automatic" | "Manual"; seats: number; status: UnitStatus; units: number; price: number; image: string; };
 const IMAGES = ["/images/movo classic.png", "/images/movo premium.png", "/images/prive black.png"];
@@ -327,6 +336,116 @@ function UnitModal({ initial, onSave, onClose }: {
   );
 }
 
+// ── Create Vehicle with Driver Modal ──────────────────────────────────────────
+type VehicleForm = { make: string; model: string; year: number; plate: string; tier: string; driverId: string };
+
+function CreateVehicleModal({ onSave, onClose }: {
+  onSave: (data: VehicleForm) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState<VehicleForm>({
+    make: "", model: "", year: new Date().getFullYear(), plate: "", tier: "classic", driverId: "",
+  });
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/drivers-available")
+      .then(r => r.json())
+      .then(setDrivers)
+      .catch(console.error)
+      .finally(() => setLoadingDrivers(false));
+  }, []);
+
+  const set = (k: keyof VehicleForm, v: string | number) =>
+    setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = () => {
+    if (!form.make.trim() || !form.model.trim() || !form.plate.trim() || !form.driverId) return;
+    onSave({ ...form, year: Number(form.year) });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}/>
+      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6 z-10 max-h-[92vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-[16px] font-bold text-gray-900">Add New Vehicle</p>
+          <button onClick={onClose}
+            className="no-hover-fx w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 text-[18px] leading-none">×</button>
+        </div>
+        <div className="flex flex-col gap-3.5">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[11px] text-gray-500 font-medium mb-1">Make <span className="text-red-400">*</span></p>
+              <input value={form.make} onChange={e => set("make", e.target.value)}
+                placeholder="e.g. Toyota"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none focus:border-red-300 placeholder-gray-300"/>
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-500 font-medium mb-1">Model <span className="text-red-400">*</span></p>
+              <input value={form.model} onChange={e => set("model", e.target.value)}
+                placeholder="e.g. Corolla"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none focus:border-red-300 placeholder-gray-300"/>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[11px] text-gray-500 font-medium mb-1">Year</p>
+              <input type="number" min={2000} max={new Date().getFullYear() + 1} value={form.year}
+                onChange={e => set("year", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none" suppressHydrationWarning/>
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-500 font-medium mb-1">Plate <span className="text-red-400">*</span></p>
+              <input value={form.plate} onChange={e => set("plate", e.target.value)}
+                placeholder="e.g. ABC123"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none focus:border-red-300 placeholder-gray-300"/>
+            </div>
+          </div>
+          <div>
+            <p className="text-[11px] text-gray-500 font-medium mb-1">Tier <span className="text-red-400">*</span></p>
+            <select value={form.tier} onChange={e => set("tier", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none" suppressHydrationWarning>
+              <option value="classic">Classic</option>
+              <option value="premium">Premium</option>
+              <option value="black">Privé Black</option>
+            </select>
+          </div>
+          <div>
+            <p className="text-[11px] text-gray-500 font-medium mb-1">Assign Driver <span className="text-red-400">*</span></p>
+            {loadingDrivers ? (
+              <div className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-400">Loading drivers...</div>
+            ) : drivers.length === 0 ? (
+              <div className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-400">No available drivers</div>
+            ) : (
+              <select value={form.driverId} onChange={e => set("driverId", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none" suppressHydrationWarning>
+                <option value="">Select a driver...</option>
+                {drivers.map(d => (
+                  <option key={d.id} value={d.id}>{d.firstName} {d.lastName} ({d.email})</option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-2.5 mt-5">
+          <button onClick={onClose}
+            className="no-hover-fx flex-1 py-2.5 rounded-xl text-[13px] font-medium text-gray-600 border border-gray-200">
+            Cancel
+          </button>
+          <button onClick={handleSubmit}
+            disabled={!form.make.trim() || !form.model.trim() || !form.plate.trim() || !form.driverId}
+            className="no-hover-fx flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-40"
+            style={{ background: "#ef4444" }}>
+            Create Vehicle
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function UnitsPage() {
   const [units,    setUnits]    = useState<Unit[]>([]);
@@ -338,6 +457,7 @@ export default function UnitsPage() {
   const [view,     setView]     = useState<"list" | "grid">("list");
   const [perPage,  setPerPage]  = useState(8);
   const [showAdd,  setShowAdd]  = useState(false);
+  const [showCreateVehicle, setShowCreateVehicle] = useState(false);
   const [editUnit, setEditUnit] = useState<Unit | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -385,6 +505,33 @@ export default function UnitsPage() {
     });
     setDeleteId(null);
     loadUnits();
+  };
+
+  const handleCreateVehicle = async (data: VehicleForm) => {
+    try {
+      const res = await fetch("/api/admin/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          carMake: data.make,
+          carModel: data.model,
+          carType: data.tier,
+          carPlate: data.plate,
+          driverId: data.driverId,
+        }),
+      });
+
+      if (res.ok) {
+        setShowCreateVehicle(false);
+        loadUnits();
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch (error) {
+      console.error("Error creating vehicle:", error);
+      alert("Failed to create vehicle");
+    }
   };
 
   return (
@@ -442,6 +589,15 @@ export default function UnitsPage() {
             </svg>
           </button>
         </div>
+
+        <button onClick={() => setShowCreateVehicle(true)}
+          className="no-hover-fx flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[12px] font-bold tracking-wide"
+          style={{ background: "#2D0A53" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          CREATE VEHICLE
+        </button>
 
         <button onClick={() => setShowAdd(true)}
           className="no-hover-fx flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[12px] font-bold tracking-wide"
@@ -521,6 +677,9 @@ export default function UnitsPage() {
 
       {/* ── Edit Modal ── */}
       {editUnit && <UnitModal initial={editUnit} onSave={handleEdit} onClose={() => setEditUnit(null)}/>}
+
+      {/* ── Create Vehicle Modal ── */}
+      {showCreateVehicle && <CreateVehicleModal onSave={handleCreateVehicle} onClose={() => setShowCreateVehicle(false)}/>}
 
     </div>
   );
