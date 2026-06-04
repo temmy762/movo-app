@@ -11,6 +11,9 @@ type Unit = {
   transmission: "Automatic" | "Manual";
   seats: number; status: UnitStatus; units: number;
   price: number; image: string;
+  plate?: string;
+  tier?: string;
+  driverName?: string;
 };
 
 // ── Status config ────────────────────────────────────────────────────────────
@@ -98,9 +101,11 @@ function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDel
         <div className="relative w-36 h-[72px] shrink-0 rounded-xl overflow-hidden bg-gray-50">
           <Image src={unit.image} alt={unit.model} fill className="object-contain p-2" sizes="144px"/>
         </div>
-        <div className="w-[170px] shrink-0">
+        <div className="w-[200px] shrink-0">
           <p className="text-[10px] text-gray-400 font-medium leading-none">{unit.brand}</p>
           <p className="text-[18px] font-bold text-gray-900 leading-tight">{unit.model}</p>
+          {unit.plate && <p className="text-[10px] text-gray-500 mt-0.5">Plate: {unit.plate}</p>}
+          {unit.driverName && <p className="text-[10px] text-gray-500">Driver: {unit.driverName}</p>}
           <StatusBadge status={unit.status} units={unit.units}/>
         </div>
         <div className="w-[115px] shrink-0">
