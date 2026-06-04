@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendAdminOTP } from "@/lib/sms";
 import crypto from "crypto";
 
 function generateOTP(): string {
@@ -45,9 +46,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // TODO: Send SMS with OTP
-    // For now, log to console (replace with actual SMS service like Twilio, AWS SNS, etc.)
-    console.log(`[ADMIN OTP] Phone: ${phone}, Code: ${otp}`);
+    // Send SMS with OTP
+    await sendAdminOTP(phone, otp);
 
     return NextResponse.json({ success: true });
   } catch (error) {
