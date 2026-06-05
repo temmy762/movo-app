@@ -59,5 +59,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       }
       return NextResponse.json({ error: "Failed to delete driver" }, { status: 500 });
     }
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Failed to delete driver" }, { status: 500 });
   }
 }
