@@ -15,6 +15,10 @@ export default function DriverLoginPage() {
 
   async function handleLogin() {
     setError("");
+    if (!email || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/driver/login", {
@@ -23,7 +27,20 @@ export default function DriverLoginPage() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Login failed"); return; }
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError("Invalid email or password. Please check and try again.");
+        } else if (res.status === 404) {
+          setError("No account found with this email. Please register first.");
+        } else if (res.status === 403) {
+          setError("Your account has been deactivated. Please contact support.");
+        } else if (res.status === 500) {
+          setError("Server error. Please try again in a few moments.");
+        } else {
+          setError(data.error || "Login failed. Please try again.");
+        }
+        return;
+      }
       
       // Check onboarding status and redirect accordingly
       const statusRes = await fetch("/api/driver/onboarding/status");
@@ -31,7 +48,7 @@ export default function DriverLoginPage() {
         const statusData = await statusRes.json();
         if (statusData.adminStatus === "APPROVED") {
           router.push("/driver/onboarding/approved");
-        } else if (statusData.adminStatus === "PENDING") {
+        } else if (statusData.adminStatus === "PENDING" || statusData.adminStatus === "UNDER_REVIEW") {
           router.push("/driver/onboarding/pending");
         } else if (statusData.adminStatus === "REJECTED") {
           router.push("/driver/onboarding/rejected");
@@ -41,8 +58,9 @@ export default function DriverLoginPage() {
       } else {
         router.push("/driver/home");
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
