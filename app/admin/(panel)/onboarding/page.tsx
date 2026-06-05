@@ -80,16 +80,28 @@ export default function AdminOnboardingPage() {
   const handleAction = async (status: AdminStatus) => {
     if (!selected) return;
     setSaving(true);
-    const res = await fetch(`/api/admin/onboarding/${selected.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ adminStatus: status, adminNote: note || null, activateDriver: status === "APPROVED" }),
-    });
-    const data = await res.json();
-    setSaving(false);
-    if (data.success) {
-      setSelected(prev => prev ? { ...prev, adminStatus: status, adminNote: note, reviewedAt: new Date().toISOString() } : null);
-      setOnboardings(prev => prev.map(o => o.id === selected.id ? { ...o, adminStatus: status } : o));
+    try {
+      const res = await fetch(`/api/admin/onboarding/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminStatus: status, adminNote: note || null, activateDriver: status === "APPROVED" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Admin action failed:", data.error || "Unknown error");
+        alert(`Error: ${data.error || "Failed to update onboarding status"}`);
+        setSaving(false);
+        return;
+      }
+      if (data.success) {
+        setSelected(prev => prev ? { ...prev, adminStatus: status, adminNote: note, reviewedAt: new Date().toISOString() } : null);
+        setOnboardings(prev => prev.map(o => o.id === selected.id ? { ...o, adminStatus: status } : o));
+      }
+    } catch (err) {
+      console.error("Admin action error:", err);
+      alert("Network error: Failed to update onboarding status");
+    } finally {
+      setSaving(false);
     }
   };
 

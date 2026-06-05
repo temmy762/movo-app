@@ -21,10 +21,10 @@ interface Consents {
 interface Docs { [key: string]: DocState }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 10;
 const STEP_LABELS = [
   "Welcome", "Personal", "Vehicle", "Standards",
-  "App Basics", "Safety", "Agreements", "Contract", "Review",
+  "Test Assessment", "App Basics", "Safety", "Agreements", "Contract", "Review",
 ];
 const VEHICLE_TIERS = ["First Class", "Business Class", "Business Van", "Economy"];
 const VEHICLE_COLORS = ["Black", "White", "Silver", "Grey", "Dark Blue", "Other"];
@@ -498,7 +498,11 @@ export default function ChauffeurOnboardingPage() {
             <div className="flex gap-3">
               <OutlineBtn label="← Back" onClick={back} />
               <div className="flex-1">
-                <GradBtn label="Next →" onClick={() => next()} disabled={!form.dob || !form.licenseNumber} />
+                <GradBtn 
+                  label="Next →" 
+                  onClick={() => next()} 
+                  disabled={!form.dob || !form.licenseNumber || !docs.DRIVERS_LICENSE?.uploaded || !docs.BACKGROUND_CHECK?.uploaded || !docs.DRIVERS_ABSTRACT?.uploaded || !docs.WORK_ELIGIBILITY?.uploaded} 
+                />
               </div>
             </div>
           </div>
@@ -546,7 +550,11 @@ export default function ChauffeurOnboardingPage() {
             <div className="flex gap-3">
               <OutlineBtn label="← Back" onClick={back} />
               <div className="flex-1">
-                <GradBtn label="Next →" onClick={() => next()} disabled={!form.vehicleMake || !form.vehiclePlate} />
+                <GradBtn 
+                  label="Next →" 
+                  onClick={() => next()} 
+                  disabled={!form.vehicleMake || !form.vehiclePlate || !docs.VEHICLE_REGISTRATION?.uploaded || !docs.VEHICLE_INSURANCE?.uploaded || !docs.VEHICLE_PHOTO?.uploaded} 
+                />
               </div>
             </div>
           </div>
@@ -614,8 +622,38 @@ export default function ChauffeurOnboardingPage() {
           </div>
         );
 
-      // ─── Step 5: App Basics ─────────────────────────────────────────────────
+      // ─── Step 5: Test Assessment ──────────────────────────────────────────────
       case 5:
+        return (
+          <div>
+            <p className="text-[18px] font-extrabold text-gray-900 mb-1">Standards Assessment</p>
+            <p className="text-[12px] text-gray-400 mb-5">Test your knowledge of Movo Privé standards and procedures.</p>
+
+            <div className="rounded-2xl border border-gray-100 bg-gray-50 px-5 py-8 flex flex-col items-center text-center mb-6">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" className="mb-3">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+              </svg>
+              <p className="text-[13px] font-semibold text-gray-500 mb-2">Assessment Coming Soon</p>
+              <p className="text-[11px] text-gray-400">The Movo Privé team is preparing your assessment. You can mark this as complete for now.</p>
+            </div>
+
+            <div className="mb-5">
+              <Checkbox checked={standards} onChange={setStandards}>
+                I understand the assessment will be available soon. I have reviewed the standards and am ready to proceed.
+              </Checkbox>
+            </div>
+
+            <div className="flex gap-3">
+              <OutlineBtn label="← Back" onClick={back} />
+              <div className="flex-1">
+                <GradBtn label="Next →" onClick={() => next()} disabled={!standards} />
+              </div>
+            </div>
+          </div>
+        );
+
+      // ─── Step 6: App Basics ─────────────────────────────────────────────────
+      case 6:
         return (
           <div>
             <p className="text-[18px] font-extrabold text-gray-900 mb-1">Chauffeur App Basics</p>
@@ -674,8 +712,8 @@ export default function ChauffeurOnboardingPage() {
           </div>
         );
 
-      // ─── Step 6: Safety & Emergency ─────────────────────────────────────────
-      case 6:
+      // ─── Step 7: Safety & Emergency ─────────────────────────────────────────
+      case 7:
         return (
           <div>
             <p className="text-[18px] font-extrabold text-gray-900 mb-1">Safety & Emergency Procedures</p>
@@ -737,8 +775,8 @@ export default function ChauffeurOnboardingPage() {
           </div>
         );
 
-      // ─── Step 7: Agreement Summary (consents) ───────────────────────────────
-      case 7:
+      // ─── Step 8: Agreement Summary (consents) ───────────────────────────────
+      case 8:
         return (
           <div>
             <p className="text-[18px] font-extrabold text-gray-900 mb-1">Agreement Summary</p>
@@ -797,8 +835,8 @@ export default function ChauffeurOnboardingPage() {
           </div>
         );
 
-      // ─── Step 8: Contract & Signature ───────────────────────────────────────
-      case 8:
+      // ─── Step 9: Contract & Signature ───────────────────────────────────────
+      case 9:
         return (
           <div>
             <p className="text-[18px] font-extrabold text-gray-900 mb-1">Chauffeur Agreement</p>
@@ -887,8 +925,8 @@ export default function ChauffeurOnboardingPage() {
           </div>
         );
 
-      // ─── Step 9: Final Review & Approval ────────────────────────────────────
-      case 9: {
+      // ─── Step 10: Final Review & Approval ────────────────────────────────────
+      case 10: {
         const docTypes = ["PROFILE_PHOTO", "DRIVERS_LICENSE", "BACKGROUND_CHECK", "DRIVERS_ABSTRACT", "WORK_ELIGIBILITY", "VEHICLE_REGISTRATION", "VEHICLE_INSURANCE", "VEHICLE_PHOTO"];
         const docLabels: Record<string, string> = {
           PROFILE_PHOTO: "Profile Photo", DRIVERS_LICENSE: "Driver's License",
@@ -901,7 +939,7 @@ export default function ChauffeurOnboardingPage() {
         const checkItems = [
           { label: "Personal information", ok: !!form.dob && !!form.licenseNumber },
           { label: "Vehicle information", ok: !!form.vehicleMake && !!form.vehiclePlate },
-          { label: "Documents uploaded", ok: uploadedCount >= 4, note: `${uploadedCount}/${docTypes.length}` },
+          { label: "Documents uploaded", ok: uploadedCount === docTypes.length, note: `${uploadedCount}/${docTypes.length}` },
           { label: "Chauffeur standards acknowledged", ok: standards },
           { label: "App basics reviewed", ok: appBasics },
           { label: "Safety procedures reviewed", ok: safetyReview },
