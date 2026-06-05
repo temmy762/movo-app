@@ -12,6 +12,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Ensure the driver still exists (protect against stale sessions)
+    const driverRecord = await prisma.driver.findUnique({
+      where: { id: session.driverId },
+    });
+
+    if (!driverRecord) {
+      return NextResponse.json(
+        { error: "Driver account not found. Please log out and log in again." },
+        { status: 404 }
+      );
+    }
+
     const body = await req.json();
     
     // Validate required fields based on onboarding type
