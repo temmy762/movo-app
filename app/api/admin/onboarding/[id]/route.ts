@@ -4,7 +4,7 @@ import { getSession } from "@/lib/session";
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // CRITICAL: Authorization check
   const session = await getSession(req);
@@ -12,6 +12,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const { id } = await params;
   const body = await req.json();
   const { adminStatus, adminNote, activateDriver } = body;
 
@@ -19,9 +20,13 @@ export async function PATCH(
     return NextResponse.json({ error: "adminStatus required" }, { status: 400 });
   }
 
+  if (!id) {
+    return NextResponse.json({ error: "Onboarding ID is required" }, { status: 400 });
+  }
+
   // Check if already approved (prevent double approval)
   const existingOnboarding = await prisma.driverOnboarding.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (existingOnboarding?.adminStatus === "APPROVED") {
@@ -32,7 +37,7 @@ export async function PATCH(
   }
 
   const onboarding = await prisma.driverOnboarding.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       adminStatus,
       adminNote: adminNote ?? null,
