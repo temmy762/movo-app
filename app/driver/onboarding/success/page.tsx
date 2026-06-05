@@ -70,7 +70,7 @@ export default function OnboardingSuccessPage() {
           {/* Action buttons */}
           <div className="flex flex-col gap-3">
             <Link
-              href="/driver/dashboard"
+              href="/driver/home"
               className="w-full py-3 rounded-xl text-white font-bold text-[14px] text-center"
               style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
             >

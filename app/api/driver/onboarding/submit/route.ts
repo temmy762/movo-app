@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { Resend } from "resend";
 
 export async function POST(req: NextRequest) {
   try {
@@ -169,12 +170,36 @@ export async function POST(req: NextRequest) {
     });
 
     // Update driver onboarding type
-    await prisma.driver.update({
+    const driver = await prisma.driver.update({
       where: { id: session.driverId },
       data: { onboardingType: type || "INDIVIDUAL" },
     });
 
-    console.log(`[Onboarding] Fleet partner submitted: ${onboarding.id} (driver: ${session.driverId})`);
+    // Send confirmation email
+    if (driver.email) {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: "noreply@movoprive.com",
+          to: driver.email,
+          subject: "Onboarding Application Submitted - Movo Privé",
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2>Thank you for submitting your onboarding application!</h2>
+              <p>Dear ${driver.firstName || "Driver"},</p>
+              <p>We have received your ${type === "FLEET" ? "fleet partner" : "chauffeur"} onboarding application.</p>
+              <p>Our team will review your information and documents. You'll receive an email notification once your application has been reviewed. This typically takes 1-3 business days.</p>
+              <p>If you have any questions, please contact our support team at <strong>support@movoprive.com</strong></p>
+              <p>Best regards,<br/>The Movo Privé Team</p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Failed to send onboarding confirmation email:", emailError);
+      }
+    }
+
+    console.log(`[Onboarding] ${type === "FLEET" ? "Fleet partner" : "Chauffeur"} submitted: ${onboarding.id} (driver: ${session.driverId})`);
 
     return NextResponse.json({
       success: true,
