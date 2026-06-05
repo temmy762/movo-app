@@ -71,19 +71,8 @@ export default function VehicleInformationPage() {
   const handleSubmit = async () => {
     setError("");
     
-    // Validate all required fields
+    // Validate only fields that belong to this step (vehicle & first chauffeur)
     const requiredFields = [
-      { key: "companyName", label: "Company Name" },
-      { key: "legalForm", label: "Legal Form" },
-      { key: "country", label: "Country" },
-      { key: "city", label: "City" },
-      { key: "street", label: "Street" },
-      { key: "postalCode", label: "Postal Code" },
-      { key: "taxId", label: "Tax ID" },
-      { key: "vatId", label: "VAT ID" },
-      { key: "registrationNumber", label: "Registration Number" },
-      { key: "fleetSize", label: "Fleet Size" },
-      { key: "vehicleDescriptions", label: "Vehicle Descriptions" },
       { key: "firstVehicleYear", label: "Vehicle Year" },
       { key: "firstVehicleBrand", label: "Vehicle Brand" },
       { key: "firstVehicleClass", label: "Vehicle Class" },
