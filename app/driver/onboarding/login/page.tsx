@@ -24,7 +24,23 @@ export default function DriverLoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Login failed"); return; }
-      router.push("/driver/home");
+      
+      // Check onboarding status and redirect accordingly
+      const statusRes = await fetch("/api/driver/onboarding/status");
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        if (statusData.adminStatus === "APPROVED") {
+          router.push("/driver/onboarding/approved");
+        } else if (statusData.adminStatus === "PENDING") {
+          router.push("/driver/onboarding/pending");
+        } else if (statusData.adminStatus === "REJECTED") {
+          router.push("/driver/onboarding/rejected");
+        } else {
+          router.push("/driver/home");
+        }
+      } else {
+        router.push("/driver/home");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
