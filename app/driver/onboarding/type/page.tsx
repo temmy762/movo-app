@@ -28,7 +28,7 @@ export default function OnboardingTypePage() {
           {/* Individual Chauffeur Card */}
           <button
             type="button"
-            onClick={() => router.push("/driver/onboarding/register?type=INDIVIDUAL")}
+            onClick={() => router.push("/driver/onboarding/chauffeur")}
             className="no-hover-fx w-full text-left mb-4 rounded-2xl border-2 p-5 transition-all"
             style={{ borderColor: "#2D0A53", background: "linear-gradient(135deg,#2D0A5308 0%,#8B750008 100%)" }}
           >
