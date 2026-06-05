@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useFleetOnboarding } from "../context";
 
 const TOTAL_STEPS = 9;
 
@@ -53,6 +55,38 @@ function StatusDot({ ok }: { ok: boolean }) {
 
 export default function ApplicationSummaryPage() {
   const router = useRouter();
+  const { data } = useFleetOnboarding();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/driver/onboarding/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "FLEET",
+          ...data,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to submit onboarding");
+        return;
+      }
+
+      // Success - redirect to success page
+      router.push("/driver/onboarding/success");
+    } catch (err) {
+      console.error("Submission error:", err);
+      setError(err instanceof Error ? err.message : "Failed to submit onboarding");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -97,6 +131,13 @@ export default function ApplicationSummaryPage() {
             Please make sure you have completed all the steps listed above before you can submit your application for review. Please complete the chauffeur identity process you should have received on your email.
           </p>
 
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-[12px] text-red-600">{error}</p>
+            </div>
+          )}
+
           {/* FAQ */}
           <p className="text-[12px] text-gray-500 mb-6">
             For more information, you can visit our FAQ page{" "}
@@ -111,17 +152,19 @@ export default function ApplicationSummaryPage() {
             <button
               type="button"
               onClick={() => router.push("/driver/onboarding/partner/payment")}
-              className="flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-600"
+              disabled={isSubmitting}
+              className="flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-600 disabled:opacity-50"
             >
               Previous
             </button>
             <button
               type="button"
-              onClick={() => router.push("/driver/home")}
-              className="flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex-1 py-3 rounded-xl text-white font-bold text-[14px] disabled:opacity-50"
               style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
             >
-              Next
+              {isSubmitting ? "Submitting..." : "Submit for Review"}
             </button>
           </div>
 

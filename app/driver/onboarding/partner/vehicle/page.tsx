@@ -104,7 +104,7 @@ export default function VehicleInformationPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/driver/onboarding/submit", {
+      const response = await fetch("/api/driver/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -115,15 +115,15 @@ export default function VehicleInformationPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        setError(errorData.error || "Failed to submit onboarding");
+        setError(errorData.error || "Failed to save onboarding");
         return;
       }
 
-      // Success - redirect to success page
-      router.push("/driver/onboarding/success");
+      // Success - redirect to summary page
+      router.push("/driver/onboarding/partner/summary");
     } catch (err) {
-      console.error("Submission error:", err);
-      setError(err instanceof Error ? err.message : "Failed to submit onboarding");
+      console.error("Save error:", err);
+      setError(err instanceof Error ? err.message : "Failed to save onboarding");
     } finally {
       setIsSubmitting(false);
     }
@@ -258,7 +258,7 @@ export default function VehicleInformationPage() {
               className="flex-1 py-3 rounded-xl text-white font-bold text-[14px] disabled:opacity-50"
               style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
             >
-              {isSubmitting ? "Submitting..." : "Submit for Review"}
+              {isSubmitting ? "Saving..." : "Next →"}
             </button>
           </div>
 
