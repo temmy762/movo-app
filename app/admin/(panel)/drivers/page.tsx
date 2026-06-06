@@ -355,9 +355,21 @@ export default function DriversPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this driver?")) return;
-    await fetch(`/api/admin/drivers/${id}`, { method: "DELETE" });
-    if (selected?.id === id) setSelected(null);
-    loadDrivers();
+    try {
+      const response = await fetch(`/api/admin/drivers/${id}`, { method: "DELETE" });
+      const data = await response.json();
+      
+      if (!response.ok) {
+        alert(`Cannot delete driver: ${data.error || "Unknown error"}`);
+        return;
+      }
+      
+      if (selected?.id === id) setSelected(null);
+      loadDrivers();
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete driver. Please try again.");
+    }
   };
 
   const thCls = "px-3 py-2.5 text-left text-[11px] font-semibold text-gray-500 select-none";
