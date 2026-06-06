@@ -180,7 +180,7 @@ export default function DriverLoginPage() {
         <p className="text-[13px] text-white/70">
           Don&apos;t have an account yet?{" "}
           <Link
-            href="/driver/onboarding/register"
+            href="/auth/select"
             className="font-bold"
             style={{ color: "#c9a227" }}
           >
