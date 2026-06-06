@@ -36,31 +36,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    // Do not hard-delete drivers that still have related data (onboarding, trips, etc.)
-    const onboarding = await prisma.driverOnboarding.findUnique({ where: { driverId: id } });
-    if (onboarding) {
+    // Soft delete: mark driver as SUSPENDED instead of hard-deleting
+    // This preserves all historical data and audit trails
+    await prisma.driver.update({
+      where: { id },
+      data: { status: "SUSPENDED" }
+    });
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    console.error(e);
+    if (e?.code === "P2025") {
       return NextResponse.json(
-        { error: "Cannot delete driver because an onboarding record exists. Reject/deactivate instead of deleting." },
-        { status: 400 }
+        { error: "Driver not found" },
+        { status: 404 }
       );
     }
-
-    try {
-      await prisma.driver.delete({ where: { id } });
-      return NextResponse.json({ success: true });
-    } catch (e: any) {
-      console.error(e);
-      // Translate Prisma foreign key error into a clear message
-      if (e?.code === "P2003") {
-        return NextResponse.json(
-          { error: "Cannot delete driver because related records exist (bookings, wallet transactions, or incidents)." },
-          { status: 400 }
-        );
-      }
-      return NextResponse.json({ error: "Failed to delete driver" }, { status: 500 });
-    }
-  } catch (e) {
-    console.error(e);
     return NextResponse.json({ error: "Failed to delete driver" }, { status: 500 });
   }
 }

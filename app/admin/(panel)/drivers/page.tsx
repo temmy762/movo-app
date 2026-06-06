@@ -354,21 +354,22 @@ export default function DriversPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this driver?")) return;
+    if (!confirm("Deactivate this driver? They will be marked as suspended and cannot accept new bookings.")) return;
     try {
       const response = await fetch(`/api/admin/drivers/${id}`, { method: "DELETE" });
       const data = await response.json();
       
       if (!response.ok) {
-        alert(`Cannot delete driver: ${data.error || "Unknown error"}`);
+        alert(`Cannot deactivate driver: ${data.error || "Unknown error"}`);
         return;
       }
       
+      alert("Driver has been deactivated successfully.");
       if (selected?.id === id) setSelected(null);
       loadDrivers();
     } catch (err) {
       console.error("Delete error:", err);
-      alert("Failed to delete driver. Please try again.");
+      alert("Failed to deactivate driver. Please try again.");
     }
   };
 
