@@ -108,8 +108,8 @@ export default function VehicleInformationPage() {
         return;
       }
 
-      // Success - redirect to summary page
-      router.push("/driver/onboarding/partner/summary");
+      // Success - redirect to next step (program/training)
+      router.push("/driver/onboarding/partner/program");
     } catch (err) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Failed to save onboarding");
