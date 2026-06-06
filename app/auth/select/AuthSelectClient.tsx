@@ -102,7 +102,7 @@ export default function AuthSelectClient() {
 
         {/* Chauffeur */}
         <button
-          onClick={() => router.push(`/chauffeur/login${from ? `?redirect=${encodeURIComponent(from)}` : ""}`)}
+          onClick={() => router.push("/driver/onboarding")}
           className="w-full flex items-center gap-4 p-4 rounded-2xl border border-gray-200 hover:border-[#2D0A53] hover:bg-gray-50 transition-all group"
         >
           <div
