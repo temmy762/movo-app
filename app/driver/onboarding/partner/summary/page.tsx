@@ -35,14 +35,17 @@ function ProgressBar({ step }: { step: number }) {
   );
 }
 
-const statusItems = [
-  { label: "Status of Application", value: "In progress", ok: false },
-  { label: "Training", value: "Incomplete", ok: false },
-  { label: "First chauffeurs Identity", value: "Not Verified", ok: false },
-  { label: "Documents", value: "documents uploaded", ok: true },
-  { label: "Contract sign", value: "Yes", ok: true },
-  { label: "Payment details submitted", value: "Submitted", ok: true },
-];
+function getStatusItems(data: any) {
+  return [
+    { label: "Company Information", value: data.companyName ? "Completed" : "Incomplete", ok: !!data.companyName },
+    { label: "Fleet Information", value: data.fleetSize ? "Completed" : "Incomplete", ok: !!data.fleetSize },
+    { label: "First Vehicle & Chauffeur", value: data.firstVehicleYear ? "Completed" : "Incomplete", ok: !!data.firstVehicleYear },
+    { label: "Program/Training", value: "Pending", ok: false },
+    { label: "Documents", value: "Pending", ok: false },
+    { label: "Contract", value: "Pending", ok: false },
+    { label: "Payment Details", value: "Pending", ok: false },
+  ];
+}
 
 function StatusDot({ ok }: { ok: boolean }) {
   return (
@@ -108,7 +111,7 @@ export default function ApplicationSummaryPage() {
 
           {/* Status checklist */}
           <ul className="mb-5 space-y-2">
-            {statusItems.map((item) => (
+            {getStatusItems(data).map((item) => (
               <li key={item.label} className="flex items-start gap-2 text-[13px] text-gray-700">
                 <StatusDot ok={item.ok} />
                 <span>
