@@ -130,7 +130,7 @@ function EarningsChart({ data, period, onPeriodChange }: { data: { month: string
 }
 
 // ── Rent Status (SVG Donut) ────────────────────────────────────────────────
-function RentStatusChart({ hired, pending, cancelled }: { hired: number; pending: number; cancelled: number }) {
+function RentStatusChart({ hired, pending, cancelled, period, onPeriodChange }: { hired: number; pending: number; cancelled: number; period: string; onPeriodChange: (p: string) => void }) {
   const r = 46; const cx = 65; const cy = 68;
   const c = 2 * Math.PI * r;
   const hiredArc    = (hired    / 100) * c;
@@ -140,8 +140,12 @@ function RentStatusChart({ hired, pending, cancelled }: { hired: number; pending
     <div className="bg-white rounded-2xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <p className="text-[14px] font-bold text-gray-900">Rent Status</p>
-        <select className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 text-gray-500 focus:outline-none" suppressHydrationWarning>
-          <option>All Time</option>
+        <select value={period} onChange={e => onPeriodChange(e.target.value)} className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 text-gray-500 focus:outline-none" suppressHydrationWarning>
+          <option value="3m">Last 3 Months</option>
+          <option value="6m">Last 6 Months</option>
+          <option value="8m">Last 8 Months</option>
+          <option value="12m">Last 12 Months</option>
+          <option value="all">All Time</option>
         </select>
       </div>
       <div className="flex items-center gap-3">
@@ -721,6 +725,8 @@ export default function AdminDashboard() {
             hired={apiData?.rentStatus.hired ?? 0}
             pending={apiData?.rentStatus.pending ?? 0}
             cancelled={apiData?.rentStatus.cancelled ?? 0}
+            period={earningsPeriod}
+            onPeriodChange={setEarningsPeriod}
           />
         </div>
 
