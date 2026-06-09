@@ -5,6 +5,11 @@ import { GoogleMap, Marker, Polyline, useJsApiLoader } from "@react-google-maps/
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
+// Validate API key exists
+if (!API_KEY) {
+  console.error("Google Maps API key is not configured. Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY environment variable.");
+}
+
 const CAR_ICON = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
     <circle cx="16" cy="16" r="16" fill="#ef4444" opacity="0.2"/>
@@ -43,7 +48,7 @@ export default function TrackingMap({
   dropoffLng,
   driverHeading = 0,
 }: TrackingMapProps) {
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: API_KEY,
   });
 
@@ -154,8 +159,27 @@ export default function TrackingMap({
     };
   }, []);
 
+  if (loadError) {
+    console.error("Google Maps API Error:", loadError);
+    return (
+      <div className="w-full h-96 bg-red-50 rounded-lg flex items-center justify-center border border-red-200">
+        <div className="text-center">
+          <p className="text-red-600 font-semibold mb-2">Map Loading Error</p>
+          <p className="text-red-500 text-sm">
+            {loadError.message || "Failed to load Google Maps. Please check your API key configuration."}
+          </p>
+          <p className="text-gray-500 text-xs mt-2">Error details logged to console.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isLoaded) {
-    return <div className="w-full h-96 bg-gray-200 rounded-lg" />;
+    return (
+      <div className="w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center">
+        <p className="text-gray-600">Loading map...</p>
+      </div>
+    );
   }
 
   return (
