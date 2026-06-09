@@ -1,10 +1,33 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const eightMonthsAgo = new Date();
-    eightMonthsAgo.setMonth(eightMonthsAgo.getMonth() - 8);
+    const period = req.nextUrl.searchParams.get("period") ?? "8m";
+    
+    // Calculate date range based on period
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (period) {
+      case "3m":
+        startDate.setMonth(now.getMonth() - 3);
+        break;
+      case "6m":
+        startDate.setMonth(now.getMonth() - 6);
+        break;
+      case "12m":
+        startDate.setMonth(now.getMonth() - 12);
+        break;
+      case "all":
+        startDate = new Date(2000, 0, 1); // Very old date for "all time"
+        break;
+      case "8m":
+      default:
+        startDate.setMonth(now.getMonth() - 8);
+    }
+    
+    const eightMonthsAgo = startDate;
 
     const [
       bookingCounts,
@@ -68,11 +91,21 @@ export async function GET() {
       if (b.status === "CANCELLED") bookingsMap[key].cancelled++;
     });
 
+    // Determine number of months to display based on period
+    let monthCount = 8;
+    if (period === "3m") monthCount = 3;
+    else if (period === "6m") monthCount = 6;
+    else if (period === "12m") monthCount = 12;
+    else if (period === "all") {
+      // For "all", count unique months in data
+      monthCount = Object.keys(earningsMap).length || 12;
+    }
+
     const now = new Date();
     const monthlyEarnings: { month: string; v: number }[] = [];
     const monthlyBookings: { m: string; total: number; done: number; cancelled: number }[] = [];
 
-    for (let i = 7; i >= 0; i--) {
+    for (let i = monthCount - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       const month = d.toLocaleDateString("en-US", { month: "short" });

@@ -683,12 +683,15 @@ export default function AdminDashboard() {
   const [earningsPeriod, setEarningsPeriod] = useState("8m");
 
   useEffect(() => {
-    fetch("/api/admin/stats")
+    setLoading(true);
+    const url = new URL("/api/admin/stats", window.location.origin);
+    url.searchParams.set("period", earningsPeriod);
+    fetch(url.toString())
       .then(r => r.json())
       .then(setApiData)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [earningsPeriod]);
 
   const c = apiData?.counts;
   const statCards = [
