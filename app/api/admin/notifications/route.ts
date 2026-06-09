@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -41,5 +41,44 @@ export async function GET() {
   } catch (e) {
     console.error(e);
     return NextResponse.json({ items: [], total: 0 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { notificationId, type } = body;
+
+    if (!notificationId || !type) {
+      return NextResponse.json(
+        { error: "Missing notificationId or type" },
+        { status: 400 }
+      );
+    }
+
+    // Mark notification as read based on type
+    if (type === "booking") {
+      // For bookings, we just acknowledge it was viewed
+      // In a real system, you might want to add a "viewedAt" field to Booking
+      return NextResponse.json({ success: true, message: "Notification marked as read" });
+    } else if (type === "support") {
+      // For support tickets, mark as read
+      await prisma.supportTicket.update({
+        where: { id: notificationId },
+        data: { status: "IN_PROGRESS" },
+      });
+      return NextResponse.json({ success: true, message: "Support ticket marked as in progress" });
+    }
+
+    return NextResponse.json(
+      { error: "Unknown notification type" },
+      { status: 400 }
+    );
+  } catch (e) {
+    console.error("Error marking notification as read:", e);
+    return NextResponse.json(
+      { error: "Failed to mark notification as read" },
+      { status: 500 }
+    );
   }
 }

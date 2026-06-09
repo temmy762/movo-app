@@ -96,6 +96,26 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
     router.push(`/admin/bookings?search=${q}`);
   };
 
+  // ── Mark notification as read ──────────────────────────────────────────────
+  const handleNotificationClick = async (notification: NotifItem) => {
+    try {
+      await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notificationId: notification.id,
+          type: notification.type,
+        }),
+      });
+      // Remove from list after marking as read
+      setNotifs(prev => prev.filter(n => n.id !== notification.id));
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+    setShowNotif(false);
+    router.push(notification.href);
+  };
+
   const settingsLinks = [
     { label: "Bookings",  href: "/admin/bookings" },
     { label: "Clients",   href: "/admin/clients" },
@@ -232,8 +252,8 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
                 {notifs.length === 0 ? (
                   <p className="px-4 py-8 text-center text-[12px] text-gray-400">All caught up!</p>
                 ) : notifs.map(n => (
-                  <Link key={n.id} href={n.href} onClick={() => setShowNotif(false)}
-                    className="no-hover-fx flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <button key={n.id} onClick={() => handleNotificationClick(n)}
+                    className="no-hover-fx w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
                       style={{ background: n.type === "booking" ? "#eff6ff" : "#fef2f2" }}>
                       {n.type === "booking" ? (
@@ -251,7 +271,7 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
                       <p className="text-[11px] text-gray-400 truncate">{n.sub}</p>
                     </div>
                     <span className="text-[10px] text-gray-300 shrink-0 mt-0.5">{timeAgo(n.time)}</span>
-                  </Link>
+                  </button>
                 ))}
               </div>
               {notifs.length > 0 && (
