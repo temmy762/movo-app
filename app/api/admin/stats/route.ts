@@ -101,7 +101,6 @@ export async function GET(req: NextRequest) {
       monthCount = Object.keys(earningsMap).length || 12;
     }
 
-    const now = new Date();
     const monthlyEarnings: { month: string; v: number }[] = [];
     const monthlyBookings: { m: string; total: number; done: number; cancelled: number }[] = [];
 
