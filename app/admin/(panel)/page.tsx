@@ -61,7 +61,7 @@ function smoothPath(pts: {x:number;y:number}[]) {
   return d;
 }
 
-function EarningsChart({ data }: { data: { month: string; v: number }[] }) {
+function EarningsChart({ data, period, onPeriodChange }: { data: { month: string; v: number }[]; period: string; onPeriodChange: (p: string) => void }) {
   if (!data.length) return (
     <div className="bg-white rounded-2xl p-5 shadow-sm flex items-center justify-center h-40">
       <p className="text-[13px] text-gray-400">No earnings data yet.</p>
@@ -83,8 +83,12 @@ function EarningsChart({ data }: { data: { month: string; v: number }[] }) {
     <div className="bg-white rounded-2xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <p className="text-[14px] font-bold text-gray-900">Earnings Summary</p>
-        <select className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 text-gray-500 focus:outline-none" suppressHydrationWarning>
-          <option>Last 8 Months</option>
+        <select value={period} onChange={e => onPeriodChange(e.target.value)} className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 text-gray-500 focus:outline-none" suppressHydrationWarning>
+          <option value="3m">Last 3 Months</option>
+          <option value="6m">Last 6 Months</option>
+          <option value="8m">Last 8 Months</option>
+          <option value="12m">Last 12 Months</option>
+          <option value="all">All Time</option>
         </select>
       </div>
       <div className="flex gap-2">
@@ -676,6 +680,7 @@ function CarAvailabilityPanel({ tiers, activityItems, loading }: { tiers: TierEn
 export default function AdminDashboard() {
   const [apiData, setApiData] = useState<ApiStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [earningsPeriod, setEarningsPeriod] = useState("8m");
 
   useEffect(() => {
     fetch("/api/admin/stats")
@@ -708,7 +713,7 @@ export default function AdminDashboard() {
 
         {/* Earnings + Rent Status */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 sm:gap-4 mb-4 sm:mb-5">
-          <EarningsChart data={apiData?.monthlyEarnings ?? []} />
+          <EarningsChart data={apiData?.monthlyEarnings ?? []} period={earningsPeriod} onPeriodChange={setEarningsPeriod} />
           <RentStatusChart
             hired={apiData?.rentStatus.hired ?? 0}
             pending={apiData?.rentStatus.pending ?? 0}
