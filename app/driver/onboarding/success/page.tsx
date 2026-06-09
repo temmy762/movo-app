@@ -2,8 +2,24 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function OnboardingSuccessPage() {
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/auth/select");
+    } catch (err) {
+      console.error("Logout error:", err);
+      router.push("/auth/select");
+    }
+  };
+
   return (
     <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center">
@@ -69,13 +85,14 @@ export default function OnboardingSuccessPage() {
 
           {/* Action buttons */}
           <div className="flex flex-col gap-3">
-            <Link
-              href="/driver/home"
-              className="w-full py-3 rounded-xl text-white font-bold text-[14px] text-center"
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="w-full py-3 rounded-xl text-white font-bold text-[14px] text-center disabled:opacity-60"
               style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
             >
-              Go to Dashboard
-            </Link>
+              {isLoggingOut ? "Logging out..." : "Log Out & Check Email"}
+            </button>
             <Link
               href="/"
               className="w-full py-3 rounded-xl border border-gray-300 text-gray-600 font-bold text-[14px] text-center"
