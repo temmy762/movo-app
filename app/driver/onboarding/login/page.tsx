@@ -146,7 +146,7 @@ export default function DriverLoginPage() {
             {/* Forgot password */}
             <div className="text-right">
               <Link
-                href="/driver/onboarding/set-password"
+                href="/driver/onboarding/forgot-password"
                 className="text-[12px] font-semibold underline"
                 style={{ color: "#2D0A53" }}
               >
