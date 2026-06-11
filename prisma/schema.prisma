@@ -176,7 +176,7 @@ model Vehicle {
   make      String
   model     String
   year      Int
-  plate     String   @unique
+  plate     String
   tier      String
   photoUrl  String?
   createdAt DateTime @default(now())
