@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { sendNotification } from "@/lib/notifications";
 
 export async function PATCH(
   req: NextRequest,
@@ -97,6 +98,37 @@ export async function PATCH(
           });
         }
       });
+
+      // Send approval/rejection notification to driver
+      if (adminStatus === "APPROVED") {
+        try {
+          await sendNotification({
+            eventType: "CHAUFFEUR_ONBOARDING_APPROVED",
+            driverId: onboarding.driverId,
+            data: {
+              driverName: onboarding.driver.firstName,
+              onboardingType: onboarding.type,
+            },
+          });
+        } catch (notifErr) {
+          console.error("Failed to send approval notification:", notifErr);
+          // Don't fail the approval if notification fails
+        }
+      } else if (adminStatus === "REJECTED") {
+        try {
+          await sendNotification({
+            eventType: "CHAUFFEUR_ONBOARDING_REJECTED",
+            driverId: onboarding.driverId,
+            data: {
+              driverName: onboarding.driver.firstName,
+              reason: adminNote || "Your application did not meet our requirements",
+            },
+          });
+        } catch (notifErr) {
+          console.error("Failed to send rejection notification:", notifErr);
+          // Don't fail the rejection if notification fails
+        }
+      }
     } catch (err) {
       console.error("Approval transaction failed:", err);
       return NextResponse.json(
