@@ -57,8 +57,9 @@ export async function PATCH(
           data:  { status: "ACTIVE" },
         });
 
-        // Create vehicle if fleet partner
+        // Create vehicle for both INDIVIDUAL and FLEET partners
         if (onboarding.type === "FLEET" && onboarding.firstVehicleBrand && onboarding.firstVehicleModel && onboarding.firstVehiclePlate) {
+          // Fleet: Use first vehicle info
           await tx.vehicle.create({
             data: {
               driverId: onboarding.driverId,
@@ -67,6 +68,18 @@ export async function PATCH(
               year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.firstVehiclePlate,
               tier: onboarding.firstVehicleClass || "ECONOMY",
+            },
+          });
+        } else if (onboarding.type === "INDIVIDUAL" && onboarding.vehicleMake && onboarding.vehicleModel && onboarding.vehiclePlate) {
+          // Individual: Use vehicle info from onboarding
+          await tx.vehicle.create({
+            data: {
+              driverId: onboarding.driverId,
+              make: onboarding.vehicleMake,
+              model: onboarding.vehicleModel,
+              year: parseInt(onboarding.vehicleYear || new Date().getFullYear().toString()),
+              plate: onboarding.vehiclePlate,
+              tier: onboarding.vehicleTier || "ECONOMY",
             },
           });
         }
