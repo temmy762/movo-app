@@ -178,6 +178,7 @@ model Vehicle {
   year      Int
   plate     String   @unique
   tier      String
+  photoUrl  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

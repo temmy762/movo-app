@@ -49,6 +49,17 @@ export async function PATCH(
   // When approved, activate the driver account and create vehicle for fleet partners
   if (adminStatus === "APPROVED" || activateDriver) {
     try {
+      // Fetch onboarding with documents to get vehicle photo
+      const onboardingWithDocs = await prisma.driverOnboarding.findUnique({
+        where: { id },
+        include: { documents: true },
+      });
+
+      // Get vehicle photo URL from documents
+      const vehiclePhotoDoc = onboardingWithDocs?.documents?.find(
+        (doc) => doc.type === "VEHICLE_PHOTO"
+      );
+
       // Use transaction to ensure both operations succeed or both fail
       await prisma.$transaction(async (tx) => {
         // Update driver
@@ -68,6 +79,7 @@ export async function PATCH(
               year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.firstVehiclePlate,
               tier: onboarding.firstVehicleClass || "ECONOMY",
+              photoUrl: vehiclePhotoDoc?.fileUrl || null,
             },
           });
         } else if (onboarding.type === "INDIVIDUAL" && onboarding.vehicleMake && onboarding.vehicleModel && onboarding.vehiclePlate) {
@@ -80,6 +92,7 @@ export async function PATCH(
               year: parseInt(onboarding.vehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.vehiclePlate,
               tier: onboarding.vehicleTier || "ECONOMY",
+              photoUrl: vehiclePhotoDoc?.fileUrl || null,
             },
           });
         }
