@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function DriverResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -203,5 +203,13 @@ export default function DriverResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DriverResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
