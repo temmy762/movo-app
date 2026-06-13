@@ -47,7 +47,9 @@ function RideTrackingContent() {
   const [showEmergency, setShowEmergency] = useState(false);
   const [showAddStop,  setShowAddStop]  = useState(false);
   const [stopAddress,  setStopAddress]  = useState("");
-  const [showSupport,  setShowSupport]  = useState(false);
+  const [showSupport,       setShowSupport]       = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling,        setCancelling]        = useState(false);
 
   const TIER_IMAGES: Record<string, string> = {
     classic:  "/images/movo classic.png",
@@ -121,6 +123,22 @@ function RideTrackingContent() {
     } else {
       alert("Driver phone number is not available.");
     }
+  };
+
+  const handleCancelRide = async () => {
+    setCancelling(true);
+    try {
+      if (bookingId) {
+        await fetch(`/api/bookings/${bookingId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "CANCELLED" }),
+        });
+      }
+    } catch { /* silent — still navigate away */ }
+    setCancelling(false);
+    setShowCancelConfirm(false);
+    router.push("/home");
   };
 
   const handleSendMessage = () => {
@@ -272,7 +290,7 @@ function RideTrackingContent() {
       <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100 z-[1001]">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
           {view === "route" ? (
-            <button type="button" onClick={() => router.push(`/home/ride/completed?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&car=${encodeURIComponent(car)}`)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide" style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}>
+            <button type="button" onClick={() => setShowCancelConfirm(true)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide" style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}>
               Cancel Ride
             </button>
           ) : (
@@ -331,6 +349,42 @@ function RideTrackingContent() {
           onClose={() => setShowSupport(false)}
           onMessage={() => { setShowSupport(false); setShowMessage(true); }}
         />
+      )}
+
+      {/* ── Cancel Ride Confirmation ── */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 px-5">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <h3 className="text-[15px] font-bold text-gray-900">Cancel Ride?</h3>
+            </div>
+            <p className="text-[12px] text-gray-500 mb-5">Are you sure you want to cancel this ride? Your driver has already been assigned.</p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700"
+              >
+                Keep Ride
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelRide}
+                disabled={cancelling}
+                className="flex-1 py-3 rounded-xl text-white text-[13px] font-bold disabled:opacity-60"
+                style={{ background: "linear-gradient(90deg, #1a1a2e, #2D0A53)" }}
+              >
+                {cancelling ? "Cancelling…" : "Yes, Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Emergency Modal ── */}
