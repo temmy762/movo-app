@@ -10,4 +10,5 @@ function createPrisma() {
 
 export const prisma = globalForPrisma.prisma ?? createPrisma();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Always reuse singleton across hot reloads in dev AND in production
+globalForPrisma.prisma = prisma;
