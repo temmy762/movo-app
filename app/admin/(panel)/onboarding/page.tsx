@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type DocStatus = "PENDING" | "APPROVED" | "REJECTED";
 type AdminStatus = "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
@@ -24,9 +24,16 @@ interface Onboarding {
   legalNoticeAt: string | null;
   termsAcceptedAt: string | null;
   contractSignedAt: string | null;
+  // Individual fields
   vehicleMake: string | null; vehicleModel: string | null; vehicleYear: string | null;
-  vehiclePlate: string | null; vehicleTier: string | null;
+  vehiclePlate: string | null; vehicleTier: string | null; vehicleColor: string | null;
   dob: string | null; licenseNumber: string | null;
+  // Fleet fields
+  companyName: string | null; legalForm: string | null; fleetSize: string | null;
+  firstVehicleBrand: string | null; firstVehicleModel: string | null; firstVehicleYear: string | null;
+  firstVehicleClass: string | null; firstVehicleColor: string | null; firstVehiclePlate: string | null;
+  firstChauffeurFirstName: string | null; firstChauffeurLastName: string | null;
+  firstChauffeurEmail: string | null; firstChauffeurPhone: string | null;
   bankAccountName: string | null; bankInstitution: string | null;
   documents: Document[];
   driver: {
@@ -64,7 +71,7 @@ export default function AdminOnboardingPage() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
     if (filterStatus !== "all") params.set("status", filterStatus);
@@ -73,9 +80,9 @@ export default function AdminOnboardingPage() {
       .then(r => r.json())
       .then(data => { setOnboardings(data); setLoading(false); })
       .catch(() => setLoading(false));
-  };
+  }, [filterStatus, filterType]);
 
-  useEffect(() => { load(); }, [filterStatus, filterType]);
+  useEffect(() => { load(); }, [load]);
 
   const handleAction = async (status: AdminStatus) => {
     if (!selected) return;
@@ -94,8 +101,9 @@ export default function AdminOnboardingPage() {
         return;
       }
       if (data.success) {
+        // Refresh full list from server to get accurate data
+        load();
         setSelected(prev => prev ? { ...prev, adminStatus: status, adminNote: note, reviewedAt: new Date().toISOString() } : null);
-        setOnboardings(prev => prev.map(o => o.id === selected.id ? { ...o, adminStatus: status } : o));
       }
     } catch (err) {
       console.error("Admin action error:", err);
@@ -167,7 +175,7 @@ export default function AdminOnboardingPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-gray-900 truncate">{name}</p>
                   <p className="text-[11px] text-gray-400 truncate">
-                    {o.type === "INDIVIDUAL" ? "Individual Chauffeur" : "Fleet Partner"} · Step {o.currentStep}/9
+                    {o.type === "INDIVIDUAL" ? "Individual Chauffeur" : "Fleet Partner"} · Step {o.currentStep}/{o.type === "INDIVIDUAL" ? 10 : 9}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
@@ -218,7 +226,7 @@ export default function AdminOnboardingPage() {
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-100">
                   {[
                     { label: "Type",     val: selected.type === "INDIVIDUAL" ? "Individual" : "Fleet Partner" },
-                    { label: "Progress", val: `${selected.currentStep}/9 steps` },
+                    { label: "Progress", val: `${selected.currentStep}/${selected.type === "INDIVIDUAL" ? 10 : 9} steps` },
                     { label: "Submitted", val: fmt(selected.submittedAt) },
                   ].map(r => (
                     <div key={r.label}>
@@ -229,16 +237,17 @@ export default function AdminOnboardingPage() {
                 </div>
               </div>
 
-              {/* Vehicle info */}
-              {(selected.vehicleMake || selected.vehiclePlate) && (
+              {/* Vehicle info — Individual */}
+              {selected.type === "INDIVIDUAL" && (selected.vehicleMake || selected.vehiclePlate) && (
                 <div className="bg-white rounded-2xl p-4 border border-gray-100">
                   <p className="text-[12px] font-bold text-gray-700 mb-3">Vehicle Information</p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     {[
                       ["Make / Model", `${selected.vehicleMake ?? "—"} ${selected.vehicleModel ?? ""}`],
-                      ["Year",         selected.vehicleYear ?? "—"],
+                      ["Year",         selected.vehicleYear  ?? "—"],
                       ["Plate",        selected.vehiclePlate ?? "—"],
-                      ["Class",        selected.vehicleTier ?? "—"],
+                      ["Class",        selected.vehicleTier  ?? "—"],
+                      ["Color",        selected.vehicleColor ?? "—"],
                     ].map(([label, val]) => (
                       <div key={label}>
                         <p className="text-[10px] text-gray-400">{label}</p>
@@ -247,6 +256,65 @@ export default function AdminOnboardingPage() {
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Fleet company + vehicle info */}
+              {selected.type === "FLEET" && (
+                <>
+                  {selected.companyName && (
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                      <p className="text-[12px] font-bold text-gray-700 mb-3">Company Information</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {[
+                          ["Company Name",  selected.companyName  ?? "—"],
+                          ["Legal Form",    selected.legalForm    ?? "—"],
+                          ["Fleet Size",    selected.fleetSize    ?? "—"],
+                        ].map(([label, val]) => (
+                          <div key={label}>
+                            <p className="text-[10px] text-gray-400">{label}</p>
+                            <p className="text-[12px] font-semibold text-gray-800">{val}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(selected.firstVehicleBrand || selected.firstVehiclePlate) && (
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                      <p className="text-[12px] font-bold text-gray-700 mb-3">First Vehicle</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {[
+                          ["Make / Model", `${selected.firstVehicleBrand ?? "—"} ${selected.firstVehicleModel ?? ""}`],
+                          ["Year",         selected.firstVehicleYear  ?? "—"],
+                          ["Plate",        selected.firstVehiclePlate ?? "—"],
+                          ["Class",        selected.firstVehicleClass ?? "—"],
+                          ["Color",        selected.firstVehicleColor ?? "—"],
+                        ].map(([label, val]) => (
+                          <div key={label}>
+                            <p className="text-[10px] text-gray-400">{label}</p>
+                            <p className="text-[12px] font-semibold text-gray-800">{val}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selected.firstChauffeurFirstName && (
+                    <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                      <p className="text-[12px] font-bold text-gray-700 mb-3">First Chauffeur</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {[
+                          ["Name",  `${selected.firstChauffeurFirstName} ${selected.firstChauffeurLastName ?? ""}`],
+                          ["Email", selected.firstChauffeurEmail ?? "—"],
+                          ["Phone", selected.firstChauffeurPhone ?? "—"],
+                        ].map(([label, val]) => (
+                          <div key={label}>
+                            <p className="text-[10px] text-gray-400">{label}</p>
+                            <p className="text-[12px] font-semibold text-gray-800">{val}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Documents */}
@@ -320,29 +388,42 @@ export default function AdminOnboardingPage() {
                 {selected.reviewedAt && (
                   <p className="text-[11px] text-gray-400 mb-3">Last reviewed: {fmt(selected.reviewedAt)}</p>
                 )}
-                <textarea
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                  placeholder="Add a review note (optional)…"
-                  rows={3}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[12px] text-gray-700 focus:outline-none resize-none mb-3 bg-gray-50"
-                  suppressHydrationWarning
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => handleAction("UNDER_REVIEW")} disabled={saving}
-                    className="no-hover-fx py-2.5 rounded-xl text-[12px] font-bold border border-blue-200 text-blue-700 bg-blue-50 disabled:opacity-50">
-                    Mark Under Review
-                  </button>
-                  <button type="button" onClick={() => handleAction("APPROVED")} disabled={saving}
-                    className="no-hover-fx py-2.5 rounded-xl text-[12px] font-bold text-white disabled:opacity-50"
-                    style={{ background: saving ? "#d1d5db" : "linear-gradient(90deg,#16a34a,#15803d)" }}>
-                    {saving ? "Saving…" : "Approve & Activate"}
-                  </button>
-                  <button type="button" onClick={() => handleAction("REJECTED")} disabled={saving}
-                    className="no-hover-fx py-2.5 rounded-xl text-[12px] font-bold border border-red-200 text-red-600 bg-red-50 disabled:opacity-50 col-span-2">
-                    Reject Application
-                  </button>
-                </div>
+                {["APPROVED", "REJECTED"].includes(selected.adminStatus) ? (
+                  <div className="px-4 py-3 rounded-xl text-[12px] font-semibold text-center"
+                    style={{
+                      background: selected.adminStatus === "APPROVED" ? "#dcfce7" : "#fee2e2",
+                      color:      selected.adminStatus === "APPROVED" ? "#166534" : "#991b1b",
+                    }}>
+                    Application {selected.adminStatus === "APPROVED" ? "Approved ✓" : "Rejected ✗"}
+                    {selected.adminNote && <p className="mt-1 font-normal text-[11px] opacity-80">{selected.adminNote}</p>}
+                  </div>
+                ) : (
+                  <>
+                    <textarea
+                      value={note}
+                      onChange={e => setNote(e.target.value)}
+                      placeholder="Add a review note (optional)…"
+                      rows={3}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[12px] text-gray-700 focus:outline-none resize-none mb-3 bg-gray-50"
+                      suppressHydrationWarning
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => handleAction("UNDER_REVIEW")} disabled={saving}
+                        className="no-hover-fx py-2.5 rounded-xl text-[12px] font-bold border border-blue-200 text-blue-700 bg-blue-50 disabled:opacity-50">
+                        Mark Under Review
+                      </button>
+                      <button type="button" onClick={() => handleAction("APPROVED")} disabled={saving}
+                        className="no-hover-fx py-2.5 rounded-xl text-[12px] font-bold text-white disabled:opacity-50"
+                        style={{ background: saving ? "#d1d5db" : "linear-gradient(90deg,#16a34a,#15803d)" }}>
+                        {saving ? "Saving…" : "Approve & Activate"}
+                      </button>
+                      <button type="button" onClick={() => handleAction("REJECTED")} disabled={saving}
+                        className="no-hover-fx py-2.5 rounded-xl text-[12px] font-bold border border-red-200 text-red-600 bg-red-50 disabled:opacity-50 col-span-2">
+                        Reject Application
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
 
             </div>
