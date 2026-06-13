@@ -42,21 +42,27 @@ export default function DriverLoginPage() {
         return;
       }
       
-      // Check onboarding status and redirect accordingly
+      // ACTIVE drivers go straight to dashboard
+      if (data.driver.status === "ACTIVE") {
+        router.push("/driver/home");
+        return;
+      }
+      // Non-active: check detailed onboarding status for routing
       const statusRes = await fetch("/api/driver/onboarding/status");
       if (statusRes.ok) {
         const statusData = await statusRes.json();
-        if (statusData.adminStatus === "APPROVED") {
-          router.push("/driver/onboarding/approved");
+        if (statusData.adminStatus === "REJECTED") {
+          router.push("/driver/onboarding/rejected");
         } else if (statusData.adminStatus === "PENDING" || statusData.adminStatus === "UNDER_REVIEW") {
           router.push("/driver/onboarding/pending");
-        } else if (statusData.adminStatus === "REJECTED") {
-          router.push("/driver/onboarding/rejected");
+        } else if (statusData.adminStatus === "NOT_SUBMITTED" || !statusData.adminStatus) {
+          // Still in onboarding — resume at the right flow
+          router.push(statusData.type === "FLEET" ? "/driver/onboarding/partner" : "/driver/onboarding/chauffeur");
         } else {
-          router.push("/driver/home");
+          router.push("/driver/onboarding/pending");
         }
       } else {
-        router.push("/driver/home");
+        router.push("/driver/onboarding/chauffeur");
       }
     } catch (err) {
       console.error("Login error:", err);

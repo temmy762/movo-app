@@ -63,6 +63,25 @@ export default function DriverHomePage() {
   const lastPushRef  = useRef<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(30);
 
+  // Guard: redirect drivers who are not ACTIVE away from the dashboard
+  useEffect(() => {
+    fetch("/api/driver/onboarding/status")
+      .then(r => r.json())
+      .then(d => {
+        if (d.error === "Unauthorized") {
+          router.replace("/driver/onboarding/login");
+        } else if (d.adminStatus === "REJECTED") {
+          router.replace("/driver/onboarding/rejected");
+        } else if (d.adminStatus === "PENDING" || d.adminStatus === "UNDER_REVIEW") {
+          router.replace("/driver/onboarding/pending");
+        } else if (d.adminStatus === "NOT_SUBMITTED" || !d.adminStatus) {
+          router.replace(d.type === "FLEET" ? "/driver/onboarding/partner" : "/driver/onboarding/chauffeur");
+        }
+        // adminStatus === "APPROVED" → stay on dashboard
+      })
+      .catch(() => {});
+  }, [router]);
+
   useEffect(() => {
     fetch("/api/driver/stats")
       .then((r) => r.ok ? r.json() : { totalEarned: 0, preBooked: 0 })
