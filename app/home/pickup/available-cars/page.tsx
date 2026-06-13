@@ -11,9 +11,14 @@ const TIER_IMAGES: Record<string, string> = {
 };
 
 const TIER_LABELS: Record<string, string> = {
-  classic: "Movo Classic",
-  premium: "Movo Premium",
-  black:   "Movo Privé Black",
+  classic:  "Movo Classic",
+  premium:  "Movo Premium",
+  black:    "Movo Privé Black",
+  economy:  "Movo Classic",
+  ECONOMY:  "Movo Classic",
+  CLASSIC:  "Movo Classic",
+  PREMIUM:  "Movo Premium",
+  BLACK:    "Movo Privé Black",
 };
 
 interface FleetDriver {
@@ -106,7 +111,7 @@ function AvailableCarsContent() {
             model:     v.model,
             year:      v.year,
             plate:     v.plate,
-            img:       v.photoUrl ?? TIER_IMAGES[v.tier] ?? "/images/movo classic.png",
+            img:       v.photoUrl ?? TIER_IMAGES[v.tier.toLowerCase()] ?? "/images/movo classic.png",
             isOnline:  d.isOnline,
             etaLabel,
           };

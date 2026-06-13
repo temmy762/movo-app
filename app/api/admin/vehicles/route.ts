@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         make: carMake,
         model: carModel,
         plate: carPlate,
-        tier: carType || "ECONOMY",
+        tier: carType || "classic",
         year: new Date().getFullYear(),
         driverId: driverId,
       },

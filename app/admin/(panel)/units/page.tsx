@@ -456,7 +456,6 @@ export default function UnitsPage() {
   const [page,     setPage]     = useState(1);
   const [view,     setView]     = useState<"list" | "grid">("list");
   const [perPage,  setPerPage]  = useState(8);
-  const [showAdd,  setShowAdd]  = useState(false);
   const [showCreateVehicle, setShowCreateVehicle] = useState(false);
   const [editUnit, setEditUnit] = useState<Unit | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -481,11 +480,6 @@ export default function UnitsPage() {
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const paged = loading ? [] : filtered.slice((page - 1) * perPage, page * perPage);
-
-  const handleAdd = (data: UnitForm) => {
-    setUnits(prev => [...prev, { id: crypto.randomUUID(), ...data }]);
-    setShowAdd(false);
-  };
 
   const handleEdit = async (data: UnitForm) => {
     await fetch("/api/admin/units", {
@@ -596,15 +590,6 @@ export default function UnitsPage() {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          CREATE VEHICLE
-        </button>
-
-        <button onClick={() => setShowAdd(true)}
-          className="no-hover-fx flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[12px] font-bold tracking-wide"
-          style={{ background: "#ef4444" }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
           ADD UNIT
         </button>
       </div>
@@ -671,9 +656,6 @@ export default function UnitsPage() {
             disabled={page === totalPages} onClick={() => setPage(totalPages)}>Next</button>
         </div>
       </div>
-
-      {/* ── Add Modal ── */}
-      {showAdd && <UnitModal onSave={handleAdd} onClose={() => setShowAdd(false)}/>}
 
       {/* ── Edit Modal ── */}
       {editUnit && <UnitModal initial={editUnit} onSave={handleEdit} onClose={() => setEditUnit(null)}/>}
