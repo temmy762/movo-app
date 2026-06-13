@@ -106,6 +106,7 @@ function DriverRegisterStep2Content() {
   const searchParams = useSearchParams();
   const country = searchParams.get("country") ?? "CA";
   const city = searchParams.get("city") ?? "";
+  const type = searchParams.get("type") ?? "FLEET";
 
   const [dialCode, setDialCode] = useState("+1");
   const [firstName, setFirstName] = useState("");
@@ -153,7 +154,7 @@ function DriverRegisterStep2Content() {
         }
         return;
       }
-      router.push("/driver/onboarding/partner");
+      router.push(type === "INDIVIDUAL" ? "/driver/onboarding/chauffeur" : "/driver/onboarding/partner");
     } catch (err) {
       console.error("Registration error:", err);
       setError("Network error. Please check your connection and try again.");

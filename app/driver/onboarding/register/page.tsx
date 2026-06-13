@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const countries = [
   { code: "CA", flag: "🇨🇦", label: "Canada" },
@@ -13,8 +13,10 @@ const cities: Record<string, string[]> = {
   CA: ["Winnipeg"],
 };
 
-export default function DriverRegisterStep1Page() {
+function DriverRegisterStep1Content() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const type = searchParams.get("type") ?? "FLEET";
   const [country, setCountry] = useState("CA");
   const [city, setCity] = useState("Winnipeg");
 
@@ -58,7 +60,7 @@ export default function DriverRegisterStep1Page() {
             type="button"
             onClick={() => {
               if (!city) return;
-              const params = new URLSearchParams({ country, city });
+              const params = new URLSearchParams({ country, city, type });
               router.push(`/driver/onboarding/register/step2?${params.toString()}`);
             }}
             disabled={!city}
@@ -83,5 +85,13 @@ export default function DriverRegisterStep1Page() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DriverRegisterStep1Page() {
+  return (
+    <Suspense>
+      <DriverRegisterStep1Content />
+    </Suspense>
   );
 }
