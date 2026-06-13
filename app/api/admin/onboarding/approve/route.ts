@@ -56,27 +56,45 @@ export async function POST(req: NextRequest) {
       data: { status: "ACTIVE" },
     });
 
-    // If fleet partner, create first vehicle and first chauffeur
-    if (onboarding.type === "FLEET") {
-      // Create first vehicle
-      if (onboarding.firstVehicleBrand && onboarding.firstVehicleModel && onboarding.firstVehiclePlate) {
-        await prisma.vehicle.create({
-          data: {
-            driverId: driver.id,
-            make: onboarding.firstVehicleBrand,
-            model: onboarding.firstVehicleModel,
-            year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
-            plate: onboarding.firstVehiclePlate,
-            tier: onboarding.firstVehicleClass || "ECONOMY",
-          },
-        });
+    // Check if driver already has a vehicle (idempotent re-approval)
+    const existingVehicle = await prisma.vehicle.findUnique({
+      where: { driverId: driver.id },
+    });
 
-        console.log(`[Admin] Vehicle created for fleet partner: ${driver.id}`);
+    if (!existingVehicle) {
+      if (onboarding.type === "INDIVIDUAL") {
+        // Individual chauffeur — create their vehicle from onboarding data
+        if (onboarding.vehicleMake && onboarding.vehicleModel && onboarding.vehiclePlate) {
+          await prisma.vehicle.create({
+            data: {
+              driverId: driver.id,
+              make: onboarding.vehicleMake,
+              model: onboarding.vehicleModel,
+              year: parseInt(onboarding.vehicleYear || new Date().getFullYear().toString()),
+              plate: onboarding.vehiclePlate,
+              tier: onboarding.vehicleTier || "classic",
+            },
+          });
+          console.log(`[Admin] Vehicle created for individual chauffeur: ${driver.id}`);
+        } else {
+          console.warn(`[Admin] Individual chauffeur ${driver.id} approved but missing vehicle info in onboarding`);
+        }
+      } else if (onboarding.type === "FLEET") {
+        // Fleet partner — create their first vehicle from onboarding data
+        if (onboarding.firstVehicleBrand && onboarding.firstVehicleModel && onboarding.firstVehiclePlate) {
+          await prisma.vehicle.create({
+            data: {
+              driverId: driver.id,
+              make: onboarding.firstVehicleBrand,
+              model: onboarding.firstVehicleModel,
+              year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
+              plate: onboarding.firstVehiclePlate,
+              tier: onboarding.firstVehicleClass || "classic",
+            },
+          });
+          console.log(`[Admin] Vehicle created for fleet partner: ${driver.id}`);
+        }
       }
-
-      // Note: First chauffeur creation would require additional logic
-      // For now, we just store the info in onboarding for reference
-      // Admin can manually create additional drivers if needed
     }
 
     // Update onboarding status
