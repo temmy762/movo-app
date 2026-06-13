@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/driver/onboarding/reset-password?token=${resetToken}`;
 
     await sendNotification({
-      eventType: "CHAUFFEUR_PASSWORD_RESET",
+      eventType: "RIDER_PASSWORD_RESET",
       recipient: {
         type: "driver",
         id: driver.id,

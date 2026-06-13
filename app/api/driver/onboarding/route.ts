@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { sendNotification } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -113,6 +114,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Send submission confirmation email when driver submits their application
+    if (submit && driver) {
+      sendNotification({
+        eventType: "CHAUFFEUR_ONBOARDING_SUBMITTED",
+        recipient: {
+          type: "driver",
+          id: driver.id,
+          email: driver.email,
+          firstName: driver.firstName,
+          lastName: driver.lastName,
+        },
+      }).catch(err => console.error("Submission email failed:", err));
+    }
+
     return NextResponse.json({ success: true, onboarding });
   } catch (error) {
     console.error("Onboarding POST error:", error);
@@ -189,6 +204,20 @@ export async function PATCH(req: NextRequest) {
         where: { id: session.driverId },
         data:  { onboardingType: type },
       });
+    }
+
+    // Send submission confirmation email when driver submits their application
+    if (submit && driver) {
+      sendNotification({
+        eventType: "CHAUFFEUR_ONBOARDING_SUBMITTED",
+        recipient: {
+          type: "driver",
+          id: driver.id,
+          email: driver.email,
+          firstName: driver.firstName,
+          lastName: driver.lastName,
+        },
+      }).catch(err => console.error("Submission email failed:", err));
     }
 
     return NextResponse.json({ success: true, onboarding });

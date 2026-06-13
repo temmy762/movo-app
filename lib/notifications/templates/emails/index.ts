@@ -11,6 +11,7 @@ import { riderIncidentResolvedTemplate } from "./rider/incident-resolved";
 
 // Import chauffeur templates
 import { chauffeurWelcomeTemplate } from "./chauffeur/welcome";
+import { chauffeurOnboardingSubmittedTemplate } from "./chauffeur/onboarding-submitted";
 import { chauffeurBookingAssignedTemplate } from "./chauffeur/booking-assigned";
 import { chauffeurOnboardingApprovedTemplate } from "./chauffeur/onboarding-approved";
 import { chauffeurOnboardingRejectedTemplate } from "./chauffeur/onboarding-rejected";
@@ -61,7 +62,7 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   // Generic (used by multiple channels)
   RIDER_EMAIL_VERIFICATION: emailVerificationTemplate,
   RIDER_PASSWORD_RESET: passwordResetTemplate,
-  CHAUFFEUR_ONBOARDING_SUBMITTED: chauffeurWelcomeTemplate, // Reuse welcome style
+  CHAUFFEUR_ONBOARDING_SUBMITTED: chauffeurOnboardingSubmittedTemplate,
   CHAUFFEUR_BOOKING_CANCELLED: chauffeurBookingAssignedTemplate, // Similar structure
 };
 

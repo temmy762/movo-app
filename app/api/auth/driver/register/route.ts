@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, buildSetCookieHeader } from "@/lib/session";
+import { sendNotification } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,6 +46,18 @@ export async function POST(req: NextRequest) {
     });
 
     const token = await createSession("DRIVER", undefined, driver.id);
+
+    // Send welcome email (non-blocking)
+    sendNotification({
+      eventType: "CHAUFFEUR_WELCOME",
+      recipient: {
+        type: "driver",
+        id: driver.id,
+        email: driver.email,
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+      },
+    }).catch(err => console.error("Welcome email failed:", err));
 
     return NextResponse.json(
       {
