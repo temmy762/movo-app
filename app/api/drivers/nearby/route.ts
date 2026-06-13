@@ -8,7 +8,6 @@ export async function GET() {
   const drivers = await prisma.driver.findMany({
     where: {
       status: "ACTIVE",
-      deletedAt: null,
       vehicle: { isNot: null },
     },
     select: {

@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
   const drivers = await prisma.driver.findMany({
     where: {
       status: "ACTIVE",
-      deletedAt: null,
       vehicle: null,
       onboarding: { adminStatus: "APPROVED" },
     },
