@@ -120,7 +120,7 @@ const navItems: NavEntry[] = [
   },
   {
     kind: "item",
-    label: "Messages", href: "/admin/messages", badge: 1,
+    label: "Messages", href: "/admin/messages",
     match: (p) => p.startsWith("/admin/messages"),
     icon: (a) => (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
@@ -156,7 +156,18 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
   const pathname = usePathname();
   const router = useRouter();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ Financials: pathname.startsWith("/admin/financials") });
+  const [msgUnread, setMsgUnread] = useState(0);
   const prevPath = useRef(pathname);
+
+  useEffect(() => {
+    fetch("/api/admin/messages")
+      .then(r => r.json())
+      .then((data: { unread: boolean }[]) => {
+        if (Array.isArray(data)) setMsgUnread(data.filter(c => c.unread).length);
+      })
+      .catch(() => {});
+  }, [pathname]); // re-check on navigation
+
   useEffect(() => {
     if (prevPath.current !== pathname) {
       prevPath.current = pathname;
@@ -244,9 +255,9 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
               >
                 {entry.label}
               </span>
-              {entry.badge && (
+              {entry.label === "Messages" && msgUnread > 0 && (
                 <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                  {entry.badge}
+                  {msgUnread}
                 </span>
               )}
             </Link>

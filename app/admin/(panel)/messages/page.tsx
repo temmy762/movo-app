@@ -93,6 +93,14 @@ function MessagesPageInner(){
   const endRef  = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const markRead=(id:string,convs:Conv[])=>{
+    const conv=convs.find(c=>c.id===id);
+    if(conv?.unread && !id.startsWith("driver_")){
+      fetch(`/api/admin/messages/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({status:"IN_PROGRESS"})}).catch(console.error);
+    }
+  };
+
   useEffect(()=>{
     fetch("/api/admin/messages").then(r=>r.json())
       .then((data:Conv[])=>{
@@ -103,12 +111,16 @@ function MessagesPageInner(){
             setConvs([driverConv,...data]);
             setActiveId(`driver_${driverId}`);
           } else {
-            setConvs(data);
+            setConvs(data.map(c=>c.id===`driver_${driverId}`?{...c,unread:false}:c));
             setActiveId(`driver_${driverId}`);
+            markRead(`driver_${driverId}`, data);
           }
         } else {
-          setConvs(data);
-          if(data.length>0) setActiveId(data[0].id);
+          setConvs(data.map((c,i)=>i===0?{...c,unread:false}:c));
+          if(data.length>0){
+            setActiveId(data[0].id);
+            markRead(data[0].id, data);
+          }
         }
       }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
