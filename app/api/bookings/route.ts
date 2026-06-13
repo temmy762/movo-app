@@ -45,7 +45,7 @@ const VALID_PAYMENT_STATUSES: PaymentStatus[] = ["UNPAID", "PAID", "FAILED", "RE
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, total, paymentStatus, stripePaymentIntentId } = body;
+    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, total, paymentStatus, stripePaymentIntentId, driverId } = body;
 
     if (!clientName || !pickup || !dropoff || !carTier || !carName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
         total: Number(total),
         paymentStatus: resolvedPaymentStatus,
         stripePaymentIntentId: stripePaymentIntentId ?? null,
-        ...(userId ? { userId } : {}),
+        ...(userId    ? { userId }    : {}),
+        ...(driverId  ? { driverId }  : {}),
       },
     });
 

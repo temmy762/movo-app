@@ -18,7 +18,7 @@ const carTierMap: Record<string, string> = {
   "Movo Privé Black": "black",
 };
 
-function CheckoutForm({ pickup, dropoff, carName, clientName }: { pickup: string; dropoff: string; carName: string; clientName: string }) {
+function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, clientName }: { pickup: string; dropoff: string; carName: string; tier: string; carImg: string; driverId: string; clientName: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -49,17 +49,23 @@ function CheckoutForm({ pickup, dropoff, carName, clientName }: { pickup: string
           clientName,
           pickup,
           dropoff,
-          carTier: carTierMap[carName] ?? "classic",
+          carTier: tier || carTierMap[carName] || "classic",
           carName,
           fare: FARE,
           serviceFee: SERVICE_FEE,
           total: TOTAL,
           paymentStatus: "PAID",
           stripePaymentIntentId: paymentIntent?.id ?? null,
+          ...(driverId ? { driverId } : {}),
         }),
       });
       const booking = await res.json();
-      const params = new URLSearchParams({ pickup, dropoff, car: carName, bookingId: booking.id });
+      const tp: Record<string, string> = { pickup, dropoff, car: carName };
+      if (booking?.id)  tp.bookingId = booking.id;
+      if (tier)          tp.tier      = tier;
+      if (carImg)        tp.carImg    = carImg;
+      if (driverId)      tp.driverId  = driverId;
+      const params = new URLSearchParams(tp);
       router.push(`/home/ride/tracking?${params.toString()}`);
     } catch {
       setError("Booking could not be saved. Please contact support.");
@@ -99,9 +105,12 @@ function CheckoutForm({ pickup, dropoff, carName, clientName }: { pickup: string
 function ConfirmPayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pickup = searchParams.get("pickup") || "Pickup address";
-  const dropoff = searchParams.get("dropoff") || "Destination";
-  const carName = searchParams.get("car") || "Standard Ride";
+  const pickup    = searchParams.get("pickup")   || "Pickup address";
+  const dropoff   = searchParams.get("dropoff")  || "Destination";
+  const carName   = searchParams.get("car")      || "Standard Ride";
+  const tier      = searchParams.get("tier")     || "";
+  const carImg    = searchParams.get("carImg")   || "";
+  const driverId  = searchParams.get("driverId") || "";
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
   const { user } = useCurrentUser();
@@ -193,7 +202,7 @@ function ConfirmPayContent() {
             )}
             {clientSecret && (
               <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm pickup={pickup} dropoff={dropoff} carName={carName} clientName={clientName} />
+                <CheckoutForm pickup={pickup} dropoff={dropoff} carName={carName} tier={tier} carImg={carImg} driverId={driverId} clientName={clientName} />
               </Elements>
             )}
           </div>

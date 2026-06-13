@@ -9,7 +9,11 @@ const MiniMap = dynamic(() => import("./MiniMap"), { ssr: false });
 function YourRidesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const carName = searchParams.get("car") ?? "";
+  const carName   = searchParams.get("car")      ?? "";
+  const tier      = searchParams.get("tier")     ?? "";
+  const carImg    = searchParams.get("carImg")   ?? "";
+  const driverId  = searchParams.get("driverId") ?? "";
+  const vehicleId = searchParams.get("vehicleId") ?? "";
   const [pickup, setPickup] = useState(searchParams.get("pickup") ?? "");
   const [dropoff, setDropoff] = useState(searchParams.get("dropoff") ?? "");
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -166,8 +170,12 @@ function YourRidesContent() {
           <button
             type="button"
             onClick={() => {
-              const params = new URLSearchParams({ pickup, dropoff, car: carName });
-              router.push(`/home/ride/confirm?${params.toString()}`);
+              const p: Record<string, string> = { pickup, dropoff, car: carName };
+              if (tier)      p.tier      = tier;
+              if (carImg)    p.carImg    = carImg;
+              if (driverId)  p.driverId  = driverId;
+              if (vehicleId) p.vehicleId = vehicleId;
+              router.push(`/home/ride/confirm?${new URLSearchParams(p).toString()}`);
             }}
             className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}

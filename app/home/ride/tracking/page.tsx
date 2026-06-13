@@ -18,10 +18,12 @@ const RideMap = dynamic(() => import("./RideMap"), {
 function RideTrackingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pickup  = searchParams.get("pickup")    || "";
-  const dropoff = searchParams.get("dropoff")   || "";
-  const car     = searchParams.get("car")       || "Movo Classic";
-  const bookingId = searchParams.get("bookingId");
+  const pickup    = searchParams.get("pickup")    || "";
+  const dropoff   = searchParams.get("dropoff")   || "";
+  const car       = searchParams.get("car")       || "Movo Classic";
+  const tier      = searchParams.get("tier")      || "";
+  const carImgParam = searchParams.get("carImg")  || "";
+  const bookingId = searchParams.get("bookingId") || null;
 
   const [view, setView] = useState<"route" | "actions">("route");
 
@@ -29,10 +31,12 @@ function RideTrackingContent() {
   const [etaText,     setEtaText]     = useState("...");
   const [arrivalTime, setArrivalTime] = useState("...");
 
-  /* ── Driver info ── */
+  /* ── Driver / vehicle info ── */
   const [driverName,     setDriverName]     = useState("Driver");
   const [driverRating,   setDriverRating]   = useState<number | null>(null);
   const [driverPhone,    setDriverPhone]    = useState<string | null>(null);
+  const [vehicleSeats,   setVehicleSeats]   = useState<number>(4);
+  const [vehicleImg,     setVehicleImg]     = useState<string>("");
   const [driverPosition, setDriverPosition] = useState<{ lat: number; lng: number } | null>(null);
   const locationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -45,12 +49,19 @@ function RideTrackingContent() {
   const [stopAddress,  setStopAddress]  = useState("");
   const [showSupport,  setShowSupport]  = useState(false);
 
-  const carImageMap: Record<string, string> = {
-    "Movo Classic":     "/images/movo classic.png",
-    "Movo Premium":     "/images/movo premium.png",
-    "Movo Privé Black": "/images/prive black.png",
+  const TIER_IMAGES: Record<string, string> = {
+    classic:  "/images/movo classic.png",
+    premium:  "/images/movo premium.png",
+    black:    "/images/prive black.png",
   };
-  const carImg      = carImageMap[car] ?? "/images/Car.png";
+  const TIER_LABELS: Record<string, string> = {
+    classic:  "Movo Classic",
+    premium:  "Movo Premium",
+    black:    "Movo Privé Black",
+  };
+  const resolvedTier = tier.toLowerCase().replace(/ /g, "") === "firstclass" ? "black" : tier.toLowerCase();
+  const carImg = vehicleImg || carImgParam || TIER_IMAGES[resolvedTier] || "/images/movo classic.png";
+  const tierLabel = TIER_LABELS[resolvedTier] || tier || "";
   const dropoffCity = dropoff.split(",").slice(1, 3).join(",").trim();
   const driverInitial = driverName.charAt(0).toUpperCase() || "D";
 
@@ -63,8 +74,9 @@ function RideTrackingContent() {
         if (!data?.driver) return;
         const name = `${data.driver.firstName} ${data.driver.lastName}`.trim();
         setDriverName(name || "Driver");
-        if (data.driver.phone)     setDriverPhone(data.driver.phone);
-        if (data.driver.avgRating != null) setDriverRating(data.driver.avgRating);
+        if (data.driver.phone)              setDriverPhone(data.driver.phone);
+        if (data.driver.avgRating != null)  setDriverRating(data.driver.avgRating);
+        if (data.driver.vehicle?.photoUrl)  setVehicleImg(data.driver.vehicle.photoUrl);
       })
       .catch(() => {});
   }, [bookingId]);
@@ -157,12 +169,17 @@ function RideTrackingContent() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col items-end">
-              <div className="w-[110px] h-[60px] rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100">
-                <Image src={carImg} alt={car} width={100} height={54} className="object-contain" />
+            <div className="flex flex-col items-end gap-1">
+              <div className="w-[120px] h-[68px] rounded-xl bg-gray-50 overflow-hidden border border-gray-100 relative">
+                <Image src={carImg} alt={car} fill className="object-contain p-1" />
               </div>
-              <p className="text-[12px] md:text-[13px] font-semibold text-gray-700 mt-1">{car}</p>
-              <p className="text-[11px] text-gray-400">4 Seats</p>
+              {tierLabel && (
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)" }}>
+                  {tierLabel}
+                </span>
+              )}
+              <p className="text-[12px] md:text-[13px] font-semibold text-gray-700">{car}</p>
+              <p className="text-[11px] text-gray-400">{vehicleSeats} Seats</p>
             </div>
           </div>
 

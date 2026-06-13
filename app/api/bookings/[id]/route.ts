@@ -13,6 +13,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             firstName: true,
             lastName: true,
             phone: true,
+            vehicle: {
+              select: { photoUrl: true, tier: true, make: true, model: true, year: true },
+            },
             bookings: {
               where: { rating: { not: null } },
               select: { rating: true },
@@ -24,7 +27,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     if (!booking) return NextResponse.json({ error: "Booking not found" }, { status: 404 });
 
     const { driver, ...bookingData } = booking as {
-      driver?: { firstName: string; lastName: string; phone: string | null; bookings: { rating: number }[] } | null;
+      driver?: {
+        firstName: string; lastName: string; phone: string | null;
+        vehicle?: { photoUrl: string | null; tier: string; make: string; model: string; year: number } | null;
+        bookings: { rating: number }[];
+      } | null;
       [key: string]: unknown;
     };
 
@@ -37,7 +44,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({
       ...bookingData,
       driver: driver
-        ? { firstName: driver.firstName, lastName: driver.lastName, phone: driver.phone, avgRating }
+        ? { firstName: driver.firstName, lastName: driver.lastName, phone: driver.phone, avgRating, vehicle: driver.vehicle ?? null }
         : null,
     });
   } catch {

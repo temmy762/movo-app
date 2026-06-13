@@ -265,7 +265,9 @@ function AvailableCarsContent() {
                     const params = new URLSearchParams({
                       pickup,
                       dropoff,
-                      car: `${car.make} ${car.model}`,
+                      car:      `${car.make} ${car.model}`,
+                      tier:     car.tier,
+                      carImg:   car.img,
                       vehicleId: car.vehicleId,
                       driverId:  car.driverId,
                     });
