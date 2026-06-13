@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, buildSetCookieHeader } from "@/lib/session";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 function loginRedirect(token: string) {
   return NextResponse.redirect(`${BASE_URL}/home`, {
@@ -76,8 +76,9 @@ export async function GET(req: NextRequest) {
 
       const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } });
       if (byEmail) {
+        // Link Google account if not already linked, then log in
         if (!byEmail.googleId) {
-          return errorRedirect("login", "google_wrong_provider");
+          await prisma.user.update({ where: { id: byEmail.id }, data: { googleId } });
         }
         const token = await createSession("USER", byEmail.id);
         return loginRedirect(token);
@@ -95,7 +96,12 @@ export async function GET(req: NextRequest) {
 
       const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } });
       if (byEmail) {
-        return errorRedirect("register", "google_wrong_provider");
+        // Account already exists — link Google and log in
+        if (!byEmail.googleId) {
+          await prisma.user.update({ where: { id: byEmail.id }, data: { googleId } });
+        }
+        const token = await createSession("USER", byEmail.id);
+        return loginRedirect(token);
       }
 
       const password = await bcrypt.hash(crypto.randomUUID(), 12);
