@@ -346,6 +346,7 @@ model OnboardingDocument {
   id           String         @id @default(cuid())
   type         DocumentType
   fileName     String
+  fileUrl      String?
   status       DocumentStatus @default(PENDING)
   adminNote    String?
   uploadedAt   DateTime       @default(now())

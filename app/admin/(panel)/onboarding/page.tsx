@@ -357,7 +357,14 @@ export default function AdminOnboardingPage() {
 
               {/* Consents */}
               <div className="bg-white rounded-2xl p-4 border border-gray-100">
-                <p className="text-[12px] font-bold text-gray-700 mb-3">Agreements & Consents</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[12px] font-bold text-gray-700">Agreements & Consents</p>
+                  {selected.submittedAt && consentItems.some(i => !i.ok) && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                      ⚠ Incomplete — submitted before signing
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-col gap-2">
                   {consentItems.map(item => (
                     <div key={item.label} className="flex items-center justify-between">

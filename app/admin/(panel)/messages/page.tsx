@@ -128,7 +128,15 @@ function MessagesPageInner(){
 
   const selectConv=(id:string)=>{
     setActiveId(id); setMobileView("chat"); setMoreOpen(false);
-    setConvs(p=>p.map(c=>c.id===id?{...c,unread:false}:c));
+    const conv=convs.find(c=>c.id===id);
+    if(conv?.unread){
+      setConvs(p=>p.map(c=>c.id===id?{...c,unread:false}:c));
+      // Persist read status for client support tickets (not driver msgs which are always unread:false)
+      if(!id.startsWith("driver_")){
+        fetch(`/api/admin/messages/${id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({status:"IN_PROGRESS"})}).catch(console.error);
+      }
+    }
   };
 
   const send=async()=>{

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     if (simple) {
       // Return simple list for dropdown
       const drivers = await prisma.driver.findMany({
-        where: { status: "ACTIVE" }, // Only show active drivers
+        where: { status: "ACTIVE", deletedAt: null } as never, // Only show active, non-deleted drivers
         select: {
           id: true,
           firstName: true,
@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Return full detailed list
+    // Return full detailed list (exclude soft-deleted drivers)
     const drivers = await prisma.driver.findMany({
+      where: { deletedAt: null } as never,
       orderBy: { createdAt: "desc" },
       include: {
         vehicle: true,

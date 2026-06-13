@@ -36,11 +36,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    // Soft delete: mark driver as SUSPENDED instead of hard-deleting
-    // This preserves all historical data and audit trails
+    // Soft delete: set deletedAt timestamp to preserve all historical data and audit trails
     await prisma.driver.update({
       where: { id },
-      data: { status: "SUSPENDED" }
+      data: { deletedAt: new Date() }
     });
     return NextResponse.json({ success: true });
   } catch (e: any) {

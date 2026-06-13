@@ -44,7 +44,7 @@ export async function PATCH(
       adminNote: adminNote ?? null,
       reviewedAt: new Date(),
     },
-    include: { driver: { select: { id: true, firstName: true, lastName: true } } },
+    include: { driver: { select: { id: true, firstName: true, lastName: true, email: true } } },
   }) as any;
 
   // When approved, activate the driver account and create vehicle for fleet partners
@@ -80,7 +80,7 @@ export async function PATCH(
               year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.firstVehiclePlate,
               tier: onboarding.firstVehicleClass || "ECONOMY",
-              photoUrl: vehiclePhotoDoc?.fileUrl || null,
+              photoUrl: (vehiclePhotoDoc as any)?.fileUrl || null,
             },
           });
         } else if (onboarding.type === "INDIVIDUAL" && onboarding.vehicleMake && onboarding.vehicleModel && onboarding.vehiclePlate) {
@@ -93,7 +93,7 @@ export async function PATCH(
               year: parseInt(onboarding.vehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.vehiclePlate,
               tier: onboarding.vehicleTier || "ECONOMY",
-              photoUrl: vehiclePhotoDoc?.fileUrl || null,
+              photoUrl: (vehiclePhotoDoc as any)?.fileUrl || null,
             },
           });
         }
@@ -112,7 +112,13 @@ export async function PATCH(
     try {
       await sendNotification({
         eventType: "CHAUFFEUR_ONBOARDING_APPROVED",
-        driverId: onboarding.driverId,
+        recipient: {
+          type: "driver",
+          id: onboarding.driverId,
+          email: onboarding.driver.email,
+          firstName: onboarding.driver.firstName,
+          lastName: onboarding.driver.lastName,
+        },
         data: {
           driverName: onboarding.driver.firstName,
           onboardingType: onboarding.type,
@@ -125,7 +131,13 @@ export async function PATCH(
     try {
       await sendNotification({
         eventType: "CHAUFFEUR_ONBOARDING_REJECTED",
-        driverId: onboarding.driverId,
+        recipient: {
+          type: "driver",
+          id: onboarding.driverId,
+          email: onboarding.driver.email,
+          firstName: onboarding.driver.firstName,
+          lastName: onboarding.driver.lastName,
+        },
         data: {
           driverName: onboarding.driver.firstName,
           reason: adminNote || "Your application did not meet our requirements",
