@@ -237,6 +237,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
   const [status, setStatus]     = useState("All");
   const [page, setPage]         = useState(1);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [refunding,   setRefunding]   = useState<string | null>(null);
   const PER_PAGE = 10;
 
   const load = useCallback(() => {
@@ -264,6 +265,17 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
     const retry = setTimeout(load, 3000);
     return () => clearTimeout(retry);
   }, [load]);
+
+  const handleRefund = async (id: string) => {
+    setRefunding(id);
+    await fetch(`/api/bookings/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "CANCELLED" }),
+    });
+    await load();
+    setRefunding(null);
+  };
 
   const handleConfirm = async (id: string) => {
     setConfirming(id);
@@ -359,7 +371,9 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                     <span className="font-bold text-gray-800 mr-1.5">${b.total.toFixed(2)}</span>
                     {b.paymentStatus === "PAID"
                       ? <span className="text-[11px] text-green-600 font-medium">Paid</span>
-                      : <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "#fef3c7", color: "#d97706" }}>Unpaid</span>
+                      : b.paymentStatus === "REFUNDED"
+                        ? <span className="text-[11px] text-blue-500 font-medium">Refunded</span>
+                        : <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "#fef3c7", color: "#d97706" }}>Unpaid</span>
                     }
                   </td>
                   <td className="px-4 py-3.5">
@@ -376,6 +390,15 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                         className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
                         style={{ background: confirming === b.id ? "#9ca3af" : "#2D0A53" }}>
                         {confirming === b.id ? "…" : "Confirm"}
+                      </button>
+                    )}
+                    {b.status === "CANCELLED" && b.paymentStatus === "PAID" && (
+                      <button
+                        onClick={() => handleRefund(b.id)}
+                        disabled={refunding === b.id}
+                        className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
+                        style={{ background: refunding === b.id ? "#9ca3af" : "#ef4444" }}>
+                        {refunding === b.id ? "…" : "Refund"}
                       </button>
                     )}
                   </td>
@@ -435,7 +458,9 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                   <span className="text-[13px] font-bold text-gray-900">${b.total.toFixed(2)}</span>
                   {b.paymentStatus === "PAID"
                     ? <span className="text-[11px] text-green-600 font-medium">Paid</span>
-                    : <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "#fef3c7", color: "#d97706" }}>Unpaid</span>
+                    : b.paymentStatus === "REFUNDED"
+                      ? <span className="text-[11px] text-blue-500 font-medium">Refunded</span>
+                      : <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "#fef3c7", color: "#d97706" }}>Unpaid</span>
                   }
                   <span className="text-[11px] text-gray-400">{date}</span>
                 </div>
@@ -446,6 +471,15 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                     className="no-hover-fx px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold"
                     style={{ background: confirming === b.id ? "#9ca3af" : "#2D0A53" }}>
                     {confirming === b.id ? "…" : "Confirm"}
+                  </button>
+                )}
+                {b.status === "CANCELLED" && b.paymentStatus === "PAID" && (
+                  <button
+                    onClick={() => handleRefund(b.id)}
+                    disabled={refunding === b.id}
+                    className="no-hover-fx px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold"
+                    style={{ background: refunding === b.id ? "#9ca3af" : "#ef4444" }}>
+                    {refunding === b.id ? "…" : "Refund"}
                   </button>
                 )}
               </div>
