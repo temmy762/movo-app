@@ -54,7 +54,15 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendin
       return;
     }
 
-    /* Payment succeeded — booking already exists, navigate straight to tracking */
+    /* Payment succeeded — mark booking as PAID immediately (webhook is backup only) */
+    if (pendingBookingId) {
+      await fetch(`/api/bookings/${pendingBookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus: "PAID" }),
+      }).catch(() => {});
+    }
+
     const tp: Record<string, string> = { pickup, dropoff, car: carName };
     if (pendingBookingId) tp.bookingId = pendingBookingId;
     if (tier)             tp.tier      = tier;
