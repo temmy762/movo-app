@@ -41,6 +41,28 @@ export async function POST(req: NextRequest) {
         });
 
         if (booking?.user?.email) {
+          // Booking confirmed email
+          sendNotification({
+            eventType: "RIDER_BOOKING_CONFIRMED",
+            recipient: {
+              type: "user",
+              id: booking.user.id,
+              email: booking.user.email,
+              firstName: booking.user.firstName,
+              lastName: booking.user.lastName ?? undefined,
+            },
+            data: {
+              bookingId: booking.id,
+              pickup: booking.pickup,
+              dropoff: booking.dropoff,
+              carTier: booking.carTier,
+              fare: booking.fare,
+              serviceFee: booking.serviceFee,
+              total: booking.total,
+            },
+          }).catch((e) => console.error("[webhook] booking confirmed email failed:", e));
+
+          // Payment receipt email
           sendNotification({
             eventType: "RIDER_PAYMENT_RECEIPT",
             recipient: {

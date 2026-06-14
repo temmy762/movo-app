@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createSession, buildSetCookieHeader } from "@/lib/session";
+import { sendNotification } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,6 +44,12 @@ export async function POST(req: NextRequest) {
     });
 
     const token = await createSession("USER", user.id);
+
+    // Fire welcome email (non-blocking — don't let it delay the response)
+    sendNotification({
+      eventType: "RIDER_WELCOME",
+      recipient: { type: "user", id: user.id, email: user.email, firstName: user.firstName },
+    }).catch((e) => console.error("[register] welcome email failed:", e));
 
     return NextResponse.json(
       { user: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role } },

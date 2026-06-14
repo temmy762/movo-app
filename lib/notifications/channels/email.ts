@@ -58,7 +58,10 @@ export async function sendEmail(
     }
 
     // Generate email content
-    const { subject, html, text } = await template(templateContext);
+    // NOTE: @react-email/render v1.x returns Promise<string> — resolve safely
+    const rawResult = await template(templateContext);
+    const html = await Promise.resolve(rawResult.html as string | Promise<string>);
+    const { subject, text } = rawResult;
 
     // Send email via Resend
     const { data: result, error } = await resend.emails.send({
