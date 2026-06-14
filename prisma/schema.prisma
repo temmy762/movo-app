@@ -241,6 +241,7 @@ model Booking {
   supportTickets  SupportTicket[]
   tripLocations   TripLocation[]
   incidentReports IncidentReport[]
+  messages        BookingMessage[]
 }
 
 // ─── Trip Location (live tracking) ────────────────────────────────────────────
@@ -256,6 +257,20 @@ model TripLocation {
   timestamp DateTime @default(now())
 
   @@index([bookingId, timestamp])
+}
+
+// ─── Booking Chat ────────────────────────────────────────────────────────────
+
+model BookingMessage {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  sender    String   // "driver" | "rider"
+  senderId  String   // driverId or userId
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([bookingId, createdAt])
 }
 
 // ─── Support ──────────────────────────────────────────────────────────────────

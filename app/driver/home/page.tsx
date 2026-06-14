@@ -408,7 +408,7 @@ export default function DriverHomePage() {
                     </div>
                   </div>
                   <button className="no-hover-fx w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center"
-                    onClick={() => router.push("/driver/home/finish/chat")}>
+                    onClick={() => router.push(`/driver/home/finish/chat?bookingId=${activeBooking.id}`)}>  
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>

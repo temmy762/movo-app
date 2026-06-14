@@ -1,33 +1,62 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Message = {
-  id: number;
+  id: string;
   text: string;
-  sender: "me" | "other";
-  time: string;
+  sender: "driver" | "rider";
+  createdAt: string;
 };
 
-const initialMessages: Message[] = [
-  { id: 1, text: "Hello", sender: "me", time: "12:15pm" },
-  { id: 2, text: "Hello Brother\nI will be reach in 10 mins", sender: "other", time: "12:15pm" },
-  { id: 3, text: "Okay", sender: "me", time: "12:15pm" },
-];
+function fmt(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
-export default function ChatPage() {
+function ChatInner() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [input, setInput] = useState("");
+  const searchParams = useSearchParams();
+  const bookingId = searchParams.get("bookingId");
 
-  function sendMessage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput]   = useState("");
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadMessages = useCallback(() => {
+    if (!bookingId) return;
+    fetch(`/api/bookings/${bookingId}/messages`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setMessages(data);
+      })
+      .catch(() => {});
+  }, [bookingId]);
+
+  useEffect(() => {
+    loadMessages();
+    pollRef.current = setInterval(loadMessages, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [loadMessages]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function sendMessage() {
     const text = input.trim();
-    if (!text) return;
-    const now = new Date();
-    const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }).toLowerCase();
-    setMessages((prev) => [...prev, { id: Date.now(), text, sender: "me", time }]);
+    if (!text || !bookingId || sending) return;
+    setSending(true);
     setInput("");
+    await fetch(`/api/bookings/${bookingId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    }).catch(() => {});
+    setSending(false);
+    loadMessages();
   }
 
   return (
@@ -43,8 +72,10 @@ export default function ChatPage() {
             </svg>
           </button>
           <div>
-            <p className="text-[15px] font-bold text-gray-900">Nelson Smith</p>
-            <p className="text-[11px]" style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Online</p>
+            <p className="text-[15px] font-bold text-gray-900">
+              {bookingId ? `Booking #${bookingId.slice(0, 8)}` : "Chat"}
+            </p>
+            <p className="text-[11px]" style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Live Chat</p>
           </div>
         </div>
         <button className="no-hover-fx p-1">
@@ -58,29 +89,38 @@ export default function ChatPage() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex flex-col ${msg.sender === "me" ? "items-end" : "items-start"} gap-1`}>
-            {msg.sender === "other" && (
-              <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden shrink-0">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
-                  <circle cx="12" cy="8" r="4" />
-                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                </svg>
+        {!bookingId && (
+          <p className="text-center text-[13px] text-gray-400 mt-8">No active booking. Open chat from your ride screen.</p>
+        )}
+        {bookingId && messages.length === 0 && (
+          <p className="text-center text-[13px] text-gray-400 mt-8">No messages yet. Say hello!</p>
+        )}
+        {messages.map((msg) => {
+          const isMe = msg.sender === "driver";
+          return (
+            <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"} gap-1`}>
+              {!isMe && (
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                    <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                  </svg>
+                </div>
+              )}
+              <div
+                className="max-w-[75%] px-4 py-2.5 rounded-2xl text-[14px] leading-snug whitespace-pre-line"
+                style={
+                  isMe
+                    ? { background: "linear-gradient(135deg,#2D0A53,#8B7500)", color: "white", borderBottomRightRadius: "4px" }
+                    : { background: "#f3f4f6", color: "#1f2937", borderBottomLeftRadius: "4px" }
+                }
+              >
+                {msg.text}
               </div>
-            )}
-            <div
-              className="max-w-[75%] px-4 py-2.5 rounded-2xl text-[14px] leading-snug whitespace-pre-line"
-              style={
-                msg.sender === "me"
-                  ? { background: "linear-gradient(135deg,#2D0A53,#8B7500)", color: "white", borderBottomRightRadius: "4px" }
-                  : { background: "#f3f4f6", color: "#1f2937", borderBottomLeftRadius: "4px" }
-              }
-            >
-              {msg.text}
+              <p className="text-[10px] text-gray-400">{fmt(msg.createdAt)}</p>
             </div>
-            <p className="text-[10px] text-gray-400">{msg.time}</p>
-          </div>
-        ))}
+          );
+        })}
+        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
@@ -92,21 +132,34 @@ export default function ChatPage() {
           <input
             type="text"
             className="flex-1 bg-transparent text-white placeholder-white/50 text-[14px] focus:outline-none"
-            placeholder="Write Your Message...."
+            placeholder={bookingId ? "Write your message…" : "No active booking"}
+            disabled={!bookingId || sending}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             suppressHydrationWarning
           />
-          <button className="no-hover-fx shrink-0" onClick={sendMessage}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" fill="white" stroke="none" />
-            </svg>
+          <button className="no-hover-fx shrink-0 disabled:opacity-50" onClick={sendMessage} disabled={!bookingId || sending}>
+            {sending
+              ? <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" fill="white" stroke="none" /></svg>
+            }
           </button>
         </div>
       </div>
 
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-full flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-[#2D0A53] rounded-full animate-spin" />
+      </div>
+    }>
+      <ChatInner />
+    </Suspense>
   );
 }
