@@ -43,11 +43,13 @@ function RideCard({
   ride,
   isUpcoming,
   onAction,
+  onGoToRide,
   acting,
 }: {
   ride: Ride;
   isUpcoming: boolean;
   onAction: (id: string, action: "accept" | "reject") => void;
+  onGoToRide: (id: string) => void;
   acting: string | null;
 }) {
   const busy = acting === ride.id;
@@ -120,14 +122,22 @@ function RideCard({
         </div>
       )}
 
-      {/* Confirmed — allow cancellation */}
+      {/* Confirmed — go to active ride flow + cancel option */}
       {isUpcoming && ride.status === "CONFIRMED" && (
-        <div className="pt-3 border-t border-gray-100">
+        <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => onGoToRide(ride.id)}
+            className="no-hover-fx w-full py-2.5 rounded-xl text-[13px] font-bold text-white"
+            style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}
+          >
+            Go to Ride →
+          </button>
           <button
             type="button"
             disabled={busy}
             onClick={() => onAction(ride.id, "reject")}
-            className="no-hover-fx w-full py-2.5 rounded-xl text-[13px] font-bold border border-red-200 text-red-600 bg-red-50 disabled:opacity-50"
+            className="no-hover-fx w-full py-2 rounded-xl text-[12px] font-semibold border border-red-200 text-red-500 bg-red-50 disabled:opacity-50"
           >
             {busy ? "Cancelling…" : "Cancel Ride"}
           </button>
@@ -255,6 +265,7 @@ export default function MyRidesPage() {
             ride={ride}
             isUpcoming={tab === "upcoming"}
             onAction={handleAction}
+            onGoToRide={(id) => { void id; router.push("/driver/home"); }}
             acting={acting}
           />
         ))}

@@ -48,7 +48,7 @@ function MapBackground() {
 
 export default function DriverHomePage() {
   const router = useRouter();
-  type RidePhase = "idle" | "searching" | "requesting" | "accepted" | "started";
+  type RidePhase = "idle" | "searching" | "requesting" | "accepted" | "arrived" | "started";
   const [isOnline, setIsOnline] = useState(false);
   const [ridePhase, setRidePhase] = useState<RidePhase>("idle");
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
@@ -62,6 +62,37 @@ export default function DriverHomePage() {
   const geoWatchRef  = useRef<number | null>(null);
   const lastPushRef  = useRef<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(30);
+
+  // Restore online state + detect active booking on mount
+  useEffect(() => {
+    fetch("/api/driver/active-booking")
+      .then(r => r.json())
+      .then(({ booking }) => {
+        if (booking) {
+          setActiveBooking(booking);
+          setIsOnline(true);
+          localStorage.setItem("driverOnline", "true");
+          setRidePhase(booking.startedAt ? "started" : "accepted");
+          if (booking.startedAt) startLocationTracking(booking.id);
+        } else {
+          const saved = localStorage.getItem("driverOnline") === "true";
+          if (saved) {
+            setIsOnline(true);
+            setRidePhase("searching");
+            startPolling(fetchNextPending);
+          }
+        }
+      })
+      .catch(() => {
+        const saved = localStorage.getItem("driverOnline") === "true";
+        if (saved) {
+          setIsOnline(true);
+          setRidePhase("searching");
+          startPolling(fetchNextPending);
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Guard: redirect drivers who are not ACTIVE away from the dashboard
   useEffect(() => {
@@ -192,6 +223,7 @@ export default function DriverHomePage() {
   async function handleToggleOnline() {
     const next = !isOnline;
     setIsOnline(next);
+    localStorage.setItem("driverOnline", String(next));
     if (next) {
       setRidePhase("searching");
       startPolling(fetchNextPending);
@@ -231,6 +263,10 @@ export default function DriverHomePage() {
     setActiveBooking(null);
     setRidePhase("searching");
     startPolling(fetchNextPending);
+  }
+
+  function handleArrived() {
+    setRidePhase("arrived");
   }
 
   async function handleStartRide() {
@@ -333,11 +369,11 @@ export default function DriverHomePage() {
 
 
         {/* ── Bottom sheet — phase aware ── */}
-        {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "started") && activeBooking && (
+        {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "arrived" || ridePhase === "started") && activeBooking && (
           <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6">
 
-            {/* Rider info row — requesting + accepted */}
-            {(ridePhase === "requesting" || ridePhase === "accepted") && (
+            {/* Rider info row — requesting + accepted + arrived */}
+            {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "arrived") && (
               <>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[15px] font-bold text-gray-900">Ride Request</p>
@@ -440,12 +476,26 @@ export default function DriverHomePage() {
             )}
 
             {ridePhase === "accepted" && (
-              <button type="button" onClick={handleStartRide}
-                disabled={actionLoading}
+              <button type="button" onClick={handleArrived}
                 className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
-                {actionLoading ? "Starting…" : "Start Ride"}
+                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                I&apos;ve Arrived at Pickup
               </button>
+            )}
+
+            {ridePhase === "arrived" && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-50 border border-green-200 mb-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  <p className="text-[12px] font-semibold text-green-700">You&apos;re at the pickup location</p>
+                </div>
+                <button type="button" onClick={handleStartRide}
+                  disabled={actionLoading}
+                  className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                  {actionLoading ? "Starting…" : "Start Ride"}
+                </button>
+              </div>
             )}
 
             {ridePhase === "started" && (
@@ -535,6 +585,7 @@ export default function DriverHomePage() {
                 setShowTripComplete(false);
                 setRidePhase("idle");
                 setIsOnline(false);
+                localStorage.setItem("driverOnline", "false");
                 setActiveBooking(null);
                 router.push("/driver/home/finish");
               }}
