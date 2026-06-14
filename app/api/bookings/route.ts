@@ -52,15 +52,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Geocode addresses to get coordinates
-    const coordinates = await geocodeAddresses(pickup, dropoff);
-    
-    if (!coordinates) {
-      return NextResponse.json(
-        { error: "Could not geocode addresses. Please verify pickup and dropoff locations." },
-        { status: 400 }
-      );
-    }
+    // Geocode addresses to get coordinates (non-fatal — booking proceeds even without coords)
+    const coordinates = await geocodeAddresses(pickup, dropoff).catch(() => null);
 
     const resolvedPaymentStatus: PaymentStatus =
       paymentStatus && VALID_PAYMENT_STATUSES.includes(paymentStatus)
