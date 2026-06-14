@@ -24,7 +24,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     /* ── Atomic claim: only succeeds if booking is still PENDING + unclaimed ── */
     if (status === "CONFIRMED" && session?.driverId) {
       const result = await prisma.booking.updateMany({
-        where: { id, status: "PENDING", driverId: null },
+        where: {
+          id,
+          status: "PENDING",
+          OR: [
+            { driverId: null },
+            { driverId: session.driverId },
+          ],
+        },
         data:  { status: "CONFIRMED", driverId: session.driverId },
       });
 

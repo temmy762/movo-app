@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 type Ride = {
@@ -24,9 +24,37 @@ function formatDateTime(iso: string) {
   return `${date} | ${time}`;
 }
 
-function RideCard({ ride }: { ride: Ride }) {
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { bg: string; color: string; label: string }> = {
+    PENDING:   { bg: "#fef9c3", color: "#854d0e", label: "Awaiting Acceptance" },
+    CONFIRMED: { bg: "#dbeafe", color: "#1e40af", label: "Confirmed" },
+    COMPLETED: { bg: "#dcfce7", color: "#166534", label: "Completed" },
+    CANCELLED: { bg: "#fee2e2", color: "#991b1b", label: "Cancelled" },
+  };
+  const s = map[status] ?? { bg: "#f3f4f6", color: "#6b7280", label: status };
+  return (
+    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.color }}>
+      {s.label}
+    </span>
+  );
+}
+
+function RideCard({
+  ride,
+  isUpcoming,
+  onAction,
+  acting,
+}: {
+  ride: Ride;
+  isUpcoming: boolean;
+  onAction: (id: string, action: "accept" | "reject") => void;
+  acting: string | null;
+}) {
+  const busy = acting === ride.id;
+
   return (
     <div className="bg-white rounded-2xl px-4 py-4 shadow-sm mb-3">
+      {/* Top row */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <div
@@ -43,9 +71,15 @@ function RideCard({ ride }: { ride: Ride }) {
             {ride.carName && <p className="text-[11px] text-gray-400">{ride.carName}</p>}
           </div>
         </div>
-        <span className="text-[14px] font-bold text-red-500">${ride.fare.toFixed(2)}</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-[14px] font-bold" style={{ color: "#2D0A53" }}>
+            £{ride.fare.toFixed(2)}
+          </span>
+          {isUpcoming && <StatusBadge status={ride.status} />}
+        </div>
       </div>
 
+      {/* Route */}
       <div className="flex flex-col gap-1.5 mb-3 pl-1">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }} />
@@ -57,21 +91,60 @@ function RideCard({ ride }: { ride: Ride }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-gray-400">
+      {/* Meta row */}
+      <div className="flex items-center justify-between text-[11px] text-gray-400 mb-3">
         <span>Payment: <span className="font-medium text-gray-600">{ride.paymentStatus === "PAID" ? "Paid" : "Unpaid"}</span></span>
-        <span>Date Time: <span className="font-medium text-gray-600">{formatDateTime(ride.createdAt)}</span></span>
+        <span>{formatDateTime(ride.createdAt)}</span>
       </div>
+
+      {/* Action buttons — upcoming rides only */}
+      {isUpcoming && ride.status === "PENDING" && (
+        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onAction(ride.id, "reject")}
+            className="no-hover-fx py-2.5 rounded-xl text-[13px] font-bold border border-red-200 text-red-600 bg-red-50 disabled:opacity-50"
+          >
+            {busy ? "…" : "Reject"}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onAction(ride.id, "accept")}
+            className="no-hover-fx py-2.5 rounded-xl text-[13px] font-bold text-white disabled:opacity-50"
+            style={{ background: busy ? "#d1d5db" : "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+          >
+            {busy ? "…" : "Accept"}
+          </button>
+        </div>
+      )}
+
+      {/* Confirmed — allow cancellation */}
+      {isUpcoming && ride.status === "CONFIRMED" && (
+        <div className="pt-3 border-t border-gray-100">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onAction(ride.id, "reject")}
+            className="no-hover-fx w-full py-2.5 rounded-xl text-[13px] font-bold border border-red-200 text-red-600 bg-red-50 disabled:opacity-50"
+          >
+            {busy ? "Cancelling…" : "Cancel Ride"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function MyRidesPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<"past" | "upcoming">("past");
+  const [tab, setTab] = useState<"past" | "upcoming">("upcoming");
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadRides = useCallback(() => {
     setLoading(true);
     fetch(`/api/driver/rides?tab=${tab}`)
       .then((r) => r.json())
@@ -79,6 +152,30 @@ export default function MyRidesPage() {
       .catch(() => setRides([]))
       .finally(() => setLoading(false));
   }, [tab]);
+
+  useEffect(() => { loadRides(); }, [loadRides]);
+
+  const handleAction = useCallback(async (id: string, action: "accept" | "reject") => {
+    setActing(id);
+    const newStatus = action === "accept" ? "CONFIRMED" : "CANCELLED";
+    try {
+      const res = await fetch(`/api/bookings/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus, cancelledBy: "driver" }),
+      });
+      if (res.ok) {
+        loadRides();
+      } else {
+        const d = await res.json();
+        alert(d.error ?? "Could not update ride. Please try again.");
+      }
+    } catch {
+      alert("Network error. Please try again.");
+    } finally {
+      setActing(null);
+    }
+  }, [loadRides]);
 
   return (
     <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -96,7 +193,7 @@ export default function MyRidesPage() {
 
       {/* Tabs */}
       <div className="flex bg-white border-b border-gray-100 px-4">
-        {(["past", "upcoming"] as const).map((t) => (
+        {(["upcoming", "past"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -146,14 +243,20 @@ export default function MyRidesPage() {
               No {tab === "past" ? "past" : "upcoming"} rides
             </p>
             <p className="text-[12px] text-gray-400 mt-1">
-              {tab === "past" ? "Completed rides will appear here." : "Confirmed bookings will appear here."}
+              {tab === "past" ? "Completed rides will appear here." : "New ride assignments will appear here."}
             </p>
           </div>
         )}
 
         {/* Real ride cards */}
         {!loading && rides.map((ride) => (
-          <RideCard key={ride.id} ride={ride} />
+          <RideCard
+            key={ride.id}
+            ride={ride}
+            isUpcoming={tab === "upcoming"}
+            onAction={handleAction}
+            acting={acting}
+          />
         ))}
 
       </div>
