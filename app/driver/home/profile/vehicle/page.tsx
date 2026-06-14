@@ -9,6 +9,7 @@ type Vehicle = {
   year: number;
   plate: string;
   tier: string;
+  photoUrl: string | null;
 };
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -56,6 +57,27 @@ export default function VehiclePage() {
           </div>
         ) : vehicle ? (
           <>
+            {/* Vehicle photo */}
+            <div className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4">
+              {vehicle.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={vehicle.photoUrl}
+                  alt={`${vehicle.make} ${vehicle.model}`}
+                  className="w-full h-44 object-cover"
+                />
+              ) : (
+                <div className="w-full h-44 bg-gray-100 flex flex-col items-center justify-center gap-2">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5">
+                    <rect x="2" y="8" width="20" height="12" rx="2" />
+                    <path d="M6 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" />
+                    <circle cx="7" cy="17" r="1.5" /><circle cx="17" cy="17" r="1.5" />
+                  </svg>
+                  <p className="text-[11px] text-gray-400">No photo uploaded</p>
+                </div>
+              )}
+            </div>
+
             <div className="bg-white rounded-2xl px-4 shadow-sm mb-4">
               <InfoRow label="Make" value={vehicle.make} />
               <InfoRow label="Model" value={vehicle.model} />

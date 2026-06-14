@@ -216,7 +216,7 @@ function RideTrackingContent() {
             </div>
             <div className="flex flex-col items-end gap-1">
               <div className="w-[120px] h-[68px] rounded-xl bg-gray-50 overflow-hidden border border-gray-100 relative">
-                <Image src={carImg} alt={car} fill className="object-contain p-1" />
+                <Image src={carImg} alt={car} fill className="object-contain p-1" unoptimized />
               </div>
               {tierLabel && (
                 <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)" }}>

@@ -255,7 +255,7 @@ function AvailableCarsContent() {
                     </div>
                   </div>
                   <div className="relative w-24 h-16 shrink-0">
-                    <Image src={car.img} alt={`${car.make} ${car.model}`} fill className="object-contain" />
+                    <Image src={car.img} alt={`${car.make} ${car.model}`} fill className="object-contain" unoptimized />
                   </div>
                 </div>
 
