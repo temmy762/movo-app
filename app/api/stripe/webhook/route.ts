@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         const intent = event.data.object as Stripe.PaymentIntent;
         await prisma.booking.updateMany({
           where: { stripePaymentIntentId: intent.id },
-          data: { paymentStatus: "PAID", status: "CONFIRMED" },
+          data: { paymentStatus: "PAID" },
         });
 
         /* Fire payment receipt email */
