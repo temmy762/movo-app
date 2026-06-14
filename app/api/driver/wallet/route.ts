@@ -9,21 +9,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [bookings, walletTxs] = await Promise.all([
-    prisma.booking.findMany({
-      where: { driverId: session.driverId, status: "COMPLETED" },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, clientName: true, fare: true, paymentStatus: true, createdAt: true },
-    }),
-    prisma.walletTransaction.findMany({
-      where: { driverId: session.driverId },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+  const SETTLEMENT_HOURS = 48;
+  const settlementCutoff = new Date(Date.now() - SETTLEMENT_HOURS * 60 * 60 * 1000);
 
-  const totalEarned = bookings
-    .filter((b) => b.paymentStatus === "PAID")
-    .reduce((sum, b) => sum + b.fare, 0);
+  const walletTxs = await prisma.walletTransaction.findMany({
+    where: { driverId: session.driverId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  /* Earnings settled (>= 48 h old) vs pending (< 48 h) */
+  const settledEarnings = walletTxs
+    .filter((t) => t.type === "EARNING" && t.status === "COMPLETED" && t.createdAt <= settlementCutoff)
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const pendingEarnings = walletTxs
+    .filter((t) => t.type === "EARNING" && t.status === "COMPLETED" && t.createdAt > settlementCutoff)
+    .reduce((sum, t) => sum + t.amount, 0);
 
   const totalTopups = walletTxs
     .filter((t) => t.type === "TOPUP" && t.status === "COMPLETED")
@@ -33,29 +34,39 @@ export async function GET(req: NextRequest) {
     .filter((t) => t.type === "PAYOUT" && t.status === "COMPLETED")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const availableBalance = totalEarned + totalTopups - totalPayouts;
+  const pendingPayouts = walletTxs
+    .filter((t) => t.type === "PAYOUT" && t.status === "PENDING")
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  const rideEntries = bookings.map((b) => ({
-    id: b.id,
-    label: `Ride — ${b.clientName}`,
-    date: b.createdAt.toISOString(),
-    amount: b.fare,
-    type: "in" as const,
-    status: b.paymentStatus === "PAID" ? "COMPLETED" : "PENDING",
-  }));
+  /* Available = only settled earnings + topups - completed payouts */
+  const availableBalance = parseFloat((settledEarnings + totalTopups - totalPayouts).toFixed(2));
+  const totalEarned      = parseFloat((settledEarnings + pendingEarnings).toFixed(2));
 
-  const walletEntries = walletTxs.map((t) => ({
-    id: t.id,
-    label: t.note ?? (t.type === "PAYOUT" ? "Send to bank" : "Add money"),
-    date: t.createdAt.toISOString(),
-    amount: t.amount,
-    type: t.type === "PAYOUT" ? ("out" as const) : ("in" as const),
-    status: t.status,
-  }));
+  const walletEntries = walletTxs.map((t) => {
+    const isPendingEarning = t.type === "EARNING" && t.createdAt > settlementCutoff;
+    return {
+      id: t.id,
+      label: t.note ?? (t.type === "PAYOUT" ? "Send to bank" : t.type === "EARNING" ? "Trip earning" : "Add money"),
+      date: t.createdAt.toISOString(),
+      amount: t.amount,
+      type: t.type === "PAYOUT" ? ("out" as const) : ("in" as const),
+      status: isPendingEarning ? "PENDING_SETTLEMENT" : t.status,
+      settlesAt: isPendingEarning
+        ? new Date(t.createdAt.getTime() + SETTLEMENT_HOURS * 60 * 60 * 1000).toISOString()
+        : null,
+    };
+  });
 
-  const transactions = [...rideEntries, ...walletEntries].sort(
+  const transactions = walletEntries.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  return NextResponse.json({ availableBalance, totalEarned, transactions });
+  return NextResponse.json({
+    availableBalance,
+    totalEarned,
+    pendingEarnings: parseFloat(pendingEarnings.toFixed(2)),
+    pendingPayouts,
+    settlementHours: SETTLEMENT_HOURS,
+    transactions,
+  });
 }

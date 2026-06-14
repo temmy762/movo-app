@@ -200,6 +200,8 @@ type Booking = {
   status: BookingStatus;
   paymentStatus: PaymentStatus;
   stripePaymentIntentId: string | null;
+  refundId: string | null;
+  cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -218,7 +220,7 @@ const tierColor: Record<string, string> = {
   classic: "#64748b", premium: "#16a34a", black: "white",
 };
 
-const COLS = ["Booking ID","Date","Client","Car","Pickup","Dropoff","Payment","Status","Action"];
+const COLS = ["Booking ID","Date","Client","Car","Pickup","Dropoff","Payment","Status","Actions"];
 
 function SortIcon() {
   return (
@@ -235,9 +237,12 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState("");
   const [status, setStatus]     = useState("All");
+  const [payFilter, setPayFilter] = useState("All");
   const [page, setPage]         = useState(1);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [refunding,   setRefunding]   = useState<string | null>(null);
+  const [refundModal, setRefundModal] = useState<Booking | null>(null);
+  const [refundAmt, setRefundAmt] = useState("");
   const PER_PAGE = 10;
 
   const load = useCallback(() => {
@@ -266,15 +271,21 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
     return () => clearTimeout(retry);
   }, [load]);
 
-  const handleRefund = async (id: string) => {
+  const handleRefund = async (id: string, amount?: number) => {
     setRefunding(id);
     await fetch(`/api/bookings/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "CANCELLED" }),
+      body: JSON.stringify({
+        status: "CANCELLED",
+        cancelledBy: "admin",
+        ...(amount ? { refundAmount: amount } : {}),
+      }),
     });
     await load();
     setRefunding(null);
+    setRefundModal(null);
+    setRefundAmt("");
   };
 
   const handleConfirm = async (id: string) => {
@@ -290,6 +301,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
 
   const filtered = bookings.filter(b =>
     (status === "All" || b.status === status) &&
+    (payFilter === "All" || b.paymentStatus === payFilter) &&
     (b.clientName.toLowerCase().includes(search.toLowerCase()) ||
      b.id.toLowerCase().includes(search.toLowerCase()) ||
      b.carName.toLowerCase().includes(search.toLowerCase()))
@@ -322,6 +334,17 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
               className="text-[12px] text-gray-600 focus:outline-none bg-transparent cursor-pointer" suppressHydrationWarning>
               <option value="All">All Statuses</option>
               {["PENDING","CONFIRMED","COMPLETED","CANCELLED"].map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          {/* Payment filter */}
+          <div className="flex items-center gap-1.5 border border-gray-200 rounded-xl px-3 py-2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+              <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+            </svg>
+            <select value={payFilter} onChange={e => { setPayFilter(e.target.value); setPage(1); }}
+              className="text-[12px] text-gray-600 focus:outline-none bg-transparent cursor-pointer" suppressHydrationWarning>
+              <option value="All">All Payments</option>
+              {["UNPAID","PAID","FAILED","REFUNDED"].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <button onClick={load} className="no-hover-fx px-4 py-2 rounded-xl text-white text-[12px] font-semibold"
@@ -383,24 +406,28 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                     </span>
                   </td>
                   <td className="px-4 py-3.5">
-                    {b.status === "PENDING" && (
-                      <button
-                        onClick={() => handleConfirm(b.id)}
-                        disabled={confirming === b.id}
-                        className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
-                        style={{ background: confirming === b.id ? "#9ca3af" : "#2D0A53" }}>
-                        {confirming === b.id ? "…" : "Confirm"}
-                      </button>
-                    )}
-                    {b.status === "CANCELLED" && b.paymentStatus === "PAID" && (
-                      <button
-                        onClick={() => handleRefund(b.id)}
-                        disabled={refunding === b.id}
-                        className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
-                        style={{ background: refunding === b.id ? "#9ca3af" : "#ef4444" }}>
-                        {refunding === b.id ? "…" : "Refund"}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {b.status === "PENDING" && (
+                        <button
+                          onClick={() => handleConfirm(b.id)}
+                          disabled={confirming === b.id}
+                          className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
+                          style={{ background: confirming === b.id ? "#9ca3af" : "#2D0A53" }}>
+                          {confirming === b.id ? "…" : "Confirm"}
+                        </button>
+                      )}
+                      {b.paymentStatus === "PAID" && b.status !== "CANCELLED" && (
+                        <button
+                          onClick={() => { setRefundModal(b); setRefundAmt(""); }}
+                          className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
+                          style={{ background: "#ef4444" }}>
+                          Refund
+                        </button>
+                      )}
+                      {b.refundId && (
+                        <span className="text-[10px] font-mono text-blue-500" title={`Refund ID: ${b.refundId}`}>✓ Refunded</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -473,20 +500,60 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                     {confirming === b.id ? "…" : "Confirm"}
                   </button>
                 )}
-                {b.status === "CANCELLED" && b.paymentStatus === "PAID" && (
+                {b.paymentStatus === "PAID" && b.status !== "CANCELLED" && (
                   <button
-                    onClick={() => handleRefund(b.id)}
-                    disabled={refunding === b.id}
+                    onClick={() => { setRefundModal(b); setRefundAmt(""); }}
                     className="no-hover-fx px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold"
-                    style={{ background: refunding === b.id ? "#9ca3af" : "#ef4444" }}>
-                    {refunding === b.id ? "…" : "Refund"}
+                    style={{ background: "#ef4444" }}>
+                    Refund
                   </button>
+                )}
+                {b.refundId && (
+                  <span className="text-[10px] font-mono text-blue-500">✓ Refunded</span>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Partial Refund Modal */}
+      {refundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-[15px] font-bold text-gray-900 mb-1">Issue Refund</h3>
+            <p className="text-[12px] text-gray-400 mb-4">
+              Booking <span className="font-mono">{refundModal.id.slice(0,10)}…</span> · Total paid: <strong>${refundModal.total.toFixed(2)}</strong>
+            </p>
+            <label className="text-[12px] font-semibold text-gray-600 block mb-1">Refund amount (USD)</label>
+            <input
+              type="number"
+              min="0.01"
+              max={refundModal.total}
+              step="0.01"
+              placeholder={`Full refund = $${refundModal.total.toFixed(2)}`}
+              value={refundAmt}
+              onChange={e => setRefundAmt(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-[#2D0A53] mb-1"
+            />
+            <p className="text-[11px] text-gray-400 mb-5">Leave empty for full refund.</p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setRefundModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700">
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={refunding === refundModal.id}
+                onClick={() => handleRefund(refundModal.id, refundAmt ? parseFloat(refundAmt) : undefined)}
+                className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-bold"
+                style={{ background: refunding === refundModal.id ? "#9ca3af" : "#ef4444" }}>
+                {refunding === refundModal.id ? "Processing…" : "Confirm Refund"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-gray-100">

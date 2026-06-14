@@ -1,33 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
-function mapPaymentStatus(ps: string): "Completed" | "Awaiting" | "Overdue" {
-  if (ps === "PAID")    return "Completed";
-  if (ps === "FAILED" || ps === "REFUNDED") return "Overdue";
+async function requireAdmin(req: NextRequest) {
+  const session = await getSession(req);
+  if (!session || session.role !== "ADMIN") return false;
+  return true;
+}
+
+function mapPaymentStatus(ps: string): "Completed" | "Awaiting" | "Overdue" | "Refunded" {
+  if (ps === "PAID")     return "Completed";
+  if (ps === "REFUNDED") return "Refunded";
+  if (ps === "FAILED")   return "Overdue";
   return "Awaiting";
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!(await requireAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const bookings = await prisma.booking.findMany({
       orderBy: { createdAt: "desc" },
-      where:  { status: { not: "CANCELLED" as never } },
       select: {
         id: true, clientName: true, carName: true, carTier: true,
-        fare: true, total: true, paymentStatus: true, createdAt: true,
+        fare: true, serviceFee: true, total: true, paymentStatus: true,
+        status: true, stripePaymentIntentId: true, refundId: true, createdAt: true,
       },
     });
 
     const payments = bookings.map(b => ({
-      id:        `INV-${b.id.slice(-6).toUpperCase()}`,
-      bookingId: b.id,
-      client:     b.clientName,
-      car:        b.carName,
-      ratePerDay: Math.round(b.fare * 100) / 100,
-      rentalDays: 1,
-      amount:     Math.round(b.total * 100) / 100,
-      dueDate:    new Date(b.createdAt).toISOString().split("T")[0],
-      status:     mapPaymentStatus(b.paymentStatus),
+      id:          `INV-${b.id.slice(-6).toUpperCase()}`,
+      bookingId:   b.id,
+      client:      b.clientName,
+      car:         b.carName,
+      ratePerDay:  Math.round(b.fare * 100) / 100,
+      serviceFee:  Math.round(b.serviceFee * 100) / 100,
+      rentalDays:  1,
+      amount:      Math.round(b.total * 100) / 100,
+      dueDate:     new Date(b.createdAt).toISOString().split("T")[0],
+      status:      mapPaymentStatus(b.paymentStatus),
+      bookingStatus: b.status,
+      hasStripe:   !!b.stripePaymentIntentId,
+      refundId:    b.refundId ?? null,
     }));
 
     return NextResponse.json(payments);
@@ -37,40 +52,18 @@ export async function GET() {
   }
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const { client, car, ratePerDay, rentalDays, amount, dueDate, status } = await req.json();
-    if (!client || !car) return NextResponse.json({ error: "client and car required" }, { status: 400 });
-
-    const psMap: Record<string, string> = { Completed: "PAID", Awaiting: "UNPAID", Overdue: "FAILED" };
-    const booking = await prisma.booking.create({
-      data: {
-        clientName: client, carName: car, carTier: "STANDARD",
-        pickup: "N/A", dropoff: "N/A",
-        fare: Number(ratePerDay) || 0, serviceFee: 0,
-        total: Number(amount) || (Number(ratePerDay) * Number(rentalDays)),
-        status: "CONFIRMED" as never,
-        paymentStatus: (psMap[status] ?? "UNPAID") as never,
-      },
-    });
-    return NextResponse.json({
-      id:        `INV-${booking.id.slice(-6).toUpperCase()}`,
-      bookingId: booking.id,
-      dueDate:   dueDate ?? new Date().toISOString().split("T")[0],
-      rentalDays: Number(rentalDays) || 1,
-    });
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Failed to create payment" }, { status: 500 });
-  }
-}
-
 export async function PATCH(req: NextRequest) {
+  if (!(await requireAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const { bookingId, paymentStatus } = await req.json();
     if (!bookingId) return NextResponse.json({ error: "bookingId required" }, { status: 400 });
 
-    const dbStatus = paymentStatus === "Completed" ? "PAID" : paymentStatus === "Overdue" ? "FAILED" : "UNPAID";
+    const psMap: Record<string, string> = {
+      Completed: "PAID", Overdue: "FAILED", Awaiting: "UNPAID", Refunded: "REFUNDED",
+    };
+    const dbStatus = psMap[paymentStatus] ?? "UNPAID";
     await prisma.booking.update({ where: { id: bookingId }, data: { paymentStatus: dbStatus as never } });
     return NextResponse.json({ success: true });
   } catch (e) {

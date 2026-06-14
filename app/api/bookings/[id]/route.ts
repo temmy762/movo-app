@@ -51,3 +51,25 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const body = await req.json();
+
+    const allowedFields = ["stripePaymentIntentId", "paymentStatus", "clientName"];
+    const data: Record<string, unknown> = {};
+    for (const field of allowedFields) {
+      if (field in body) data[field] = body[field];
+    }
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
+    const booking = await prisma.booking.update({ where: { id }, data });
+    return NextResponse.json(booking);
+  } catch {
+    return NextResponse.json({ error: "Failed to update booking" }, { status: 500 });
+  }
+}

@@ -38,7 +38,8 @@ function RideTrackingContent() {
   const [vehicleSeats,   setVehicleSeats]   = useState<number>(4);
   const [vehicleImg,     setVehicleImg]     = useState<string>("");
   const [driverPosition, setDriverPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const locationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationPollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const statusPollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ── Modal states ── */
   const [showMessage,  setShowMessage]  = useState(false);
@@ -98,13 +99,39 @@ function RideTrackingContent() {
         .catch(() => {});
     };
 
-    poll(); // immediate first fetch
+    poll();
     locationPollRef.current = setInterval(poll, 6000);
 
     return () => {
       if (locationPollRef.current) clearInterval(locationPollRef.current);
     };
   }, [bookingId]);
+
+  /* ── Booking status polling → auto-redirect on COMPLETED / CANCELLED ── */
+  useEffect(() => {
+    if (!bookingId) return;
+
+    const checkStatus = () => {
+      fetch(`/api/bookings/${bookingId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.status === "COMPLETED") {
+            if (statusPollRef.current) clearInterval(statusPollRef.current);
+            router.replace(`/home/ride/completed?bookingId=${bookingId}`);
+          } else if (data?.status === "CANCELLED") {
+            if (statusPollRef.current) clearInterval(statusPollRef.current);
+            router.replace("/home");
+          }
+        })
+        .catch(() => {});
+    };
+
+    statusPollRef.current = setInterval(checkStatus, 8000);
+
+    return () => {
+      if (statusPollRef.current) clearInterval(statusPollRef.current);
+    };
+  }, [bookingId, router]);
 
   /* ── Directions callback from RideMap ── */
   const handleDirectionsFetched = useCallback(
@@ -132,7 +159,7 @@ function RideTrackingContent() {
         await fetch(`/api/bookings/${bookingId}/status`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "CANCELLED" }),
+          body: JSON.stringify({ status: "CANCELLED", cancelledBy: "user" }),
         });
       }
     } catch { /* silent — still navigate away */ }

@@ -33,6 +33,7 @@ function SectionGroup({ title, children }: { title: string; children: React.Reac
 export default function DriverProfilePage() {
   const router = useRouter();
   const [photo, setPhoto] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { user } = useCurrentUser();
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [totalReviews, setTotalReviews] = useState(0);
@@ -45,7 +46,27 @@ export default function DriverProfilePage() {
         setTotalReviews(d.totalReviews ?? 0);
       })
       .catch(() => {});
+
+    /* Load persisted profile photo */
+    fetch("/api/driver/profile/photo")
+      .then((r) => r.json())
+      .then((d) => { if (d.photoUrl) setPhoto(d.photoUrl); })
+      .catch(() => {});
   }, []);
+
+  const handlePhotoChange = async (file: File) => {
+    setUploading(true);
+    /* Preview immediately */
+    setPhoto(URL.createObjectURL(file));
+    const fd = new FormData();
+    fd.append("photo", file);
+    try {
+      const res = await fetch("/api/driver/profile/photo", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.photoUrl) setPhoto(data.photoUrl);
+    } catch { /* keep preview */ }
+    setUploading(false);
+  };
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -107,17 +128,20 @@ export default function DriverProfilePage() {
               </div>
             </div>
             <label
-              className="text-[12px] font-bold cursor-pointer"
+              className="text-[12px] font-bold cursor-pointer flex items-center gap-1.5"
               style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
             >
-              UPLOAD
+              {uploading ? (
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" style={{ WebkitTextFillColor: "initial" }} />
+              ) : "UPLOAD"}
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
+                disabled={uploading}
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) setPhoto(URL.createObjectURL(f));
+                  if (f) handlePhotoChange(f);
                 }}
               />
             </label>
@@ -128,6 +152,10 @@ export default function DriverProfilePage() {
         <div>
           <SectionGroup title="Vehicle">
             <SectionRow label="Default Vehicles" onClick={() => router.push("/driver/home/profile/vehicle")} />
+          </SectionGroup>
+
+          <SectionGroup title="Payments">
+            <SectionRow label="Banking Details" onClick={() => router.push("/driver/home/profile/banking")} />
           </SectionGroup>
 
           <SectionGroup title="Support">

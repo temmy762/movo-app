@@ -10,11 +10,14 @@ type Transaction = {
   amount: number;
   type: "in" | "out";
   status: string;
+  settlesAt: string | null;
 };
 
 type WalletData = {
   availableBalance: number;
   totalEarned: number;
+  pendingEarnings: number;
+  settlementHours: number;
   transactions: Transaction[];
 };
 
@@ -52,9 +55,17 @@ function TransactionRow({ tx }: { tx: Transaction }) {
         <p className="text-[13px] font-bold" style={{ color: isIn ? "#16a34a" : "#e11d48" }}>
           {isIn ? "+" : "-"}${tx.amount.toFixed(2)}
         </p>
-        <p className="text-[10px]" style={{ color: tx.status === "COMPLETED" ? "#16a34a" : "#d97706" }}>
-          {tx.status === "COMPLETED" ? "Completed" : "Pending"}
-        </p>
+        {tx.status === "PENDING_SETTLEMENT" && tx.settlesAt ? (
+          <p className="text-[10px]" style={{ color: "#0284c7" }}>
+            Settling {new Date(tx.settlesAt) > new Date()
+              ? `in ~${Math.ceil((new Date(tx.settlesAt).getTime() - Date.now()) / 3600000)}h`
+              : "soon"}
+          </p>
+        ) : (
+          <p className="text-[10px]" style={{ color: tx.status === "COMPLETED" ? "#16a34a" : "#d97706" }}>
+            {tx.status === "COMPLETED" ? "Completed" : "Pending"}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -153,7 +164,21 @@ export default function WalletPage() {
             <p className="text-[32px] font-bold">${(wallet?.availableBalance ?? 0).toFixed(2)}</p>
           )}
           {!loading && (
-            <p className="text-[11px] opacity-60 mt-1">Total earned: ${(wallet?.totalEarned ?? 0).toFixed(2)}</p>
+            <div className="flex items-center gap-4 mt-2">
+              <div>
+                <p className="text-[10px] opacity-50">Total Earned</p>
+                <p className="text-[13px] font-semibold opacity-90">${(wallet?.totalEarned ?? 0).toFixed(2)}</p>
+              </div>
+              {(wallet?.pendingEarnings ?? 0) > 0 && (
+                <div className="border-l border-white/20 pl-4">
+                  <p className="text-[10px] opacity-50">Pending Settlement</p>
+                  <p className="text-[13px] font-semibold" style={{ color: "#93c5fd" }}>
+                    ${(wallet.pendingEarnings).toFixed(2)}
+                    <span className="text-[10px] opacity-60 ml-1">({wallet.settlementHours}h hold)</span>
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

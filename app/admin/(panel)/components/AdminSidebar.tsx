@@ -102,8 +102,10 @@ const navItems: NavEntry[] = [
       </svg>
     ),
     children: [
-      { label: "Payments", href: "/admin/financials/payments" },
-      { label: "Expenses", href: "/admin/financials/expenses" },
+      { label: "Payments",  href: "/admin/financials/payments" },
+      { label: "Expenses",  href: "/admin/financials/expenses" },
+      { label: "Payouts",   href: "/admin/financials/payouts" },
+      { label: "Analytics", href: "/admin/financials/analytics" },
     ],
   },
   {

@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status } = body as { status: BookingStatus };
+    const { status, cancelledBy, refundAmount } = body as { status: BookingStatus; cancelledBy?: string; refundAmount?: number };
     const session = await getSession(req);
 
     if (!VALID_STATUSES.includes(status)) {
@@ -43,26 +43,155 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (status === "CANCELLED") {
       const existing = await prisma.booking.findUnique({ where: { id } });
 
-      if (existing?.stripePaymentIntentId && existing.paymentStatus === "PAID") {
+      if (!existing) {
+        return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+      }
+
+      /* Block double-cancel */
+      if (existing.status === "CANCELLED") {
+        return NextResponse.json({ ...existing, refunded: existing.paymentStatus === "REFUNDED" });
+      }
+
+      /* Block cancellation of an already-started trip */
+      if (existing.startedAt) {
+        return NextResponse.json(
+          { error: "Cannot cancel a trip that has already started" },
+          { status: 409 }
+        );
+      }
+
+      const now = new Date();
+      const caller = cancelledBy ?? (session?.driverId ? "driver" : session?.userId ? "user" : "admin");
+
+      if (existing.stripePaymentIntentId && existing.paymentStatus === "PAID") {
         try {
-          await stripe.refunds.create({ payment_intent: existing.stripePaymentIntentId });
+          /* ── Cancellation policy ── */
+          const msElapsed    = now.getTime() - new Date(existing.createdAt).getTime();
+          const within5Min   = msElapsed < 5 * 60 * 1000;
+          const noDriver     = !existing.driverId;
+          const isAdminForce = caller === "admin";
+
+          let policyRefundAmount: number | undefined;
+
+          if (isAdminForce || refundAmount !== undefined) {
+            /* Admin-specified amount overrides policy */
+            policyRefundAmount = refundAmount;
+          } else if (within5Min || noDriver) {
+            /* Full refund — free cancellation window or unassigned */
+            policyRefundAmount = undefined;
+          } else {
+            /* Partial: 50% refund */
+            policyRefundAmount = parseFloat((existing.total * 0.50).toFixed(2));
+          }
+
+          const refundParams: Stripe.RefundCreateParams = { payment_intent: existing.stripePaymentIntentId };
+          if (policyRefundAmount && policyRefundAmount > 0 && policyRefundAmount < existing.total) {
+            refundParams.amount = Math.round(policyRefundAmount * 100); /* cents */
+          }
+          const refund = await stripe.refunds.create(refundParams);
+          const isPartial = !!refundParams.amount;
           const booking = await prisma.booking.update({
             where: { id },
-            data: { status: "CANCELLED", paymentStatus: "REFUNDED" },
+            data: {
+              status: "CANCELLED",
+              paymentStatus: "REFUNDED",
+              cancelledAt: now,
+              cancelledBy: caller,
+              refundId: refund.id,
+            },
           });
-          return NextResponse.json({ ...booking, refunded: true });
+          return NextResponse.json({ ...booking, refunded: true, partialRefund: isPartial });
         } catch (refundErr) {
           console.error("[Stripe] Refund failed:", refundErr);
           const booking = await prisma.booking.update({
             where: { id },
-            data: { status: "CANCELLED" },
+            data: { status: "CANCELLED", cancelledAt: now, cancelledBy: caller },
           });
-          return NextResponse.json({ ...booking, refunded: false, refundError: "Refund could not be processed automatically. Please refund manually in Stripe." });
+          return NextResponse.json({
+            ...booking,
+            refunded: false,
+            refundError: "Refund could not be processed automatically. Please refund manually via admin dashboard.",
+          });
         }
       }
+
+      /* No payment to refund — just cancel */
+      const booking = await prisma.booking.update({
+        where: { id },
+        data: { status: "CANCELLED", cancelledAt: now, cancelledBy: caller },
+      });
+      return NextResponse.json({ ...booking, refunded: false });
     }
 
-    /* ── All other status transitions (COMPLETED, etc.) ── */
+    /* ── COMPLETED — update booking and auto-credit driver earnings ── */
+    if (status === "COMPLETED") {
+      const existing = await prisma.booking.findUnique({ where: { id } });
+
+      if (!existing) {
+        return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+      }
+
+      const booking = await prisma.booking.update({
+        where: { id },
+        data: { status: "COMPLETED", completedAt: new Date() },
+      });
+
+      /* Auto-credit driver earnings after platform commission + fleet split */
+      if (existing.driverId && existing.fare > 0) {
+        const [tierConfig, driver] = await Promise.all([
+          prisma.vehicleTierConfig.findFirst({
+            where: { tier: { equals: existing.carTier ?? "classic", mode: "insensitive" } },
+            select: { commissionRate: true },
+          }).catch(() => null),
+          prisma.driver.findUnique({
+            where: { id: existing.driverId },
+            select: { fleetOwnerId: true, fleetDriverSplit: true },
+          }).catch(() => null),
+        ]);
+
+        const commission = tierConfig?.commissionRate ?? 0.20;
+        const netAfterPlatform = parseFloat((existing.fare * (1 - commission)).toFixed(2));
+
+        const driverSplit     = driver?.fleetDriverSplit ?? 1.0;
+        const driverEarning   = parseFloat((netAfterPlatform * driverSplit).toFixed(2));
+        const fleetEarning    = parseFloat((netAfterPlatform * (1 - driverSplit)).toFixed(2));
+
+        const txNote = `Trip earning — booking ${id} (${Math.round(commission * 100)}% platform fee)`;
+
+        const txOps: Promise<unknown>[] = [
+          prisma.walletTransaction.create({
+            data: {
+              driverId: existing.driverId,
+              type: "EARNING",
+              status: "COMPLETED",
+              amount: driverEarning,
+              note: txNote,
+            },
+          }),
+        ];
+
+        /* Credit fleet owner if this driver belongs to a fleet */
+        if (driver?.fleetOwnerId && fleetEarning > 0) {
+          txOps.push(
+            prisma.walletTransaction.create({
+              data: {
+                driverId: driver.fleetOwnerId,
+                type: "EARNING",
+                status: "COMPLETED",
+                amount: fleetEarning,
+                note: `Fleet earning — booking ${id}`,
+              },
+            })
+          );
+        }
+
+        await Promise.all(txOps);
+      }
+
+      return NextResponse.json(booking);
+    }
+
+    /* ── All other status transitions ── */
     const booking = await prisma.booking.update({
       where: { id },
       data: { status },

@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
         where: {
           status: "PENDING",
           driverId: null,
+          paymentStatus: "PAID",
           ...(tier ? { carTier: tier } : {}),
         },
         orderBy: { createdAt: "asc" },

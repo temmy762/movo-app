@@ -8,17 +8,22 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-const FARE = 30.00;
-const SERVICE_FEE = 5.50;
-const TOTAL = 35.50;
-
 const carTierMap: Record<string, string> = {
   "Movo Classic": "classic",
   "Movo Premium": "premium",
   "Movo Privé Black": "black",
 };
 
-function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, clientName }: { pickup: string; dropoff: string; carName: string; tier: string; carImg: string; driverId: string; clientName: string }) {
+type FareEstimate = { fare: number; serviceFee: number; total: number; distanceKm: number | null; durationMin: number | null };
+
+type CheckoutFormProps = {
+  pickup: string; dropoff: string; carName: string;
+  tier: string; carImg: string; driverId: string;
+  pendingBookingId: string | null;
+  estimate: FareEstimate | null;
+};
+
+function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendingBookingId, estimate }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -30,47 +35,32 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
     setSubmitting(true);
     setError(null);
 
-    const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+    const { error: stripeError } = await stripe.confirmPayment({
       elements,
       redirect: "if_required",
     });
 
     if (stripeError) {
+      /* Payment failed — cancel the pre-created booking so it's cleaned up */
+      if (pendingBookingId) {
+        fetch(`/api/bookings/${pendingBookingId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "CANCELLED", cancelledBy: "payment_failed" }),
+        }).catch(() => {});
+      }
       setError(stripeError.message ?? "Payment failed. Please try again.");
       setSubmitting(false);
       return;
     }
 
-    try {
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientName,
-          pickup,
-          dropoff,
-          carTier: tier || carTierMap[carName] || "classic",
-          carName,
-          fare: FARE,
-          serviceFee: SERVICE_FEE,
-          total: TOTAL,
-          paymentStatus: "PAID",
-          stripePaymentIntentId: paymentIntent?.id ?? null,
-          ...(driverId ? { driverId } : {}),
-        }),
-      });
-      const booking = await res.json();
-      const tp: Record<string, string> = { pickup, dropoff, car: carName };
-      if (booking?.id)  tp.bookingId = booking.id;
-      if (tier)          tp.tier      = tier;
-      if (carImg)        tp.carImg    = carImg;
-      if (driverId)      tp.driverId  = driverId;
-      const params = new URLSearchParams(tp);
-      router.push(`/home/ride/tracking?${params.toString()}`);
-    } catch {
-      setError("Booking could not be saved. Please contact support.");
-      setSubmitting(false);
-    }
+    /* Payment succeeded — booking already exists, navigate straight to tracking */
+    const tp: Record<string, string> = { pickup, dropoff, car: carName };
+    if (pendingBookingId) tp.bookingId = pendingBookingId;
+    if (tier)             tp.tier      = tier;
+    if (carImg)           tp.carImg    = carImg;
+    if (driverId)         tp.driverId  = driverId;
+    router.push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
   };
 
   return (
@@ -86,10 +76,10 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!stripe || submitting}
+            disabled={!stripe || submitting || !pendingBookingId}
             className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
             style={{
-              background: !stripe || submitting
+              background: !stripe || submitting || !pendingBookingId
                 ? "#9ca3af"
                 : "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
             }}
@@ -111,24 +101,79 @@ function ConfirmPayContent() {
   const tier      = searchParams.get("tier")     || "";
   const carImg    = searchParams.get("carImg")   || "";
   const driverId  = searchParams.get("driverId") || "";
+
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
+  const [estimate, setEstimate] = useState<FareEstimate | null>(null);
+  const [estimating, setEstimating] = useState(true);
   const { user } = useCurrentUser();
   const clientName = user ? `${user.firstName} ${user.lastName}`.trim() : "Guest";
+  const resolvedTier = tier || carTierMap[carName] || "classic";
 
+  /* Step 1 — Fetch fare estimate */
   useEffect(() => {
-    fetch("/api/stripe/create-payment-intent", {
+    if (!pickup || !dropoff) { setEstimating(false); return; }
+    setEstimating(true);
+    fetch(`/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.fare != null) setEstimate(d); })
+      .catch(() => {})
+      .finally(() => setEstimating(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup, dropoff, resolvedTier]);
+
+  /* Step 2 — Once estimate + user ready, create intent + booking in parallel */
+  useEffect(() => {
+    if (!clientName || clientName === "Guest" || !estimate) return;
+
+    const { fare, serviceFee, total } = estimate;
+
+    const idempotencyKey = `pi-${clientName}-${resolvedTier}-${Math.round(total * 100)}-${pickup.slice(0, 20)}`.replace(/\s+/g, "_");
+
+    const intentPromise = fetch("/api/stripe/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: TOTAL }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.clientSecret) setClientSecret(d.clientSecret);
-        else setIntentError("Could not initialise payment. Please try again.");
+      body: JSON.stringify({ amount: total, idempotencyKey }),
+    }).then((r) => r.json());
+
+    const bookingPromise = fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientName,
+        pickup,
+        dropoff,
+        carTier: resolvedTier,
+        carName,
+        fare,
+        serviceFee,
+        total,
+        paymentStatus: "UNPAID",
+        ...(driverId ? { driverId } : {}),
+      }),
+    }).then((r) => r.json());
+
+    Promise.all([intentPromise, bookingPromise])
+      .then(([intentData, bookingData]) => {
+        if (intentData.clientSecret) {
+          setClientSecret(intentData.clientSecret);
+          if (bookingData?.id && intentData.id) {
+            fetch(`/api/bookings/${bookingData.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ stripePaymentIntentId: intentData.id }),
+            }).catch(() => {});
+          }
+        } else {
+          setIntentError("Could not initialise payment. Please try again.");
+        }
+        if (bookingData?.id) setPendingBookingId(bookingData.id);
+        else setIntentError("Could not create booking. Please try again.");
       })
       .catch(() => setIntentError("Could not initialise payment. Please try again."));
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientName, estimate]);
 
   return (
     <div
@@ -202,7 +247,7 @@ function ConfirmPayContent() {
             )}
             {clientSecret && (
               <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm pickup={pickup} dropoff={dropoff} carName={carName} tier={tier} carImg={carImg} driverId={driverId} clientName={clientName} />
+                <CheckoutForm pickup={pickup} dropoff={dropoff} carName={carName} tier={tier} carImg={carImg} driverId={driverId} pendingBookingId={pendingBookingId} estimate={estimate} />
               </Elements>
             )}
           </div>
@@ -218,19 +263,40 @@ function ConfirmPayContent() {
                 "linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #2D0A53 0%, #8B7500 100%) border-box",
             }}
           >
-            <div className="flex justify-between items-center">
-              <span className="text-[13px] md:text-[14px] text-gray-600">Ride Fare</span>
-              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">${FARE.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
-              <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">${SERVICE_FEE.toFixed(2)}</span>
-            </div>
-            <div className="h-px bg-gray-100 my-1" />
-            <div className="flex justify-between items-center">
-              <span className="text-[14px] md:text-[15px] font-bold text-gray-900">Total</span>
-              <span className="text-[14px] md:text-[15px] font-bold text-gray-900">${TOTAL.toFixed(2)}</span>
-            </div>
+            {estimating ? (
+              <div className="flex items-center gap-2 text-[13px] text-gray-400 py-2">
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin shrink-0" />
+                Calculating fare…
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-[13px] md:text-[14px] text-gray-600">Ride Fare</span>
+                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">
+                    {estimate ? `$${estimate.fare.toFixed(2)}` : "—"}
+                  </span>
+                </div>
+                {estimate?.distanceKm && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[12px] text-gray-400">Distance</span>
+                    <span className="text-[12px] text-gray-400">{estimate.distanceKm} km</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
+                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">
+                    {estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}
+                  </span>
+                </div>
+                <div className="h-px bg-gray-100 my-1" />
+                <div className="flex justify-between items-center">
+                  <span className="text-[14px] md:text-[15px] font-bold text-gray-900">Total</span>
+                  <span className="text-[14px] md:text-[15px] font-bold text-gray-900">
+                    {estimate ? `$${estimate.total.toFixed(2)}` : "—"}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
         </div>

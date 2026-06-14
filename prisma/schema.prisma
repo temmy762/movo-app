@@ -37,6 +37,7 @@ enum PaymentStatus {
 enum WalletTxType {
   PAYOUT
   TOPUP
+  EARNING
 }
 
 enum WalletTxStatus {
@@ -154,6 +155,11 @@ model Driver {
   lat       Float?
   lng       Float?
   isOnline           Boolean            @default(false)
+  photoUrl           String?
+  fleetOwnerId       String?
+  fleetDriverSplit   Float              @default(0.85)
+  stripeAccountId    String?
+  stripeAccountStatus String?
   trainingCompleted  Int[]              @default([])
   onboardingType     OnboardingType?    
   deletedAt          DateTime?
@@ -220,6 +226,9 @@ model Booking {
   review                String?
   startedAt             DateTime?
   completedAt           DateTime?
+  cancelledAt           DateTime?
+  cancelledBy           String?
+  refundId              String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -567,11 +576,12 @@ model AdminResetToken {
 }
 
 model VehicleTierConfig {
-  id        String   @id @default(cuid())
-  tier      String   @unique
-  name      String
-  image     String
-  price     Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  tier           String   @unique
+  name           String
+  image          String
+  price          Int
+  commissionRate Float    @default(0.20)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
