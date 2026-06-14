@@ -240,6 +240,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
   const [payFilter, setPayFilter] = useState("All");
   const [page, setPage]         = useState(1);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [refunding,   setRefunding]   = useState<string | null>(null);
   const [refundModal, setRefundModal] = useState<Booking | null>(null);
   const [refundAmt, setRefundAmt] = useState("");
@@ -286,6 +287,17 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
     setRefunding(null);
     setRefundModal(null);
     setRefundAmt("");
+  };
+
+  const handleMarkPaid = async (id: string) => {
+    setMarkingPaid(id);
+    await fetch(`/api/bookings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentStatus: "PAID" }),
+    });
+    await load();
+    setMarkingPaid(null);
   };
 
   const handleConfirm = async (id: string) => {
@@ -407,6 +419,15 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {b.paymentStatus === "UNPAID" && b.status !== "CANCELLED" && (
+                        <button
+                          onClick={() => handleMarkPaid(b.id)}
+                          disabled={markingPaid === b.id}
+                          className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
+                          style={{ background: markingPaid === b.id ? "#9ca3af" : "#16a34a" }}>
+                          {markingPaid === b.id ? "…" : "Mark Paid"}
+                        </button>
+                      )}
                       {b.status === "PENDING" && (
                         <button
                           onClick={() => handleConfirm(b.id)}
@@ -491,7 +512,16 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                   }
                   <span className="text-[11px] text-gray-400">{date}</span>
                 </div>
-                {b.status === "PENDING" && (
+                {b.paymentStatus === "UNPAID" && b.status !== "CANCELLED" && (
+                  <button
+                    onClick={() => handleMarkPaid(b.id)}
+                    disabled={markingPaid === b.id}
+                    className="no-hover-fx px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold"
+                    style={{ background: markingPaid === b.id ? "#9ca3af" : "#16a34a" }}>
+                    {markingPaid === b.id ? "…" : "Mark Paid"}
+                  </button>
+                )}
+                {b.status === "PENDING" && b.paymentStatus !== "UNPAID" && (
                   <button
                     onClick={() => handleConfirm(b.id)}
                     disabled={confirming === b.id}
