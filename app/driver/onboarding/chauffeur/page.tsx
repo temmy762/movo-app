@@ -303,17 +303,21 @@ export default function ChauffeurOnboardingPage() {
   }, []);
 
   const handleDocUpload = useCallback((key: string, file: File) => {
-    setDocs(p => ({ ...p, [key]: { fileName: file.name, uploaded: true } }));
-    fetch("/api/driver/onboarding/document", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: key, fileName: file.name }),
-    }).catch(() => {});
+    setDocs(p => ({ ...p, [key]: { fileName: file.name, uploaded: false } }));
     if (key === "PROFILE_PHOTO") {
       const reader = new FileReader();
       reader.onload = e => setProfilePreview(e.target?.result as string);
       reader.readAsDataURL(file);
     }
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("type", key);
+    fetch("/api/driver/onboarding/document/upload", { method: "POST", body: fd })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) setDocs(p => ({ ...p, [key]: { fileName: file.name, uploaded: true } }));
+      })
+      .catch(() => setDocs(p => ({ ...p, [key]: { fileName: file.name, uploaded: true } })));
   }, []);
 
   const saveProgress = useCallback(async (extra: Record<string, unknown> = {}) => {

@@ -6,7 +6,7 @@ type DocStatus = "PENDING" | "APPROVED" | "REJECTED";
 type AdminStatus = "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
 
 interface Document {
-  id: string; type: string; fileName: string; status: DocStatus; uploadedAt: string;
+  id: string; type: string; fileName: string; fileUrl: string | null; status: DocStatus; uploadedAt: string;
 }
 
 interface Onboarding {
@@ -327,8 +327,8 @@ export default function AdminOnboardingPage() {
                 ) : (
                   <div className="flex flex-col gap-2">
                     {selected.documents.map(doc => (
-                      <div key={doc.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div key={doc.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100 gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                             style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
@@ -342,13 +342,31 @@ export default function AdminOnboardingPage() {
                             <p className="text-[10px] text-gray-400 truncate">{doc.fileName}</p>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-2"
-                          style={{
-                            background: doc.status === "APPROVED" ? "#dcfce7" : doc.status === "REJECTED" ? "#fee2e2" : "#f3f4f6",
-                            color:      doc.status === "APPROVED" ? "#166534" : doc.status === "REJECTED" ? "#991b1b" : "#6b7280",
-                          }}>
-                          {doc.status.charAt(0) + doc.status.slice(1).toLowerCase()}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{
+                              background: doc.status === "APPROVED" ? "#dcfce7" : doc.status === "REJECTED" ? "#fee2e2" : "#f3f4f6",
+                              color:      doc.status === "APPROVED" ? "#166534" : doc.status === "REJECTED" ? "#991b1b" : "#6b7280",
+                            }}>
+                            {doc.status.charAt(0) + doc.status.slice(1).toLowerCase()}
+                          </span>
+                          {doc.fileUrl ? (
+                            <a
+                              href={doc.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-white"
+                              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                              </svg>
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-[10px] text-gray-300 italic">No file</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
