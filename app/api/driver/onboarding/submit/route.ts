@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { Resend } from "resend";
+import { notifyAdmins } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -232,6 +233,23 @@ export async function POST(req: NextRequest) {
         console.error("Failed to send onboarding confirmation email:", emailError);
       }
     }
+
+    /* Notify all admins — email + in-app */
+    const eventType = type === "FLEET" ? "ADMIN_NEW_FLEET_APPLICATION" : "ADMIN_NEW_DRIVER_APPLICATION";
+    notifyAdmins(
+      eventType,
+      {
+        driverId:      driver.id,
+        firstName:     driver.firstName,
+        lastName:      driver.lastName,
+        email:         driver.email,
+        phone:         driver.phone ?? undefined,
+        city:          driver.city,
+        onboardingType: type === "FLEET" ? "Fleet Partner" : "Individual Chauffeur",
+        submittedAt:   new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      },
+      ["EMAIL", "IN_APP"]
+    ).catch((e) => console.error("[onboarding] admin notify failed:", e));
 
     console.log(`[Onboarding] ${type === "FLEET" ? "Fleet partner" : "Chauffeur"} submitted: ${onboarding.id} (driver: ${session.driverId})`);
 

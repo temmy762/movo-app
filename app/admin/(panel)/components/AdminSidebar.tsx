@@ -159,6 +159,7 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
   const router = useRouter();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ Financials: pathname.startsWith("/admin/financials") });
   const [msgUnread, setMsgUnread] = useState(0);
+  const [pendingOnboarding, setPendingOnboarding] = useState(0);
   const prevPath = useRef(pathname);
 
   useEffect(() => {
@@ -167,6 +168,11 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
       .then((data: { unread: boolean }[]) => {
         if (Array.isArray(data)) setMsgUnread(data.filter(c => c.unread).length);
       })
+      .catch(() => {});
+
+    fetch("/api/admin/onboarding/pending-count")
+      .then(r => r.json())
+      .then((d: { count: number }) => { if (typeof d.count === "number") setPendingOnboarding(d.count); })
       .catch(() => {});
   }, [pathname]); // re-check on navigation
 
@@ -260,6 +266,11 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
               {entry.label === "Messages" && msgUnread > 0 && (
                 <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
                   {msgUnread}
+                </span>
+              )}
+              {entry.label === "Onboarding" && pendingOnboarding > 0 && (
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                  {pendingOnboarding > 9 ? "9+" : pendingOnboarding}
                 </span>
               )}
             </Link>
