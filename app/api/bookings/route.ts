@@ -21,9 +21,18 @@ export async function GET(req: NextRequest) {
       const bookings = await prisma.booking.findMany({
         where: {
           status: "PENDING",
-          driverId: null,
-          paymentStatus: "PAID",
-          ...(tier ? { carTier: tier } : {}),
+          OR: [
+            // Pool bookings: paid, unassigned, tier-matched
+            {
+              driverId: null,
+              paymentStatus: "PAID",
+              ...(tier ? { carTier: tier } : {}),
+            },
+            // Direct bookings: rider picked this specific driver (any payment status)
+            {
+              driverId: session.driverId,
+            },
+          ],
         },
         orderBy: { createdAt: "asc" },
       });
