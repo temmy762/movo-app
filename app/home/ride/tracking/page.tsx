@@ -24,6 +24,7 @@ function RideTrackingContent() {
   const tier      = searchParams.get("tier")      || "";
   const carImgParam = searchParams.get("carImg")  || "";
   const bookingId = searchParams.get("bookingId") || null;
+  const paidFlag  = searchParams.get("paid");
 
   const [view, setView] = useState<"route" | "actions">("route");
 
@@ -67,6 +68,17 @@ function RideTrackingContent() {
   const tierLabel = TIER_LABELS[resolvedTier] || tier || "";
   const dropoffCity = dropoff.split(",").slice(1, 3).join(",").trim();
   const driverInitial = driverName.charAt(0).toUpperCase() || "D";
+
+  /* ── Guarantee PAID status (covers 3DS redirect case) ── */
+  useEffect(() => {
+    if (!bookingId || paidFlag !== "1") return;
+    fetch(`/api/bookings/${bookingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentStatus: "PAID" }),
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Fetch booking / driver details ── */
   useEffect(() => {

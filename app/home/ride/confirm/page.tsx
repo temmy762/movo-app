@@ -35,9 +35,19 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendin
     setSubmitting(true);
     setError(null);
 
+    /* Build tracking URL — used both as return_url (3DS redirect) and router.push */
+    const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
+    if (pendingBookingId) tp.bookingId = pendingBookingId;
+    if (tier)             tp.tier      = tier;
+    if (carImg)           tp.carImg    = carImg;
+    if (driverId)         tp.driverId  = driverId;
+    const trackingUrl = `/home/ride/tracking?${new URLSearchParams(tp).toString()}`;
+    const returnUrl   = `${window.location.origin}${trackingUrl}`;
+
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
       redirect: "if_required",
+      confirmParams: { return_url: returnUrl },
     });
 
     if (stripeError) {
@@ -54,7 +64,7 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendin
       return;
     }
 
-    /* Payment succeeded — mark booking as PAID immediately (webhook is backup only) */
+    /* Payment succeeded inline (no redirect needed) — mark PAID immediately */
     if (pendingBookingId) {
       await fetch(`/api/bookings/${pendingBookingId}`, {
         method: "PATCH",
@@ -63,12 +73,7 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendin
       }).catch(() => {});
     }
 
-    const tp: Record<string, string> = { pickup, dropoff, car: carName };
-    if (pendingBookingId) tp.bookingId = pendingBookingId;
-    if (tier)             tp.tier      = tier;
-    if (carImg)           tp.carImg    = carImg;
-    if (driverId)         tp.driverId  = driverId;
-    router.push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
+    router.push(trackingUrl);
   };
 
   return (
