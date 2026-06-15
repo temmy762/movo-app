@@ -246,8 +246,8 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
   const [refundAmt, setRefundAmt] = useState("");
   const PER_PAGE = 10;
 
-  const load = useCallback(() => {
-    setLoading(true);
+  const fetchBookings = useCallback((showSpinner = false) => {
+    if (showSpinner) setLoading(true);
     fetch("/api/bookings")
       .then(r => r.json())
       .then((data: unknown) => {
@@ -262,15 +262,17 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
           });
         }
       })
-      .catch(() => setBookings([]))
-      .finally(() => setLoading(false));
+      .catch(() => {})
+      .finally(() => { if (showSpinner) setLoading(false); });
   }, [onCountsChange]);
 
+  const load = useCallback(() => fetchBookings(true), [fetchBookings]);
+
   useEffect(() => {
-    load();
-    const retry = setTimeout(load, 3000);
-    return () => clearTimeout(retry);
-  }, [load]);
+    fetchBookings(true);
+    const interval = setInterval(() => fetchBookings(false), 15000);
+    return () => clearInterval(interval);
+  }, [fetchBookings]);
 
   const handleRefund = async (id: string, amount?: number) => {
     setRefunding(id);

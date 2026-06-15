@@ -461,10 +461,16 @@ function CreateVehicleModal({ onSave, onClose }: {
   );
 }
 
+const FALLBACK_PRICING: TierPricing[] = [
+  { tier: "classic", baseFare: 4.00, ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00, hourlyRate: 55.00 },
+  { tier: "premium", baseFare: 6.00, ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00, hourlyRate: 75.00 },
+  { tier: "black",   baseFare: 8.00, ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00, hourlyRate: 95.00 },
+];
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function UnitsPage() {
   const [units,    setUnits]    = useState<Unit[]>([]);
-  const [pricing,  setPricing]  = useState<TierPricing[]>([]);
+  const [pricing,  setPricing]  = useState<TierPricing[]>(FALLBACK_PRICING);
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState("");
   const [carType,  setCarType]  = useState("All");
