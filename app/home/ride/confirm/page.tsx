@@ -14,7 +14,7 @@ const carTierMap: Record<string, string> = {
   "Movo Privé Black": "black",
 };
 
-type FareEstimate = { fare: number; serviceFee: number; total: number; distanceKm: number | null; durationMin: number | null };
+type FareEstimate = { fare: number; serviceFee: number; gst: number; total: number; distanceKm: number | null; durationMin: number | null };
 
 type CheckoutFormProps = {
   pickup: string; dropoff: string; carName: string;
@@ -294,6 +294,12 @@ function ConfirmPayContent() {
                   <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
                   <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">
                     {estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[13px] md:text-[14px] text-gray-600">GST (5%)</span>
+                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">
+                    {estimate ? `$${(estimate.gst ?? 0).toFixed(2)}` : "—"}
                   </span>
                 </div>
                 <div className="h-px bg-gray-100 my-1" />

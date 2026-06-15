@@ -3,20 +3,15 @@ import { prisma } from "@/lib/prisma";
 
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-/* Fallback rates per km by tier if VehicleTierConfig has no price */
-const FALLBACK_RATE: Record<string, number> = {
-  classic: 1.80,
-  premium: 2.50,
-  black:   3.20,
+/* Official pricing defaults (used when DB rows don't exist yet) */
+const TIER_DEFAULTS: Record<string, { baseFare: number; ratePerKm: number; ratePerMin: number; minFare: number }> = {
+  classic: { baseFare: 4.00, ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00 },
+  premium: { baseFare: 6.00, ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00 },
+  black:   { baseFare: 8.00, ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00 },
 };
 
-const BASE_FARE: Record<string, number> = {
-  classic: 5.00,
-  premium: 7.00,
-  black:   10.00,
-};
-
-const SERVICE_FEE_RATE = 0.12; /* 12% of fare */
+const DEFAULT_SERVICE_FEE_RATE = 0.12;
+const DEFAULT_GST_RATE         = 0.05;
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,45 +24,54 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "pickup and dropoff required" }, { status: 400 });
     }
 
-    /* Try VehicleTierConfig for rate per km */
-    const tierConfig = await prisma.vehicleTierConfig.findFirst({
-      where: { tier: { equals: tier, mode: "insensitive" } },
-      select: { price: true },
-    }).catch(() => null);
+    /* Load tier config + global pricing config from DB (non-fatal) */
+    const [tierConfig, pricingConfig] = await Promise.all([
+      prisma.vehicleTierConfig.findFirst({
+        where: { tier: { equals: tier, mode: "insensitive" } },
+        select: { baseFare: true, ratePerKm: true, ratePerMin: true, minFare: true },
+      }).catch(() => null),
+      prisma.pricingConfig.findFirst().catch(() => null),
+    ]);
 
-    const ratePerKm = tierConfig?.price
-      ? tierConfig.price / 100          /* stored in cents */
-      : (FALLBACK_RATE[tier] ?? 1.80);
+    const defaults      = TIER_DEFAULTS[tier] ?? TIER_DEFAULTS.classic;
+    const baseFare      = tierConfig?.baseFare  ?? defaults.baseFare;
+    const ratePerKm     = tierConfig?.ratePerKm ?? defaults.ratePerKm;
+    const ratePerMin    = tierConfig?.ratePerMin ?? defaults.ratePerMin;
+    const minFare       = tierConfig?.minFare   ?? defaults.minFare;
+    const serviceFeeRate = pricingConfig?.serviceFeeRate ?? DEFAULT_SERVICE_FEE_RATE;
+    const gstRate        = pricingConfig?.gstRate        ?? DEFAULT_GST_RATE;
 
-    const baseFare = BASE_FARE[tier] ?? 5.00;
+    const calcFares = (distKm: number, durMin: number) => {
+      const raw        = baseFare + distKm * ratePerKm + durMin * ratePerMin;
+      const fare       = parseFloat(Math.max(raw, minFare).toFixed(2));
+      const serviceFee = parseFloat((fare * serviceFeeRate).toFixed(2));
+      const gst        = parseFloat((fare * gstRate).toFixed(2));
+      const total      = parseFloat((fare + serviceFee + gst).toFixed(2));
+      return { fare, serviceFee, gst, total };
+    };
 
-    /* Google Distance Matrix */
+    /* No API key — return flat estimate (10 km, 15 min) */
     if (!GOOGLE_API_KEY) {
-      /* No API key — return flat estimate */
-      const fare       = parseFloat((baseFare + 10 * ratePerKm).toFixed(2));
-      const serviceFee = parseFloat((fare * SERVICE_FEE_RATE).toFixed(2));
-      return NextResponse.json({ fare, serviceFee, total: fare + serviceFee, distanceKm: null, durationMin: null });
+      const result = calcFares(10, 15);
+      return NextResponse.json({ ...result, distanceKm: null, durationMin: null, gstRate, serviceFeeRate });
     }
 
+    /* Google Distance Matrix */
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(dropoff)}&units=metric&key=${GOOGLE_API_KEY}`;
     const resp = await fetch(url);
     const data = await resp.json();
 
     const element = data?.rows?.[0]?.elements?.[0];
     if (!element || element.status !== "OK") {
-      const fare       = parseFloat((baseFare + 10 * ratePerKm).toFixed(2));
-      const serviceFee = parseFloat((fare * SERVICE_FEE_RATE).toFixed(2));
-      return NextResponse.json({ fare, serviceFee, total: +(fare + serviceFee).toFixed(2), distanceKm: null, durationMin: null });
+      const result = calcFares(10, 15);
+      return NextResponse.json({ ...result, distanceKm: null, durationMin: null, gstRate, serviceFeeRate });
     }
 
     const distanceKm  = element.distance.value / 1000;
     const durationMin = Math.ceil(element.duration.value / 60);
+    const result      = calcFares(distanceKm, durationMin);
 
-    const fare       = parseFloat((baseFare + distanceKm * ratePerKm).toFixed(2));
-    const serviceFee = parseFloat((fare * SERVICE_FEE_RATE).toFixed(2));
-    const total      = parseFloat((fare + serviceFee).toFixed(2));
-
-    return NextResponse.json({ fare, serviceFee, total, distanceKm: +distanceKm.toFixed(2), durationMin });
+    return NextResponse.json({ ...result, distanceKm: +distanceKm.toFixed(2), durationMin, gstRate, serviceFeeRate });
   } catch (e) {
     console.error("[estimate]", e);
     return NextResponse.json({ error: "Failed to estimate fare" }, { status: 500 });

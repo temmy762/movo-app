@@ -76,14 +76,16 @@ function AvailableCarsContent() {
   const [cards,   setCards]   = useState<CarCard[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const tierLower = tier.toLowerCase();
+
   useEffect(() => {
     let userLat: number | null = null;
     let userLng: number | null = null;
 
     const buildCards = (drivers: FleetDriver[]) => {
-      const filtered = tier === "all"
+      const filtered = tierLower === "all"
         ? drivers
-        : drivers.filter((d) => d.vehicle?.tier === tier);
+        : drivers.filter((d) => d.vehicle?.tier.toLowerCase() === tierLower);
 
       const built: CarCard[] = filtered
         .filter((d) => d.vehicle !== null)
@@ -152,7 +154,7 @@ function AvailableCarsContent() {
     } else {
       load(null, null);
     }
-  }, [tier]);
+  }, [tierLower]);
 
   const onlineCount = cards.filter((c) => c.isOnline).length;
 

@@ -596,8 +596,26 @@ model VehicleTierConfig {
   tier           String   @unique
   name           String
   image          String
-  price          Int
+  price          Int      @default(0)   // legacy — kept for compat
+  baseFare       Float    @default(4.00)
+  ratePerKm      Float    @default(1.25)
+  ratePerMin     Float    @default(0.25)
+  minFare        Float    @default(18.00)
+  hourlyRate     Float    @default(55.00)
+  hourlyMinHours Int      @default(2)
   commissionRate Float    @default(0.20)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model PricingConfig {
+  id                  String   @id @default(cuid())
+  gstRate             Float    @default(0.05)
+  serviceFeeRate      Float    @default(0.12)
+  additionalStopFee   Float    @default(5.00)
+  airportPickupFee    Float    @default(10.00)
+  freeWaitingMinutes  Int      @default(5)
+  waitingRatePerMin   Float    @default(0.75)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
