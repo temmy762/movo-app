@@ -297,7 +297,7 @@ export default function DriverHomePage() {
 
         {/* Header */}
         <header className="flex items-center justify-between px-4 pt-4 pb-2">
-          <button className="no-hover-fx w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow" onClick={() => setShowMenu(true)}>
+          <button className="no-hover-fx md:hidden w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow" onClick={() => setShowMenu(true)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
