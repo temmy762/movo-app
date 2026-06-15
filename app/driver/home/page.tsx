@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -56,6 +56,7 @@ export default function DriverHomePage() {
   const [showTripComplete, setShowTripComplete] = useState(false);
   const [tripRating, setTripRating] = useState(4);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [stats, setStats] = useState<{ totalEarned: number; preBooked: number }>({ totalEarned: 0, preBooked: 0 });
   const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -296,7 +297,7 @@ export default function DriverHomePage() {
 
         {/* Header */}
         <header className="flex items-center justify-between px-4 pt-4 pb-2">
-          <button className="no-hover-fx w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow">
+          <button className="no-hover-fx w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow" onClick={() => setShowMenu(true)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
@@ -517,6 +518,50 @@ export default function DriverHomePage() {
           </div>
         )}
       </div>
+
+      {/* ── Slide-in nav drawer ── */}
+      {showMenu && (
+        <div className="absolute inset-0 z-50 flex" onClick={() => setShowMenu(false)}>
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50" />
+          {/* Drawer */}
+          <aside
+            className="relative w-64 h-full flex flex-col py-6 px-4 shadow-2xl"
+            style={{ background: "linear-gradient(180deg, #1a1a2e 0%, #2D0A53 60%, #8B7500 100%)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Close */}
+            <button
+              className="no-hover-fx self-end mb-6 w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center"
+              onClick={() => setShowMenu(false)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            {/* Nav links */}
+            <nav className="flex flex-col gap-1">
+              {([
+                { label: "Home",    href: "/driver/home",         icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg> },
+                { label: "Offers",  href: "/driver/home/offers",  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7" strokeLinecap="round" strokeWidth="2.5"/></svg> },
+                { label: "Planned", href: "/driver/home/planned", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3"/><line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3"/><line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3"/></svg> },
+                { label: "Finish",  href: "/driver/home/finish",  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg> },
+                { label: "Profile", href: "/driver/home/profile", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> },
+              ] as { label: string; href: string; icon: React.ReactNode }[]).map(item => (
+                <button
+                  key={item.href}
+                  className="no-hover-fx flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full"
+                  style={{ background: "rgba(255,255,255,0.08)" }}
+                  onClick={() => { setShowMenu(false); router.push(item.href); }}
+                >
+                  {item.icon}
+                  <span className="text-[14px] font-medium text-white">{item.label}</span>
+                </button>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
 
       {/* Decline modal */}
       {showDeclineModal && (
