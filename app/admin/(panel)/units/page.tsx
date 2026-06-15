@@ -15,6 +15,10 @@ type Unit = {
   tier?: string;
   driverName?: string;
 };
+type TierPricing = {
+  tier: string; baseFare: number; ratePerKm: number;
+  ratePerMin: number; minFare: number; hourlyRate: number;
+};
 
 // ── Status config ────────────────────────────────────────────────────────────
 const statusCfg: Record<UnitStatus, { bg: string; color: string }> = {
@@ -85,14 +89,29 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
   );
 }
 
+// ── Pricing pill ─────────────────────────────────────────────────────────────
+function PricingInfo({ tier, pricing }: { tier?: string; pricing: TierPricing[] }) {
+  const t = pricing.find(p => p.tier.toLowerCase() === (tier ?? "").toLowerCase());
+  if (!t) return <p className="text-[11px] text-gray-400">No pricing config</p>;
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+      <span className="text-[10px] text-gray-500">Min <span className="font-semibold text-gray-800">${t.minFare}</span></span>
+      <span className="text-[10px] text-gray-500">${t.ratePerKm}<span className="text-gray-400">/km</span></span>
+      <span className="text-[10px] text-gray-500">${t.ratePerMin}<span className="text-gray-400">/min</span></span>
+      <span className="text-[10px] text-gray-500">${t.hourlyRate}<span className="text-gray-400">/hr</span></span>
+    </div>
+  );
+}
+
 // ── Unit Row (list view) ──────────────────────────────────────────────────────
-function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDeleteCancel }: {
+function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDeleteCancel, pricing }: {
   unit: Unit;
   onEdit: () => void;
   onDelete: () => void;
   deletePending: boolean;
   onDeleteConfirm: () => void;
   onDeleteCancel: () => void;
+  pricing: TierPricing[];
 }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -124,10 +143,8 @@ function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDel
         </div>
         <div className="flex-1"/>
         <div className="shrink-0 mr-3 text-right">
-          <p className="text-[10px] text-gray-400 mb-0.5">Price</p>
-          <p className="text-[16px] font-bold text-gray-900 leading-none">
-            ${unit.price}<span className="text-[10px] font-normal text-gray-400">/days</span>
-          </p>
+          <p className="text-[10px] text-gray-400 mb-1">Pricing ({unit.tier ?? "—"})</p>
+          <PricingInfo tier={unit.tier} pricing={pricing} />
         </div>
         <Link href={`/admin/units/${unit.id}`}
           className="no-hover-fx px-5 py-2 rounded-xl text-white text-[13px] font-semibold shrink-0"
@@ -157,10 +174,8 @@ function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDel
             <StatusBadge status={unit.status} units={unit.units}/>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[9px] text-gray-400">Price</p>
-            <p className="text-[15px] font-bold text-gray-900">
-              ${unit.price}<span className="text-[9px] text-gray-400">/day</span>
-            </p>
+            <p className="text-[9px] text-gray-400 mb-0.5">Pricing</p>
+            <PricingInfo tier={unit.tier} pricing={pricing} />
           </div>
         </div>
         <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-gray-50">
@@ -183,7 +198,7 @@ function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDel
 }
 
 // ── Unit Grid Card (grid view) ────────────────────────────────────────────────
-function UnitGridCard({ unit, onEdit, onDelete }: { unit: Unit; onEdit: () => void; onDelete: () => void }) {
+function UnitGridCard({ unit, onEdit, onDelete, pricing }: { unit: Unit; onEdit: () => void; onDelete: () => void; pricing: TierPricing[] }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col gap-3">
       <div className="relative w-full h-32 rounded-xl overflow-hidden bg-gray-50">
@@ -206,8 +221,8 @@ function UnitGridCard({ unit, onEdit, onDelete }: { unit: Unit; onEdit: () => vo
       </div>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[9px] text-gray-400">Price</p>
-          <p className="text-[16px] font-bold text-gray-900">${unit.price}<span className="text-[10px] text-gray-400">/day</span></p>
+          <p className="text-[9px] text-gray-400 mb-0.5">Pricing ({unit.tier ?? "—"})</p>
+          <PricingInfo tier={unit.tier} pricing={pricing} />
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={onEdit} className="no-hover-fx px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 border border-gray-200">Edit</button>
@@ -449,6 +464,7 @@ function CreateVehicleModal({ onSave, onClose }: {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function UnitsPage() {
   const [units,    setUnits]    = useState<Unit[]>([]);
+  const [pricing,  setPricing]  = useState<TierPricing[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [search,   setSearch]   = useState("");
   const [carType,  setCarType]  = useState("All");
@@ -462,9 +478,14 @@ export default function UnitsPage() {
 
   const loadUnits = () => {
     setLoading(true);
-    fetch("/api/admin/units")
-      .then(r => r.json())
-      .then(setUnits)
+    Promise.all([
+      fetch("/api/admin/units").then(r => r.json()),
+      fetch("/api/admin/pricing").then(r => r.json()),
+    ])
+      .then(([unitData, pricingData]) => {
+        setUnits(Array.isArray(unitData) ? unitData : []);
+        if (pricingData?.tiers) setPricing(pricingData.tiers);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -603,7 +624,8 @@ export default function UnitsPage() {
               onDelete={() => setDeleteId(u.id)}
               deletePending={deleteId === u.id}
               onDeleteConfirm={() => handleDelete(u.id)}
-              onDeleteCancel={() => setDeleteId(null)}/>
+              onDeleteCancel={() => setDeleteId(null)}
+              pricing={pricing} />
           ))}
           {paged.length === 0 && (
             <div className="bg-white rounded-2xl py-16 flex flex-col items-center gap-2 shadow-sm">
@@ -619,7 +641,8 @@ export default function UnitsPage() {
           {paged.map(u => (
             <UnitGridCard key={u.id} unit={u}
               onEdit={() => setEditUnit(u)}
-              onDelete={() => handleDelete(u.id)}/>
+              onDelete={() => handleDelete(u.id)}
+              pricing={pricing} />
           ))}
           {paged.length === 0 && (
             <div className="col-span-full bg-white rounded-2xl py-16 flex items-center justify-center shadow-sm">
