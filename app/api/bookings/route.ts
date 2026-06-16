@@ -69,6 +69,9 @@ export async function POST(req: NextRequest) {
         ? paymentStatus
         : "UNPAID";
 
+    /* Auto-confirm bookings the moment payment is received — no admin approval needed */
+    const resolvedStatus = resolvedPaymentStatus === "PAID" ? "CONFIRMED" : "PENDING";
+
     const session = await getSession(req);
     const userId = session?.userId ?? null;
 
@@ -87,6 +90,7 @@ export async function POST(req: NextRequest) {
         serviceFee: Number(serviceFee),
         total: Number(total),
         paymentStatus: resolvedPaymentStatus,
+        status: resolvedStatus,
         stripePaymentIntentId: stripePaymentIntentId ?? null,
         ...(userId    ? { userId }    : {}),
         ...(driverId  ? { driverId }  : {}),
