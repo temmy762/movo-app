@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   /* Create Stripe transfer to connected account */
   const transfer = await stripe.transfers.create({
     amount:      Math.round(amount * 100),
-    currency:    "gbp",
+    currency:    "cad",
     destination: driver.stripeAccountId,
   });
 

@@ -3,6 +3,9 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+
+const DriverMap = dynamic(() => import("./DriverMap"), { ssr: false, loading: () => <div className="absolute inset-0" style={{ background: "#1a1e3c" }} /> });
 
 type Booking = {
   id: string;
@@ -15,36 +18,6 @@ type Booking = {
   status: string;
 };
 
-function MapBackground() {
-  return (
-    <div className="absolute inset-0 overflow-hidden" style={{ background: "#1a1e3c" }}>
-      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 700" preserveAspectRatio="xMidYMid slice">
-        <line x1="0" y1="400" x2="400" y2="340" stroke="#252a4a" strokeWidth="16" />
-        <line x1="0" y1="400" x2="400" y2="340" stroke="#2e3560" strokeWidth="8" />
-        <line x1="160" y1="0" x2="220" y2="700" stroke="#252a4a" strokeWidth="12" />
-        <line x1="160" y1="0" x2="220" y2="700" stroke="#2e3560" strokeWidth="5" />
-        <line x1="0" y1="550" x2="400" y2="500" stroke="#252a4a" strokeWidth="20" />
-        <line x1="0" y1="550" x2="400" y2="500" stroke="#2e3560" strokeWidth="10" />
-        <line x1="300" y1="0" x2="350" y2="400" stroke="#252a4a" strokeWidth="10" />
-        <line x1="300" y1="0" x2="350" y2="400" stroke="#2e3560" strokeWidth="4" />
-        <line x1="0" y1="200" x2="400" y2="180" stroke="#252a4a" strokeWidth="8" />
-        <line x1="0" y1="200" x2="400" y2="180" stroke="#2e3560" strokeWidth="3" />
-        <line x1="50" y1="0" x2="80" y2="700" stroke="#252a4a" strokeWidth="8" />
-        <circle cx="200" cy="360" r="10" fill="#e74c3c" />
-        <circle cx="200" cy="360" r="5" fill="white" />
-        <circle cx="270" cy="260" r="7" fill="#8B7500" opacity="0.9" />
-        <circle cx="130" cy="300" r="7" fill="#8B7500" opacity="0.9" />
-        <circle cx="320" cy="420" r="7" fill="#8B7500" opacity="0.9" />
-        <text x="100" y="170" fill="#4a5180" fontSize="11" fontFamily="sans-serif">National Trust -</text>
-        <text x="70" y="185" fill="#4a5180" fontSize="11" fontFamily="sans-serif">Stonehenge Landscape</text>
-        <text x="155" y="290" fill="#4a5180" fontSize="10" fontFamily="sans-serif">Henge</text>
-        <text x="70" y="330" fill="#4a5180" fontSize="10" fontFamily="sans-serif">Stonehenge</text>
-        <text x="30" y="500" fill="#4a5180" fontSize="10" fontFamily="sans-serif">England</text>
-        <text x="30" y="550" fill="#4a5180" fontSize="13" fontFamily="sans-serif" fontWeight="bold">A303</text>
-      </svg>
-    </div>
-  );
-}
 
 export default function DriverHomePage() {
   const router = useRouter();
@@ -58,11 +31,13 @@ export default function DriverHomePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [stats, setStats] = useState<{ totalEarned: number; preBooked: number }>({ totalEarned: 0, preBooked: 0 });
-  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const geoWatchRef  = useRef<number | null>(null);
-  const lastPushRef  = useRef<number>(0);
-  const [timeLeft, setTimeLeft] = useState<number>(30);
+  const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const geoWatchRef     = useRef<number | null>(null);
+  const onlineGeoRef    = useRef<number | null>(null);
+  const lastPushRef     = useRef<number>(0);
+  const [timeLeft,      setTimeLeft]      = useState<number>(30);
+  const [driverPos,     setDriverPos]     = useState<{ lat: number; lng: number } | null>(null);
 
   // Restore online state + detect active booking on mount
   useEffect(() => {
@@ -74,6 +49,7 @@ export default function DriverHomePage() {
           setIsOnline(true);
           localStorage.setItem("driverOnline", "true");
           setRidePhase(booking.startedAt ? "started" : "accepted");
+          startOnlineLocationBroadcast();
           if (booking.startedAt) startLocationTracking(booking.id);
         } else {
           const saved = localStorage.getItem("driverOnline") === "true";
@@ -81,6 +57,7 @@ export default function DriverHomePage() {
             setIsOnline(true);
             setRidePhase("searching");
             startPolling(fetchNextPending);
+            startOnlineLocationBroadcast();
           }
         }
       })
@@ -125,8 +102,35 @@ export default function DriverHomePage() {
     return () => {
       if (pollRef.current)      clearInterval(pollRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
-      if (geoWatchRef.current !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
+      if (geoWatchRef.current  !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
+      if (onlineGeoRef.current !== null) navigator.geolocation.clearWatch(onlineGeoRef.current);
     };
+  }, []);
+
+  /* Broadcast driver position while ONLINE (no booking needed) */
+  const startOnlineLocationBroadcast = useCallback(() => {
+    if (!navigator.geolocation) return;
+    if (onlineGeoRef.current !== null) navigator.geolocation.clearWatch(onlineGeoRef.current);
+    onlineGeoRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setDriverPos({ lat, lng });
+        fetch("/api/driver/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat, lng }),
+        }).catch(() => {});
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+  }, []);
+
+  const stopOnlineLocationBroadcast = useCallback(() => {
+    if (onlineGeoRef.current !== null) {
+      navigator.geolocation.clearWatch(onlineGeoRef.current);
+      onlineGeoRef.current = null;
+    }
   }, []);
 
   const startLocationTracking = useCallback((bookingId: string) => {
@@ -228,12 +232,20 @@ export default function DriverHomePage() {
     if (next) {
       setRidePhase("searching");
       startPolling(fetchNextPending);
+      startOnlineLocationBroadcast();
     } else {
       stopPolling();
       stopCountdown();
+      stopOnlineLocationBroadcast();
       setRidePhase("idle");
       setActiveBooking(null);
       setShowDeclineModal(false);
+      /* Mark driver offline in DB */
+      fetch("/api/driver/status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOnline: false }),
+      }).catch(() => {});
     }
   }
 
@@ -291,7 +303,7 @@ export default function DriverHomePage() {
   return (
     <div className="relative h-full flex flex-col overflow-hidden" style={{ fontFamily: "var(--font-poppins)" }}>
 
-      <MapBackground />
+      <DriverMap position={driverPos} />
 
       <div className="relative z-10 flex flex-col h-full">
 
