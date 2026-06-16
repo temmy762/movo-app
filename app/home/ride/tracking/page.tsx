@@ -23,8 +23,15 @@ function RideTrackingContent() {
   const car       = searchParams.get("car")       || "Movo Classic";
   const tier      = searchParams.get("tier")      || "";
   const carImgParam = searchParams.get("carImg")  || "";
-  const bookingId = searchParams.get("bookingId") || null;
-  const paidFlag  = searchParams.get("paid");
+  const bookingIdParam = searchParams.get("bookingId") || null;
+  const paidFlag       = searchParams.get("paid");
+  const intentId       = searchParams.get("intentId");
+  const farePm         = searchParams.get("fare");
+  const serviceFeePm   = searchParams.get("serviceFee");
+  const totalPm        = searchParams.get("total");
+  const driverIdPm     = searchParams.get("driverId") || "";
+
+  const [bookingId, setBookingId] = useState<string | null>(bookingIdParam);
 
   const [view, setView] = useState<"route" | "actions">("route");
 
@@ -69,14 +76,29 @@ function RideTrackingContent() {
   const dropoffCity = dropoff.split(",").slice(1, 3).join(",").trim();
   const driverInitial = driverName.charAt(0).toUpperCase() || "D";
 
-  /* ── Guarantee PAID status (covers 3DS redirect case) ── */
+  /* ── 3DS redirect: no bookingId yet — create booking as PAID from URL params ── */
   useEffect(() => {
-    if (!bookingId || paidFlag !== "1") return;
-    fetch(`/api/bookings/${bookingId}`, {
-      method: "PATCH",
+    if (paidFlag !== "1" || bookingId) return;
+    if (!intentId || !farePm || !totalPm) return;
+    const resolvedT = tier.toLowerCase() || "classic";
+    fetch("/api/bookings", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentStatus: "PAID" }),
-    }).catch(() => {});
+      body: JSON.stringify({
+        clientName: "Guest",
+        pickup, dropoff,
+        carTier: resolvedT, carName: car,
+        fare: parseFloat(farePm),
+        serviceFee: parseFloat(serviceFeePm ?? "0"),
+        total: parseFloat(totalPm),
+        paymentStatus: "PAID",
+        stripePaymentIntentId: intentId,
+        ...(driverIdPm ? { driverId: driverIdPm } : {}),
+      }),
+    })
+      .then(r => r.json())
+      .then(data => { if (data?.id) setBookingId(data.id); })
+      .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

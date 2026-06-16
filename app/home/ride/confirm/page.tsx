@@ -19,30 +19,35 @@ type FareEstimate = { fare: number; serviceFee: number; gst: number; total: numb
 type CheckoutFormProps = {
   pickup: string; dropoff: string; carName: string;
   tier: string; carImg: string; driverId: string;
-  pendingBookingId: string | null;
-  estimate: FareEstimate | null;
+  clientName: string; intentId: string;
+  estimate: FareEstimate;
 };
 
-function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendingBookingId, estimate }: CheckoutFormProps) {
+function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, clientName, intentId, estimate }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const resolvedTier = tier || carTierMap[carName] || "classic";
 
   const handleConfirm = async () => {
     if (!stripe || !elements) return;
     setSubmitting(true);
     setError(null);
 
-    /* Build tracking URL — used both as return_url (3DS redirect) and router.push */
-    const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
-    if (pendingBookingId) tp.bookingId = pendingBookingId;
-    if (tier)             tp.tier      = tier;
-    if (carImg)           tp.carImg    = carImg;
-    if (driverId)         tp.driverId  = driverId;
-    const trackingUrl = `/home/ride/tracking?${new URLSearchParams(tp).toString()}`;
-    const returnUrl   = `${window.location.origin}${trackingUrl}`;
+    const { fare, serviceFee, total } = estimate;
+
+    /* Build return_url for 3DS — includes all booking data so tracking page can create booking */
+    const rp: Record<string, string> = {
+      pickup, dropoff, car: carName, paid: "1",
+      fare: fare.toString(), serviceFee: serviceFee.toString(), total: total.toString(),
+      intentId,
+    };
+    if (tier)     rp.tier     = tier;
+    if (carImg)   rp.carImg   = carImg;
+    if (driverId) rp.driverId = driverId;
+    const returnUrl = `${window.location.origin}/home/ride/tracking?${new URLSearchParams(rp).toString()}`;
 
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
@@ -51,29 +56,31 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendin
     });
 
     if (stripeError) {
-      /* Payment failed — cancel the pre-created booking so it's cleaned up */
-      if (pendingBookingId) {
-        fetch(`/api/bookings/${pendingBookingId}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "CANCELLED", cancelledBy: "payment_failed" }),
-        }).catch(() => {});
-      }
       setError(stripeError.message ?? "Payment failed. Please try again.");
       setSubmitting(false);
       return;
     }
 
-    /* Payment succeeded inline (no redirect needed) — mark PAID immediately */
-    if (pendingBookingId) {
-      await fetch(`/api/bookings/${pendingBookingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentStatus: "PAID" }),
-      }).catch(() => {});
-    }
+    /* Payment succeeded inline — create booking as PAID */
+    const bookingRes = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientName, pickup, dropoff,
+        carTier: resolvedTier, carName,
+        fare, serviceFee, total,
+        paymentStatus: "PAID",
+        stripePaymentIntentId: intentId,
+        ...(driverId ? { driverId } : {}),
+      }),
+    }).then(r => r.json()).catch(() => null);
 
-    router.push(trackingUrl);
+    const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
+    if (bookingRes?.id) tp.bookingId = bookingRes.id;
+    if (tier)           tp.tier      = tier;
+    if (carImg)         tp.carImg    = carImg;
+    if (driverId)       tp.driverId  = driverId;
+    router.push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
   };
 
   return (
@@ -89,10 +96,10 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, pendin
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!stripe || submitting || !pendingBookingId}
+            disabled={!stripe || submitting}
             className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
             style={{
-              background: !stripe || submitting || !pendingBookingId
+              background: !stripe || submitting
                 ? "#9ca3af"
                 : "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
             }}
@@ -116,7 +123,7 @@ function ConfirmPayContent() {
   const driverId  = searchParams.get("driverId") || "";
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
+  const [intentId, setIntentId] = useState<string | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<FareEstimate | null>(null);
   const [estimating, setEstimating] = useState(true);
@@ -136,53 +143,26 @@ function ConfirmPayContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickup, dropoff, resolvedTier]);
 
-  /* Step 2 — Once estimate + user ready, create intent + booking in parallel */
+  /* Step 2 — Once estimate + user ready, create ONLY the payment intent */
   useEffect(() => {
     if (!clientName || clientName === "Guest" || !estimate) return;
 
-    const { fare, serviceFee, total } = estimate;
-
+    const { total } = estimate;
     const idempotencyKey = `pi-${clientName}-${resolvedTier}-${Math.round(total * 100)}-${pickup.slice(0, 20)}`.replace(/\s+/g, "_");
 
-    const intentPromise = fetch("/api/stripe/create-payment-intent", {
+    fetch("/api/stripe/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: total, idempotencyKey }),
-    }).then((r) => r.json());
-
-    const bookingPromise = fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientName,
-        pickup,
-        dropoff,
-        carTier: resolvedTier,
-        carName,
-        fare,
-        serviceFee,
-        total,
-        paymentStatus: "UNPAID",
-        ...(driverId ? { driverId } : {}),
-      }),
-    }).then((r) => r.json());
-
-    Promise.all([intentPromise, bookingPromise])
-      .then(([intentData, bookingData]) => {
-        if (intentData.clientSecret) {
-          setClientSecret(intentData.clientSecret);
-          if (bookingData?.id && intentData.id) {
-            fetch(`/api/bookings/${bookingData.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ stripePaymentIntentId: intentData.id }),
-            }).catch(() => {});
-          }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+          setIntentId(data.id);
         } else {
           setIntentError("Could not initialise payment. Please try again.");
         }
-        if (bookingData?.id) setPendingBookingId(bookingData.id);
-        else setIntentError("Could not create booking. Please try again.");
       })
       .catch(() => setIntentError("Could not initialise payment. Please try again."));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -258,9 +238,13 @@ function ConfirmPayContent() {
                 Loading payment…
               </div>
             )}
-            {clientSecret && (
+            {clientSecret && estimate && intentId && (
               <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm pickup={pickup} dropoff={dropoff} carName={carName} tier={tier} carImg={carImg} driverId={driverId} pendingBookingId={pendingBookingId} estimate={estimate} />
+                <CheckoutForm
+                  pickup={pickup} dropoff={dropoff} carName={carName}
+                  tier={tier} carImg={carImg} driverId={driverId}
+                  clientName={clientName} intentId={intentId} estimate={estimate}
+                />
               </Elements>
             )}
           </div>
