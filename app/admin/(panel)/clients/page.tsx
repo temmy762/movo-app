@@ -128,6 +128,7 @@ function DeleteConfirm({ name, onConfirm, onCancel }: { name: string; onConfirm:
 export default function ClientsPage() {
   const [clients,    setClients]    = useState<Client[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [loadError,  setLoadError]  = useState(false);
   const [search,     setSearch]     = useState("");
   const [sortCol,    setSortCol]    = useState<SortCol>(null);
   const [sortDir,    setSortDir]    = useState<SortDir>("asc");
@@ -140,10 +141,19 @@ export default function ClientsPage() {
 
   const loadClients = () => {
     setLoading(true);
+    setLoadError(false);
     fetch("/api/admin/clients")
       .then(r => r.json())
-      .then(setClients)
-      .catch(console.error)
+      .then(data => {
+        if (Array.isArray(data)) {
+          setClients(data);
+        } else {
+          console.error("Clients API error:", data);
+          setLoadError(true);
+          setClients([]);
+        }
+      })
+      .catch(err => { console.error(err); setLoadError(true); setClients([]); })
       .finally(() => setLoading(false));
   };
 
@@ -234,6 +244,13 @@ export default function ClientsPage() {
           + Add Client
         </button>
       </div>
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-100 rounded-2xl px-5 py-4 flex items-center gap-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p className="text-[13px] text-red-600 font-medium flex-1">Failed to load clients. <button onClick={loadClients} className="underline">Retry</button></p>
+        </div>
+      )}
 
       {/* ── Table ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
