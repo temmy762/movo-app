@@ -11,15 +11,24 @@ const TIER_IMAGES: Record<string, string> = {
 };
 
 const TIER_LABELS: Record<string, string> = {
-  classic:  "Movo Classic",
-  premium:  "Movo Premium",
-  black:    "Movo Privé Black",
-  economy:  "Movo Classic",
-  ECONOMY:  "Movo Classic",
-  CLASSIC:  "Movo Classic",
-  PREMIUM:  "Movo Premium",
-  BLACK:    "Movo Privé Black",
+  classic: "Movo Classic",
+  premium: "Movo Premium",
+  black:   "Movo Privé Black",
 };
+
+const TIER_DESCS: Record<string, string> = {
+  classic: "Comfortable everyday rides at great value.",
+  premium: "Elevated comfort with premium vehicles.",
+  black:   "Unparalleled luxury — your personal concierge.",
+};
+
+const MIN_FARES: Record<string, number> = {
+  classic: 18,
+  premium: 25,
+  black:   35,
+};
+
+const TIERS = ["classic", "premium", "black"] as const;
 
 interface FleetDriver {
   id: string;
@@ -39,19 +48,15 @@ interface FleetDriver {
   } | null;
 }
 
-interface CarCard {
-  vehicleId: string;
-  driverId: string;
-  driverName: string;
+interface TierInfo {
   tier: string;
-  tierLabel: string;
-  make: string;
-  model: string;
-  year: number;
-  plate: string;
-  img: string;
-  isOnline: boolean;
-  etaLabel: string;
+  onlineCount: number;
+  totalCount: number;
+  bestEtaMins: number | null;
+  bestDriverId: string | null;
+  bestVehicleImg: string | null;
+  bestMake: string;
+  bestModel: string;
 }
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -69,63 +74,71 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 function AvailableCarsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tier    = searchParams.get("tier")    ?? "all";
-  const pickup  = searchParams.get("pickup")  ?? "";
-  const dropoff = searchParams.get("dropoff") ?? "";
+  const tierParam = (searchParams.get("tier") ?? "all").toLowerCase();
+  const pickup    = searchParams.get("pickup")  ?? "";
+  const dropoff   = searchParams.get("dropoff") ?? "";
 
-  const [cards,   setCards]   = useState<CarCard[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const tierLower = tier.toLowerCase();
+  const [tierInfos, setTierInfos] = useState<Record<string, TierInfo>>({});
+  const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
     let userLat: number | null = null;
     let userLng: number | null = null;
 
-    const buildCards = (drivers: FleetDriver[]) => {
-      const filtered = tierLower === "all"
-        ? drivers
-        : drivers.filter((d) => d.vehicle?.tier.toLowerCase() === tierLower);
+    const buildTierInfos = (drivers: FleetDriver[]) => {
+      const result: Record<string, TierInfo> = {};
 
-      const built: CarCard[] = filtered
-        .filter((d) => d.vehicle !== null)
-        .map((d) => {
-          const v = d.vehicle!;
-          let etaLabel = "Available for scheduling";
+      for (const t of TIERS) {
+        const tierDrivers = drivers.filter(d => d.vehicle?.tier.toLowerCase() === t);
+        const onlineDrivers = tierDrivers.filter(d => d.isOnline && d.lat !== null && d.lng !== null);
 
-          if (d.isOnline && d.lat !== null && d.lng !== null && userLat !== null && userLng !== null) {
-            const km = haversineKm(d.lat, d.lng, userLat, userLng);
-            const m = Math.round(km * 1000);
-            const distStr = m < 1000 ? `${m} m` : `${km.toFixed(1)} km`;
-            const estMins = Math.max(1, Math.round((km / 30) * 60));
-            etaLabel = `${distStr} · ~${estMins} min away`;
-          } else if (d.isOnline) {
-            etaLabel = "Online · ETA unavailable";
+        let bestEtaMins: number | null = null;
+        let bestDriverId: string | null = null;
+        let bestVehicleImg: string | null = null;
+        let bestMake = "";
+        let bestModel = "";
+
+        if (onlineDrivers.length > 0 && userLat !== null && userLng !== null) {
+          let minKm = Infinity;
+          for (const d of onlineDrivers) {
+            const km = haversineKm(d.lat!, d.lng!, userLat, userLng);
+            if (km < minKm) {
+              minKm = km;
+              bestEtaMins = Math.max(1, Math.round((km / 30) * 60));
+              bestDriverId = d.id;
+              bestVehicleImg = d.vehicle?.photoUrl ?? null;
+              bestMake  = d.vehicle?.make ?? "";
+              bestModel = d.vehicle?.model ?? "";
+            }
           }
+        } else if (onlineDrivers.length > 0) {
+          const d = onlineDrivers[0];
+          bestEtaMins  = null;
+          bestDriverId = d.id;
+          bestVehicleImg = d.vehicle?.photoUrl ?? null;
+          bestMake  = d.vehicle?.make ?? "";
+          bestModel = d.vehicle?.model ?? "";
+        } else if (tierDrivers.length > 0) {
+          const d = tierDrivers[0];
+          bestDriverId   = d.id;
+          bestVehicleImg = d.vehicle?.photoUrl ?? null;
+          bestMake  = d.vehicle?.make ?? "";
+          bestModel = d.vehicle?.model ?? "";
+        }
 
-          return {
-            vehicleId: v.id,
-            driverId:  d.id,
-            driverName: `${d.firstName} ${d.lastName}`,
-            tier:      v.tier,
-            tierLabel: TIER_LABELS[v.tier] ?? v.tier,
-            make:      v.make,
-            model:     v.model,
-            year:      v.year,
-            plate:     v.plate,
-            img:       v.photoUrl ?? TIER_IMAGES[v.tier.toLowerCase()] ?? "/images/movo classic.png",
-            isOnline:  d.isOnline,
-            etaLabel,
-          };
-        })
-        // Sort: online drivers first, then by tier
-        .sort((a, b) => {
-          if (a.isOnline && !b.isOnline) return -1;
-          if (!a.isOnline && b.isOnline) return 1;
-          return 0;
-        });
+        result[t] = {
+          tier: t,
+          onlineCount: onlineDrivers.length,
+          totalCount:  tierDrivers.length,
+          bestEtaMins,
+          bestDriverId,
+          bestVehicleImg,
+          bestMake,
+          bestModel,
+        };
+      }
 
-      setCards(built);
+      setTierInfos(result);
       setLoading(false);
     };
 
@@ -134,12 +147,8 @@ function AvailableCarsContent() {
       userLng = lng;
       try {
         const res = await fetch("/api/drivers/nearby");
-        if (res.ok) {
-          const drivers: FleetDriver[] = await res.json();
-          buildCards(drivers);
-        } else {
-          setLoading(false);
-        }
+        if (res.ok) buildTierInfos(await res.json());
+        else setLoading(false);
       } catch {
         setLoading(false);
       }
@@ -154,9 +163,18 @@ function AvailableCarsContent() {
     } else {
       load(null, null);
     }
-  }, [tierLower]);
+  }, []);
 
-  const onlineCount = cards.filter((c) => c.isOnline).length;
+  const totalOnline = TIERS.reduce((s, t) => s + (tierInfos[t]?.onlineCount ?? 0), 0);
+
+  const handleBook = (t: string) => {
+    const info = tierInfos[t];
+    const params = new URLSearchParams({ pickup, dropoff, tier: t });
+    if (info?.bestDriverId) params.set("driverId", info.bestDriverId);
+    params.set("car", TIER_LABELS[t] ?? t);
+    params.set("carImg", TIER_IMAGES[t] ?? "");
+    router.push(`/home/ride/confirm?${params.toString()}`);
+  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
@@ -164,126 +182,131 @@ function AvailableCarsContent() {
       {/* Header */}
       <div className="px-4 pt-5 pb-3 border-b border-gray-100">
         <div className="max-w-lg mx-auto">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="flex items-center gap-1 text-[15px] text-gray-500 mb-2"
-          >
+          <button type="button" onClick={() => router.back()}
+            className="flex items-center gap-1 text-[15px] text-gray-500 mb-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="15 18 9 12 15 6" />
             </svg>
             Back
           </button>
-          <h1 className="text-[22px] font-bold text-gray-900 leading-tight">Available cars for ride</h1>
+          <h1 className="text-[22px] font-bold text-gray-900 leading-tight">Choose your ride</h1>
           {loading ? (
             <p className="text-[13px] text-gray-400 mt-0.5 flex items-center gap-1.5">
               <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin inline-block" />
-              Finding available cars…
+              Checking availability…
             </p>
           ) : (
             <p className="text-[13px] text-gray-400 mt-0.5">
-              {cards.length} car{cards.length !== 1 ? "s" : ""} found
-              {onlineCount > 0 && (
-                <span className="ml-2 text-green-600 font-medium">· {onlineCount} available now</span>
+              3 categories available
+              {totalOnline > 0 && (
+                <span className="ml-2 text-green-600 font-medium">· {totalOnline} driver{totalOnline !== 1 ? "s" : ""} online now</span>
               )}
             </p>
           )}
         </div>
       </div>
 
-      {/* Car list */}
+      {/* Tier cards */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
         <div className="max-w-lg mx-auto space-y-3">
-
           {loading ? (
-            [1, 2, 3].map((i) => (
-              <div key={i} className="bg-gray-50 border border-gray-200 rounded-2xl px-4 pt-3 pb-3 animate-pulse">
-                <div className="flex items-center gap-3 mb-3">
+            [1, 2, 3].map(i => (
+              <div key={i} className="bg-gray-50 border border-gray-200 rounded-2xl px-4 pt-4 pb-4 animate-pulse">
+                <div className="flex gap-3 mb-4">
                   <div className="flex-1">
                     <div className="h-4 bg-gray-200 rounded w-1/2 mb-2" />
-                    <div className="h-3 bg-gray-200 rounded w-2/3 mb-2" />
+                    <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
                     <div className="h-3 bg-gray-200 rounded w-1/3" />
                   </div>
-                  <div className="w-24 h-16 bg-gray-200 rounded-xl" />
+                  <div className="w-28 h-20 bg-gray-200 rounded-xl" />
                 </div>
-                <div className="h-9 bg-gray-200 rounded-lg" />
+                <div className="h-10 bg-gray-200 rounded-xl" />
               </div>
             ))
-          ) : cards.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
-                  <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" />
-                  <rect x="9" y="11" width="14" height="10" rx="2" />
-                  <circle cx="12" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
-                </svg>
-              </div>
-              <p className="text-[15px] font-semibold text-gray-700">No cars in the fleet yet</p>
-              <p className="text-[13px] text-gray-400 mt-1">Our team is expanding the fleet in your area.<br />Please check back shortly.</p>
-            </div>
           ) : (
-            cards.map((car, i) => (
-              <div
-                key={i}
-                className="bg-gray-50 border border-gray-200 rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-2"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    {/* Tier badge */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)", color: "#fff" }}
-                      >
-                        {car.tierLabel}
-                      </span>
-                      {car.isOnline ? (
-                        <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-                          Available Now
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-medium text-amber-600">Schedule</span>
-                      )}
-                    </div>
-                    <p className="text-[15px] font-bold text-gray-900">{car.make} {car.model} ({car.year})</p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">Driver: {car.driverName}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
-                        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
-                        <circle cx="12" cy="10" r="3" />
-                      </svg>
-                      <p className="text-[11px] text-gray-500">{car.etaLabel}</p>
-                    </div>
-                  </div>
-                  <div className="relative w-24 h-16 shrink-0">
-                    <Image src={car.img} alt={`${car.make} ${car.model}`} fill className="object-contain" unoptimized />
-                  </div>
-                </div>
+            TIERS.map(t => {
+              const info = tierInfos[t];
+              const isAvailableNow = (info?.onlineCount ?? 0) > 0;
+              const img = info?.bestVehicleImg ?? TIER_IMAGES[t];
+              const isHighlighted = tierParam === t;
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      pickup,
-                      dropoff,
-                      car:      `${car.make} ${car.model}`,
-                      tier:     car.tier,
-                      carImg:   car.img,
-                      vehicleId: car.vehicleId,
-                      driverId:  car.driverId,
-                    });
-                    router.push(`/home/ride?${params.toString()}`);
+              return (
+                <div
+                  key={t}
+                  className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border-2 transition-all"
+                  style={{
+                    background: isHighlighted ? "linear-gradient(135deg, #f5f0ff 0%, #fffbeb 100%)" : "#f9fafb",
+                    borderColor: isHighlighted ? "#2D0A53" : "#e5e7eb",
                   }}
-                  className="w-full py-2.5 rounded-lg text-white font-bold text-[13px] tracking-widest"
-                  style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
                 >
-                  {car.isOnline ? "BOOK NOW" : "SCHEDULE RIDE"}
-                </button>
-              </div>
-            ))
-          )}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      {/* Name + availability */}
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-[16px] font-bold text-gray-900">{TIER_LABELS[t]}</span>
+                        {isAvailableNow ? (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                            {info!.onlineCount} available now
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            Schedule only
+                          </span>
+                        )}
+                      </div>
 
+                      {/* Description */}
+                      <p className="text-[12px] text-gray-500 leading-snug mb-2">{TIER_DESCS[t]}</p>
+
+                      {/* ETA + Price row */}
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {isAvailableNow && (
+                          <div className="flex items-center gap-1">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
+                              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span className="text-[11px] text-gray-600 font-medium">
+                              {info?.bestEtaMins != null ? `~${info.bestEtaMins} min away` : "Online nearby"}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#8B7500" strokeWidth="2.5">
+                            <line x1="12" y1="1" x2="12" y2="23"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                          </svg>
+                          <span className="text-[11px] text-gray-600 font-medium">
+                            From ${MIN_FARES[t]}
+                          </span>
+                        </div>
+                        {(info?.totalCount ?? 0) > 0 && (
+                          <span className="text-[10px] text-gray-400">{info!.totalCount} vehicle{info!.totalCount !== 1 ? "s" : ""} in fleet</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Car image */}
+                    <div className="relative w-28 h-20 shrink-0">
+                      <Image src={img} alt={TIER_LABELS[t]} fill className="object-contain" unoptimized />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleBook(t)}
+                    className="w-full py-3 rounded-xl text-white font-bold text-[13px] tracking-widest"
+                    style={{ background: isAvailableNow
+                      ? "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)"
+                      : "#6b7280"
+                    }}
+                  >
+                    {isAvailableNow ? "BOOK NOW" : "SCHEDULE RIDE"}
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
