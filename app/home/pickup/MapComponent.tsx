@@ -51,22 +51,43 @@ export default function MapComponent({ selectedPoint, selectedDropoff, onLocatio
     libraries: LIBRARIES,
   });
 
-  const [center, setCenter] = useState(DEFAULT_CENTER);
-  const [mapRef, setMapRef] = useState<google.maps.Map | null>(null);
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const [nearbyDrivers, setNearbyDrivers] = useState<{ id: string; lat: number; lng: number }[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const didPanToUser = useRef(false);
 
+  /* Pan to user location once on load */
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setCenter(loc);
-        mapRef?.panTo(loc);
+        setUserLoc(loc);
+        if (mapRef.current && !didPanToUser.current) {
+          didPanToUser.current = true;
+          mapRef.current.panTo(loc);
+        }
       },
       () => {}
     );
-  }, [mapRef]);
+  }, []);
+
+  /* When map loads after geolocation already returned, pan now */
+  useEffect(() => {
+    if (mapRef.current && userLoc && !didPanToUser.current) {
+      didPanToUser.current = true;
+      mapRef.current.panTo(userLoc);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  /* Pan to selected pin WITHOUT resetting zoom */
+  useEffect(() => {
+    if (mapRef.current && selectedPoint) {
+      mapRef.current.panTo(selectedPoint);
+    }
+  }, [selectedPoint]);
 
   useEffect(() => {
     const fetchDrivers = async () => {
@@ -116,31 +137,38 @@ export default function MapComponent({ selectedPoint, selectedDropoff, onLocatio
   return (
     <GoogleMap
       mapContainerStyle={{ width: "100%", height: "100%" }}
-      center={selectedPoint ?? center}
-      zoom={14}
       onClick={onMapClick}
-      onLoad={(map) => setMapRef(map)}
+      onLoad={(map) => {
+        mapRef.current = map;
+        /* Set initial position imperatively — NOT via controlled props */
+        map.setCenter(userLoc ?? DEFAULT_CENTER);
+        map.setZoom(14);
+        if (userLoc) didPanToUser.current = true;
+      }}
       options={{
         disableDefaultUI: true,
         zoomControl: true,
         clickableIcons: false,
+        gestureHandling: "greedy",
         styles: MAP_STYLES,
       }}
     >
       {/* User location dot */}
-      <Marker
-        position={center}
-        icon={{
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 9,
-          fillColor: "#4f46e5",
-          fillOpacity: 1,
-          strokeColor: "white",
-          strokeWeight: 2.5,
-        }}
-        title="Your location"
-        zIndex={10}
-      />
+      {userLoc && (
+        <Marker
+          position={userLoc}
+          icon={{
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 9,
+            fillColor: "#4f46e5",
+            fillOpacity: 1,
+            strokeColor: "white",
+            strokeWeight: 2.5,
+          }}
+          title="Your location"
+          zIndex={10}
+        />
+      )}
 
       {/* Nearby car markers — live driver positions */}
       {nearbyDrivers.map((driver) => (
