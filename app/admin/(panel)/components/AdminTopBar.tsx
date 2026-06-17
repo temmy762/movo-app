@@ -65,11 +65,16 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
     }).catch(() => {});
   }, []);
 
-  // ── Fetch notifications ──────────────────────────────────────────────────
+  // ── Fetch notifications (initial + 60s poll) ─────────────────────────────
   useEffect(() => {
-    fetch("/api/admin/notifications").then(r => r.json()).then(d => {
-      if (d.items) setNotifs(d.items);
-    }).catch(() => {});
+    const load = () => {
+      fetch("/api/admin/notifications").then(r => r.json()).then(d => {
+        if (d.items) setNotifs(d.items);
+      }).catch(() => {});
+    };
+    load();
+    const timer = setInterval(load, 60_000);
+    return () => clearInterval(timer);
   }, []);
 
   // ── Close dropdowns on outside click ────────────────────────────────────

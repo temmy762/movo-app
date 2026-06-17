@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { BookingStatus } from "@prisma/client";
 import Stripe from "stripe";
+import { sendNotification } from "@/lib/notifications";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -42,7 +43,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         );
       }
 
-      const booking = await prisma.booking.findUnique({ where: { id } });
+      const booking = await prisma.booking.findUnique({
+        where: { id },
+        include: {
+          user:   { select: { id: true, email: true, firstName: true } },
+          driver: { select: { firstName: true, lastName: true, vehicle: { select: { make: true, model: true, plate: true } } } },
+        },
+      });
+
+      /* Notify rider that a driver has accepted */
+      if (booking?.user?.email && booking.driver) {
+        sendNotification({
+          eventType: "RIDER_DRIVER_ASSIGNED",
+          recipient: { type: "user", id: booking.user.id, email: booking.user.email, firstName: booking.user.firstName },
+          data: {
+            bookingId: id,
+            driverName: `${booking.driver.firstName} ${booking.driver.lastName}`,
+            vehicle: booking.driver.vehicle ? `${booking.driver.vehicle.make} ${booking.driver.vehicle.model} (${booking.driver.vehicle.plate})` : "N/A",
+            pickup: booking.pickup,
+            dropoff: booking.dropoff,
+          },
+        }).catch(() => {});
+      }
+
       return NextResponse.json(booking);
     }
 
@@ -193,6 +216,33 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
 
         await Promise.all(txOps);
+      }
+
+      /* Notify rider trip is complete */
+      if (existing.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: existing.userId },
+          select: { email: true, firstName: true },
+        });
+        const driver = existing.driverId ? await prisma.driver.findUnique({
+          where: { id: existing.driverId },
+          select: { firstName: true, lastName: true, vehicle: { select: { make: true, model: true } } },
+        }) : null;
+        if (user?.email) {
+          sendNotification({
+            eventType: "RIDER_RIDE_COMPLETED",
+            recipient: { type: "user", id: existing.userId, email: user.email, firstName: user.firstName },
+            data: {
+              bookingId: id,
+              pickup: existing.pickup,
+              dropoff: existing.dropoff,
+              driverName: driver ? `${driver.firstName} ${driver.lastName}` : "Your driver",
+              vehicleInfo: driver?.vehicle ? `${driver.vehicle.make} ${driver.vehicle.model}` : "",
+              total: existing.total,
+              completedAt: new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+            },
+          }).catch(() => {});
+        }
       }
 
       return NextResponse.json(booking);

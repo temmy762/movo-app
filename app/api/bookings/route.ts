@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { geocodeAddresses } from "@/lib/geocoding";
 import { PaymentStatus } from "@prisma/client";
+import { sendNotification } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
   try {
@@ -96,6 +97,29 @@ export async function POST(req: NextRequest) {
         ...(driverId  ? { driverId }  : {}),
       },
     });
+
+    /* Notify rider when booking auto-confirms on payment */
+    if (resolvedStatus === "CONFIRMED" && userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (user?.email) {
+        sendNotification({
+          eventType: "RIDER_BOOKING_CONFIRMED",
+          recipient: { type: "user", id: userId, email: user.email, firstName: user.firstName },
+          data: {
+            bookingId: booking.id,
+            pickup,
+            dropoff,
+            carTier,
+            fare: Number(fare),
+            serviceFee: Number(serviceFee),
+            total: Number(total),
+          },
+        }).catch(() => {});
+      }
+    }
 
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {

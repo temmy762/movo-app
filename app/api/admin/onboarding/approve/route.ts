@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { sendNotification } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,12 +40,16 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      console.log(`[Admin] Onboarding rejected: ${onboardingId}`);
+      /* Notify driver of rejection */
+      if (onboarding.driver.email) {
+        sendNotification({
+          eventType: "CHAUFFEUR_ONBOARDING_REJECTED",
+          recipient: { type: "driver", id: onboarding.driver.id, email: onboarding.driver.email, firstName: onboarding.driver.firstName },
+          data: { adminNote: adminNote ?? "Your application did not meet our requirements at this time." },
+        }).catch(() => {});
+      }
 
-      return NextResponse.json({
-        success: true,
-        message: "Onboarding rejected",
-      });
+      return NextResponse.json({ success: true, message: "Onboarding rejected" });
     }
 
     // APPROVE onboarding
@@ -108,13 +113,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[Admin] Onboarding approved: ${onboardingId} (driver: ${driver.id})`);
+    /* Notify driver of approval */
+    if (driver.email) {
+      sendNotification({
+        eventType: "CHAUFFEUR_ONBOARDING_APPROVED",
+        recipient: { type: "driver", id: driver.id, email: driver.email, firstName: driver.firstName },
+        data: {},
+      }).catch(() => {});
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Onboarding approved. Driver activated.",
-      driverId: driver.id,
-    });
+    return NextResponse.json({ success: true, message: "Onboarding approved. Driver activated.", driverId: driver.id });
   } catch (error) {
     console.error("Onboarding approval error:", error);
     return NextResponse.json(

@@ -57,12 +57,12 @@ export async function POST(req: NextRequest) {
 
   const incidentData = {
     incidentId:    incident.id,
-    reporterName:  reporterName ? `${reporterName.firstName} ${reporterName.lastName}` : "Unknown",
-    reporterRole:  reportedByRole,
+    reportedBy:    reporterName ? `${reporterName.firstName} ${reporterName.lastName}` : "Unknown",
+    reportedByRole: reportedByRole,
     type:          type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
     description:   description.trim().slice(0, 100) + (description.length > 100 ? "..." : ""),
-    bookingId:     bookingId ?? "N/A",
-    submittedAt:   new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+    bookingId:     bookingId ?? undefined,
+    createdAt:     new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
   };
 
   notifyAdmins("ADMIN_NEW_INCIDENT_REPORT", incidentData, ["EMAIL", "IN_APP"]).catch(() => {});

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { sendNotification } from "@/lib/notifications";
 
 async function requireAdmin(req: NextRequest) {
   const session = await getSession(req);
@@ -91,7 +92,27 @@ export async function PATCH(req: NextRequest) {
     const tx = await prisma.walletTransaction.update({
       where: { id },
       data: { status: newStatus },
+      include: { driver: { select: { id: true, email: true, firstName: true, lastName: true } } },
     });
+
+    /* Notify driver of outcome */
+    if (tx.driver?.email) {
+      sendNotification({
+        eventType: "CHAUFFEUR_PAYOUT_NOTIFICATION",
+        recipient: { type: "driver", id: tx.driver.id, email: tx.driver.email, firstName: tx.driver.firstName },
+        data: {
+          payoutId:      tx.id,
+          amount:        tx.amount,
+          paymentMethod: "Bank transfer",
+          processedAt:   new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+          periodStart:   "",
+          periodEnd:     "",
+          ridesCompleted: 0,
+          status:        newStatus,
+          note:          action === "approve" ? "Your payout has been approved and is being processed." : "Your payout request was not approved. Please contact support.",
+        },
+      }).catch(() => {});
+    }
 
     return NextResponse.json(tx);
   } catch (e) {
