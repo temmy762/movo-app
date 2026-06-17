@@ -20,7 +20,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <AdminSidebar open={sidebarOpen} onClose={close} />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <AdminTopBar onToggleSidebar={() => setSidebarOpen(v => !v)} sidebarOpen={sidebarOpen} />
-        <div className="flex-1 overflow-hidden min-h-0 relative">{children}</div>
+        <div className="flex-1 overflow-y-auto min-h-0 relative">{children}</div>
       </div>
     </>
   );
