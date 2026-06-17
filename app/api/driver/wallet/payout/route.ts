@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { sendNotification, notifyAdmins } from "@/lib/notifications";
 
 export async function POST(req: NextRequest) {
   const session = await getSession(req);
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
   /* Use Stripe Connect automatic payout if the driver is connected */
   const driver = await prisma.driver.findUnique({
     where: { id: session.driverId },
-    select: { stripeAccountId: true, stripeAccountStatus: true },
+    select: { stripeAccountId: true, stripeAccountStatus: true, firstName: true, lastName: true, email: true },
   });
 
   if (driver?.stripeAccountId && driver.stripeAccountStatus === "active") {
@@ -63,6 +64,24 @@ export async function POST(req: NextRequest) {
         note:     `Bank transfer via Stripe Connect — ref ${transfer.id}`,
       },
     });
+    const processedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" });
+    const payoutData = {
+      driverName:    `${driver.firstName} ${driver.lastName}`,
+      driverEmail:   driver.email ?? "",
+      amount:        requested,
+      type:          "Stripe Connect (automated)",
+      transactionId: tx.id,
+      requestedAt:   processedAt,
+      automated:     true,
+    };
+    if (driver.email) {
+      sendNotification({
+        eventType: "CHAUFFEUR_PAYOUT_NOTIFICATION",
+        recipient: { type: "driver", id: session.driverId, email: driver.email, firstName: driver.firstName },
+        data: { payoutId: tx.id, amount: requested, paymentMethod: "Stripe Connect", processedAt, periodStart: "", periodEnd: "", ridesCompleted: 0 },
+      }).catch(() => {});
+    }
+    notifyAdmins("ADMIN_PAYOUT_REQUEST", payoutData, ["EMAIL", "IN_APP"]).catch(() => {});
     return NextResponse.json({ ...tx, automated: true, transferId: transfer.id });
   }
 
@@ -76,6 +95,25 @@ export async function POST(req: NextRequest) {
       note: note ?? "Send to bank",
     },
   });
+
+  const requestedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" });
+  const payoutData = {
+    driverName:    `${driver?.firstName ?? ""} ${driver?.lastName ?? ""}`.trim(),
+    driverEmail:   driver?.email ?? "",
+    amount:        requested,
+    type:          "Manual (pending approval)",
+    transactionId: tx.id,
+    requestedAt,
+    automated:     false,
+  };
+  if (driver?.email) {
+    sendNotification({
+      eventType: "CHAUFFEUR_PAYOUT_NOTIFICATION",
+      recipient: { type: "driver", id: session.driverId, email: driver.email, firstName: driver.firstName },
+      data: { payoutId: tx.id, amount: requested, paymentMethod: "Manual bank transfer", processedAt: requestedAt, periodStart: "", periodEnd: "", ridesCompleted: 0 },
+    }).catch(() => {});
+  }
+  notifyAdmins("ADMIN_PAYOUT_REQUEST", payoutData, ["EMAIL", "IN_APP"]).catch(() => {});
 
   return NextResponse.json(tx);
 }

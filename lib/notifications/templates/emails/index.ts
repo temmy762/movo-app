@@ -21,6 +21,7 @@ import { chauffeurPayoutTemplate } from "./chauffeur/payout";
 import { adminNewDriverApplicationTemplate } from "./admin/new-driver-application";
 import { adminNewIncidentTemplate } from "./admin/new-incident";
 import { adminEmergencyIncidentTemplate } from "./admin/emergency-incident";
+import { adminPayoutRequestTemplate } from "./admin/payout-request";
 
 // Generic fallback templates
 import { passwordResetTemplate } from "./generic/password-reset";
@@ -58,6 +59,7 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   ADMIN_NEW_DRIVER_APPLICATION: adminNewDriverApplicationTemplate,
   ADMIN_NEW_INCIDENT_REPORT: adminNewIncidentTemplate,
   ADMIN_EMERGENCY_INCIDENT: adminEmergencyIncidentTemplate,
+  ADMIN_PAYOUT_REQUEST: adminPayoutRequestTemplate,
 
   // Generic (used by multiple channels)
   RIDER_EMAIL_VERIFICATION: emailVerificationTemplate,

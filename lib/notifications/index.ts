@@ -56,6 +56,7 @@ const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationType[]> = {
   ADMIN_NEW_INCIDENT_REPORT: ["IN_APP"],
   ADMIN_EMERGENCY_INCIDENT: ["EMAIL", "IN_APP"],
   ADMIN_NEW_FLEET_APPLICATION: ["IN_APP"],
+  ADMIN_PAYOUT_REQUEST: ["EMAIL", "IN_APP"],
   // Support events: Email + In-app
   SUPPORT_TICKET_CREATED: ["EMAIL", "IN_APP"],
   SUPPORT_TICKET_UPDATED: ["EMAIL", "IN_APP"],
@@ -136,7 +137,7 @@ export async function notifyAdmins(
     return { success: false, results: [] };
   }
 
-  const results = [];
+  const results: { channel: string; success: boolean; error?: string }[] = [];
 
   // Create in-app broadcast
   if (channels.includes("IN_APP")) {
@@ -166,7 +167,7 @@ export async function notifyAdmins(
   }
 
   return {
-    success: results.every((r: { success: boolean }) => r.success),
+    success: results.every((r) => r.success),
     results,
   };
 }
@@ -215,7 +216,7 @@ export async function getNotifications(
 
   const where = {
     ...whereClause,
-    type: "IN_APP",
+    type: "IN_APP" as const,
     ...(unreadOnly ? { readAt: null } : {}),
   };
 
@@ -228,7 +229,7 @@ export async function getNotifications(
     }),
     prisma.notification.count({ where }),
     prisma.notification.count({
-      where: { ...whereClause, type: "IN_APP", readAt: null },
+      where: { ...whereClause, type: "IN_APP" as const, readAt: null },
     }),
   ]);
 

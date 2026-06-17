@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { sendNotification, notifyAdmins } from "@/lib/notifications";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const driver = await prisma.driver.findUnique({
     where: { id: session.driverId },
-    select: { stripeAccountId: true, stripeAccountStatus: true },
+    select: { stripeAccountId: true, stripeAccountStatus: true, firstName: true, lastName: true, email: true },
   });
 
   if (!driver?.stripeAccountId) {
@@ -82,6 +83,29 @@ export async function POST(req: NextRequest) {
       note:     `Bank transfer via Stripe Connect — ref ${transfer.id}`,
     },
   });
+
+  /* ── Notifications ── */
+  const payoutData = {
+    driverName:     `${driver.firstName} ${driver.lastName}`,
+    driverEmail:    driver.email ?? "",
+    amount,
+    type:           "Stripe Connect (automated)",
+    transactionId:  tx.id,
+    requestedAt:    new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+    automated:      true,
+  };
+
+  /* Driver notification */
+  if (driver.email) {
+    sendNotification({
+      eventType: "CHAUFFEUR_PAYOUT_NOTIFICATION",
+      recipient: { type: "driver", id: session.driverId, email: driver.email, firstName: driver.firstName },
+      data: { payoutId: tx.id, amount, paymentMethod: "Stripe Connect", processedAt: payoutData.requestedAt, periodStart: "", periodEnd: "", ridesCompleted: 0 },
+    }).catch(() => {});
+  }
+
+  /* Admin notification */
+  notifyAdmins("ADMIN_PAYOUT_REQUEST", payoutData, ["EMAIL", "IN_APP"]).catch(() => {});
 
   return NextResponse.json({ success: true, transferId: transfer.id, transactionId: tx.id });
 }
