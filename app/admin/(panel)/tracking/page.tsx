@@ -118,8 +118,15 @@ export default function TrackingPage() {
   const cancelledRef=useRef(false);
   const refreshRef=useRef<()=>void>(()=>{});
 
+  const scheduleNext = useCallback((data: Vehicle[]) => {
+    if (cancelledRef.current || !autoRefresh) return;
+    const hasActive = data.some((v: Vehicle) => v.status === "Active Trip");
+    pollRef.current = setTimeout(() => refreshRef.current(), hasActive ? 5000 : 15000);
+  }, [autoRefresh]);
+
   const load=useCallback(()=>{
     setIsRefreshing(true);
+    if (pollRef.current) clearTimeout(pollRef.current);
     fetch("/api/admin/tracking")
       .then(r=>{
         if(!r.ok) throw new Error(`API error: ${r.status}`);
@@ -127,31 +134,23 @@ export default function TrackingPage() {
       })
       .then((data)=>{
         if(cancelledRef.current) return;
-        // Handle both Vehicle[] and error responses
         if(Array.isArray(data)){
           setVehicles(data);
           setLastUpdated(new Date());
           setActiveId(prev=>prev??(data.length>0?data[0].id:null));
-          // Schedule next refresh if auto-refresh is on
-          if(autoRefresh && !cancelledRef.current){
-            const hasActive=data.some((v:Vehicle)=>v.status==="Active Trip");
-            pollRef.current=setTimeout(refreshRef.current,hasActive?2000:10000);
-          }
+          scheduleNext(data);
         }else{
-          console.error("Invalid API response:", data);
           setVehicles([]);
+          scheduleNext([]);
         }
       })
-      .catch((err)=>{
-        console.error("Tracking API error:", err);
+      .catch(()=>{
         if(cancelledRef.current) return;
         setVehicles([]);
-        if(autoRefresh && !cancelledRef.current){
-          pollRef.current=setTimeout(refreshRef.current,10000);
-        }
+        scheduleNext([]);
       })
       .finally(()=>setIsRefreshing(false));
-  },[autoRefresh]);
+  },[autoRefresh, scheduleNext]);
 
   // Store load in ref so useEffect can access latest version
   refreshRef.current=load;
@@ -168,27 +167,12 @@ export default function TrackingPage() {
 
   useEffect(()=>{
     cancelledRef.current=false;
-    
-    // Don't start polling if auto-refresh is off
-    if (!autoRefresh) {
-      return;
-    }
-    
     load();
-    
-    // Auto-refresh every 2 seconds for live tracking
-    const interval = setInterval(() => {
-      if (!cancelledRef.current && autoRefresh) {
-        load();
-      }
-    }, 2000);
-    
     return()=>{
       cancelledRef.current=true;
-      clearInterval(interval);
       if(pollRef.current) clearTimeout(pollRef.current);
     };
-  },[load, autoRefresh]);
+  },[load]);
 
   const filtered=vehicles.filter(v=>
     v.client.toLowerCase().includes(search.toLowerCase())||
@@ -197,18 +181,6 @@ export default function TrackingPage() {
   // Always get the latest active vehicle data
   const active=vehicles.find(v=>v.id===activeId);
   
-  // Debug: log when active vehicle updates
-  useEffect(() => {
-    if (active) {
-      console.log(`[Tracking] Active vehicle updated:`, {
-        id: active.id,
-        pos: active.pos,
-        route: active.route?.length,
-        status: active.status,
-      });
-    }
-  }, [active]);
-
   const handleAdd=async(d:Omit<Vehicle,"id"|"pos"|"route">,driverId?:string)=>{
     try {
       if (!driverId) {
@@ -446,7 +418,7 @@ export default function TrackingPage() {
           <div className="flex-1 overflow-hidden">
             {active && (
               <TrackingMap 
-                key={`${active.id}-${active.pos[0]}-${active.pos[1]}`}
+                key={active.id}
                 lat={active.pos[0]} 
                 lng={active.pos[1]} 
                 route={active.route} 

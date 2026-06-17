@@ -34,25 +34,18 @@ export default function TrackingMap({ lat, lng, route, heading = 0 }: TrackingMa
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapType, setMapType] = useState<"roadmap" | "satellite">("satellite");
 
+  /* Smooth pan to new position — never resets zoom */
   useEffect(() => {
     if (mapRef.current && (lat !== 0 || lng !== 0)) {
-      // Use panTo for smooth movement instead of jumping
       mapRef.current.panTo({ lat, lng });
     }
   }, [lat, lng]);
-  
+
   useEffect(() => {
     if (mapRef.current) {
       mapRef.current.setMapTypeId(mapType);
     }
   }, [mapType]);
-  
-  // Force re-render when route changes
-  useEffect(() => {
-    if (route && route.length > 0) {
-      console.log(`[Map] Route updated:`, route.length, "points");
-    }
-  }, [route]);
 
   if (!isLoaded) {
     return <div style={{ width: "100%", height: "100%", background: "#1a1a1a" }} />;
@@ -64,14 +57,18 @@ export default function TrackingMap({ lat, lng, route, heading = 0 }: TrackingMa
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <GoogleMap
         mapContainerStyle={{ width: "100%", height: "100%" }}
-        center={{ lat, lng }}
-        zoom={16}
-        onLoad={(map) => { mapRef.current = map; }}
+        onLoad={(map) => {
+          mapRef.current = map;
+          /* Set initial position imperatively — no controlled center/zoom props */
+          if (lat !== 0 || lng !== 0) map.setCenter({ lat, lng });
+          map.setZoom(16);
+          map.setMapTypeId(mapType);
+        }}
         options={{
           disableDefaultUI: true,
           zoomControl: true,
           clickableIcons: false,
-          mapTypeId: mapType,
+          gestureHandling: "greedy",
           styles: [
             { featureType: "poi",     stylers: [{ visibility: "off" }] },
             { featureType: "transit", stylers: [{ visibility: "off" }] },
