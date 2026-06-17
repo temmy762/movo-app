@@ -15,6 +15,7 @@ import type {
   NotificationEventType,
 } from "./types";
 import { sendEmail } from "./channels/email";
+import { sendSMS as sendSMSChannel } from "./channels/sms";
 import { createInAppNotification, createAdminBroadcastNotification } from "./channels/in-app";
 
 // Re-export types
@@ -87,9 +88,8 @@ export async function sendNotification(payload: NotificationPayload): Promise<{
             return { channel, ...inAppResult };
 
           case "SMS":
-            // Future: Implement SMS via Twilio
-            console.log("[Notification] SMS channel not yet implemented");
-            return { channel, success: false, error: "SMS not implemented" };
+            const smsResult = await sendSMSChannel(payload);
+            return { channel, ...smsResult };
 
           case "PUSH":
             // Future: Implement push via Firebase
