@@ -31,6 +31,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   ADMIN_NEW_INCIDENT_REPORT: "New incident report",
   ADMIN_EMERGENCY_INCIDENT: "EMERGENCY INCIDENT",
   ADMIN_NEW_FLEET_APPLICATION: "New fleet application",
+  ADMIN_PAYOUT_REQUEST: "Driver payout request",
   // Support events
   SUPPORT_TICKET_CREATED: "Support ticket created",
   SUPPORT_TICKET_UPDATED: "Ticket updated",
@@ -63,6 +64,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   ADMIN_NEW_INCIDENT_REPORT: "A new incident report has been submitted.",
   ADMIN_EMERGENCY_INCIDENT: "URGENT: An emergency incident requires immediate attention.",
   ADMIN_NEW_FLEET_APPLICATION: "A new fleet application has been submitted.",
+  ADMIN_PAYOUT_REQUEST: "A driver has requested a payout. Please review and approve.",
   // Support events
   SUPPORT_TICKET_CREATED: "A new support ticket has been created.",
   SUPPORT_TICKET_UPDATED: "A support ticket has been updated.",
@@ -108,7 +110,7 @@ export async function createInAppNotification(
       data: {
         type: "IN_APP",
         channel,
-        eventType,
+        eventType: eventType as never,
         title,
         message,
         data: data as never,
@@ -150,7 +152,7 @@ export async function createAdminBroadcastNotification(
       data: {
         type: "IN_APP",
         channel: "ADMIN",
-        eventType,
+        eventType: eventType as never,
         title,
         message,
         data: data as never,
