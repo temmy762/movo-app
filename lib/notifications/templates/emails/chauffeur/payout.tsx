@@ -76,7 +76,7 @@ export function chauffeurPayoutTemplate(context: EmailTemplateContext): EmailTem
       </Text>
 
       <Button
-        href={`${settings.baseUrl}/driver/earnings`}
+        href={`${settings.baseUrl}/driver/home/wallet`}
         style={{
           backgroundColor: "#2D0A53",
           color: "#ffffff",

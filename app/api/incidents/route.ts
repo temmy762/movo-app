@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { IncidentType } from "@prisma/client";
+import { sendNotification, notifyAdmins } from "@/lib/notifications";
 
 const VALID_TYPES: IncidentType[] = [
   "ACCIDENT", "UNSAFE_DRIVING", "HARASSMENT",
@@ -48,6 +49,35 @@ export async function POST(req: NextRequest) {
       driverId:   session.driverId ?? null,
     },
   });
+
+  /* Notify admin */
+  const reporterName = session.driverId
+    ? (await prisma.driver.findUnique({ where: { id: session.driverId }, select: { firstName: true, lastName: true, email: true } }))
+    : (await prisma.user.findUnique({ where: { id: session.userId! }, select: { firstName: true, lastName: true, email: true } }));
+
+  const incidentData = {
+    incidentId:    incident.id,
+    reporterName:  reporterName ? `${reporterName.firstName} ${reporterName.lastName}` : "Unknown",
+    reporterRole:  reportedByRole,
+    type:          type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+    description:   description.trim().slice(0, 100) + (description.length > 100 ? "..." : ""),
+    bookingId:     bookingId ?? "N/A",
+    submittedAt:   new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+  };
+
+  notifyAdmins("ADMIN_NEW_INCIDENT_REPORT", incidentData, ["EMAIL", "IN_APP"]).catch(() => {});
+
+  /* Notify submitter */
+  if (reporterName?.email) {
+    const eventType = session.driverId ? "CHAUFFEUR_BOOKING_ASSIGNED" : "RIDER_INCIDENT_SUBMITTED";
+    if (!session.driverId) {
+      sendNotification({
+        eventType: "RIDER_INCIDENT_SUBMITTED",
+        recipient: { type: "user", id: session.userId!, email: reporterName.email, firstName: reporterName.firstName },
+        data: { incidentId: incident.id, type: incidentData.type, submittedAt: incidentData.submittedAt },
+      }).catch(() => {});
+    }
+  }
 
   return NextResponse.json({ success: true, incidentId: incident.id }, { status: 201 });
 }

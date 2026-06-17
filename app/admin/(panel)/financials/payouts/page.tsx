@@ -79,7 +79,14 @@ export default function PayoutsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-[20px] font-bold text-gray-900">Payout Requests</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-[20px] font-bold text-gray-900">Payout Requests</h1>
+            {pending > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white bg-red-500">
+                {pending}
+              </span>
+            )}
+          </div>
           <p className="text-[12px] text-gray-400 mt-0.5">
             {pending > 0 ? `${pending} pending approval` : "All caught up"}
           </p>

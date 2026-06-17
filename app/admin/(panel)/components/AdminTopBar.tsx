@@ -28,7 +28,7 @@ function resolveTitle(pathname: string): { title: string; parent?: { label: stri
   return { title: titles[pathname] ?? "Admin" };
 }
 
-type NotifItem = { id: string; type: "booking" | "support"; title: string; sub: string; time: string; href: string; };
+type NotifItem = { id: string; type: "booking" | "support" | "payout" | "incident"; title: string; sub: string; time: string; href: string; };
 
 function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -255,14 +255,26 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
                   <button key={n.id} onClick={() => handleNotificationClick(n)}
                     className="no-hover-fx w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                      style={{ background: n.type === "booking" ? "#eff6ff" : "#fef2f2" }}>
-                      {n.type === "booking" ? (
+                      style={{ background: n.type === "booking" ? "#eff6ff" : n.type === "payout" ? "#f0fdf4" : n.type === "incident" ? "#fff7ed" : "#fef2f2" }}>
+                      {n.type === "booking" && (
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2">
                           <rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
                         </svg>
-                      ) : (
+                      )}
+                      {n.type === "support" && (
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                      )}
+                      {n.type === "payout" && (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+                          <rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      )}
+                      {n.type === "incident" && (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2">
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                         </svg>
                       )}
                     </div>
