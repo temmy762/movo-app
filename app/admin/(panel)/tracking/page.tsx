@@ -13,7 +13,7 @@ type Vehicle = {
   id:string; client:string; car:string; carType:string; carNumber:string;
   status:TripStatus; startDate:string; endDate:string; tripTime:string; distance:string;
   pos:[number,number]; route:[number,number][]; heading?:number;
-  driverName?:string;
+  driverName?:string; vehiclePhoto?:string|null;
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -352,7 +352,9 @@ export default function TrackingPage() {
             {/* Car info */}
             <div className="flex items-center gap-3 pr-5 border-r border-gray-100">
               <div className="w-20 h-12 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
-                <CarThumb color="#ef4444"/>
+                {active.vehiclePhoto
+                  ? <img src={active.vehiclePhoto} alt={active.car} className="w-full h-full object-cover"/>
+                  : <CarThumb color="#ef4444"/>}
               </div>
               <div>
                 <p className="text-[13px] font-bold text-gray-900">{active.car}</p>
@@ -368,7 +370,7 @@ export default function TrackingPage() {
               <p className="text-[12px] font-bold text-gray-900 mb-2">Rent Info</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 {[
-                  {icon:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>, label:"Driver",    val:active.client},
+                  {icon:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>, label:"Driver",    val:active.driverName||active.client},
                   {icon:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label:"Start Date", val:active.startDate},
                   {icon:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, label:"End Date",   val:active.endDate},
                   {icon:<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, label:"Trip Time",  val:active.tripTime},
@@ -377,7 +379,7 @@ export default function TrackingPage() {
                   <div key={r.label} className="flex items-center gap-1.5">
                     <span className="shrink-0">{r.icon}</span>
                     <span className="text-[9px] text-gray-400 shrink-0">{r.label}</span>
-                    <span className="text-[9px] font-medium text-gray-700 truncate">— {r.val}</span>
+                    <span className="text-[9px] font-medium text-gray-700 truncate">{r.val && r.val !== "—" ? `— ${r.val}` : "—"}</span>
                   </div>
                 ))}
               </div>

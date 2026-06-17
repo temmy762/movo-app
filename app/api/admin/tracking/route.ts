@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
                 model: true,
                 plate: true,
                 tier: true,
+                photoUrl: true,
               },
             },
           },
@@ -58,8 +59,6 @@ export async function GET(req: NextRequest) {
         select: { bookingId: true, lat: true, lng: true, heading: true, speed: true },
       });
 
-      console.log(`[Admin Tracking] Found ${locs.length} location points for ${activeIds.length} active bookings`);
-
       // Group by bookingId (points arrive newest-first; cap at 150 per booking)
       for (const loc of locs) {
         if (!routeMap.has(loc.bookingId)) {
@@ -80,18 +79,6 @@ export async function GET(req: NextRequest) {
         routeMap.set(k, v.reverse());
       }
     }
-
-    // Debug: Log booking relation check
-    console.log(
-      "[Admin Tracking] Booking relation check:",
-      bookings.map(b => ({
-        bookingId: b.id,
-        hasDriver: !!b.driver,
-        hasVehicle: !!b.driver?.vehicle,
-        driverName: b.driver ? `${b.driver.firstName} ${b.driver.lastName}` : "NO_DRIVER",
-        vehicleInfo: b.driver?.vehicle ? `${b.driver.vehicle.make} ${b.driver.vehicle.model}` : "NO_VEHICLE",
-      }))
-    );
 
     // Format response - filter out invalid bookings
     const vehicles = bookings
@@ -152,11 +139,26 @@ export async function GET(req: NextRequest) {
                 minute: "2-digit",
               })}`
             : "—",
-          distance: "—",
+          distance: (() => {
+          const pts = routeMap.get(b.id);
+          if (!pts || pts.length < 2) return "—";
+          let km = 0;
+          for (let i = 1; i < pts.length; i++) {
+            const [lat1, lng1] = pts[i - 1];
+            const [lat2, lng2] = pts[i];
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+            km += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          }
+          return km < 1 ? `${(km*1000).toFixed(0)} m` : `${km.toFixed(1)} km`;
+        })(),
           pos: [lat, lng] as [number, number],
           route: trail,
           heading,
           driverName: `${d.firstName ?? "Unknown"} ${d.lastName ?? ""}`.trim(),
+          vehiclePhoto: v.photoUrl ?? null,
           driverId: d.id,
           isOnline: d.isOnline ?? false,
           pickupLat: b.pickupLat ?? 0,
