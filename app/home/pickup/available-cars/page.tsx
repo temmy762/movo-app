@@ -22,13 +22,20 @@ const TIER_DESCS: Record<string, string> = {
   black:   "Unparalleled luxury — your personal concierge.",
 };
 
-const MIN_FARES: Record<string, number> = {
+const MIN_FARES_FALLBACK: Record<string, number> = {
   classic: 18,
   premium: 25,
   black:   35,
 };
 
 const TIERS = ["classic", "premium", "black"] as const;
+
+function safeNormalizeTier(raw: string): typeof TIERS[number] {
+  const lower = raw.toLowerCase();
+  if (lower.includes("black") || lower.includes("luxury") || lower.includes("executive") || lower.includes("vip")) return "black";
+  if (lower.includes("premium") || lower.includes("business") || lower.includes("comfort")) return "premium";
+  return "classic";
+}
 
 interface FleetDriver {
   id: string;
@@ -93,10 +100,26 @@ function AvailableCarsContent() {
 
   const [tierInfos,    setTierInfos]    = useState<Record<string, TierInfo>>({});
   const [carsByTier,   setCarsByTier]   = useState<Record<string, CarCard[]>>({});
+  const [minFares,     setMinFares]     = useState<Record<string, number>>(MIN_FARES_FALLBACK);
   const [loading,      setLoading]      = useState(true);
   const [selectedTier, setSelectedTier] = useState<string | null>(
     TIERS.includes(tierParam as typeof TIERS[number]) ? tierParam : null
   );
+
+  useEffect(() => {
+    fetch("/api/admin/pricing")
+      .then(r => r.json())
+      .then(d => {
+        if (d.tiers) {
+          const map: Record<string, number> = { ...MIN_FARES_FALLBACK };
+          for (const t of d.tiers) {
+            if (t.tier && t.minFare != null) map[t.tier.toLowerCase()] = t.minFare;
+          }
+          setMinFares(map);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let userLat: number | null = null;
@@ -107,7 +130,7 @@ function AvailableCarsContent() {
       const carsResult: Record<string, CarCard[]> = {};
 
       for (const t of TIERS) {
-        const tierDrivers   = drivers.filter(d => d.vehicle?.tier.toLowerCase() === t);
+        const tierDrivers   = drivers.filter(d => d.vehicle !== null && safeNormalizeTier(d.vehicle.tier) === t);
         const onlineDrivers = tierDrivers.filter(d => d.isOnline && d.lat !== null && d.lng !== null);
 
         let bestEtaMins: number | null = null;
@@ -162,7 +185,7 @@ function AvailableCarsContent() {
               vehicleId: v.id, driverId: d.id,
               driverName: `${d.firstName} ${d.lastName}`,
               tier: t, make: v.make, model: v.model, year: v.year,
-              img: v.photoUrl ?? TIER_IMAGES[t] ?? "/images/movo classic.png",
+              img: v.photoUrl ?? TIER_IMAGES[safeNormalizeTier(v.tier)] ?? "/images/movo classic.png",
               isOnline: d.isOnline, etaLabel,
             };
           })
@@ -226,7 +249,7 @@ function AvailableCarsContent() {
               <h1 className="text-[22px] font-bold text-gray-900">{TIER_LABELS[selectedTier]}</h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
                 style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
-                From ${MIN_FARES[selectedTier]}
+                From ${minFares[selectedTier] ?? MIN_FARES_FALLBACK[selectedTier]}
               </span>
             </div>
             {loading ? (
@@ -342,7 +365,7 @@ function AvailableCarsContent() {
             </p>
           ) : (
             <p className="text-[13px] text-gray-400 mt-0.5">
-              3 categories available
+              {TIERS.filter(t => (tierInfos[t]?.totalCount ?? 0) > 0).length} categor{TIERS.filter(t => (tierInfos[t]?.totalCount ?? 0) > 0).length === 1 ? "y" : "ies"} available
               {totalOnline > 0 && (
                 <span className="ml-2 text-green-600 font-medium">· {totalOnline} driver{totalOnline !== 1 ? "s" : ""} online now</span>
               )}
@@ -409,7 +432,7 @@ function AvailableCarsContent() {
                             <line x1="12" y1="1" x2="12" y2="23"/>
                             <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
                           </svg>
-                          <span className="text-[11px] text-gray-600 font-medium">From ${MIN_FARES[t]}</span>
+                          <span className="text-[11px] text-gray-600 font-medium">From ${minFares[t] ?? MIN_FARES_FALLBACK[t]}</span>
                         </div>
                         {(info?.totalCount ?? 0) > 0 && (
                           <span className="text-[10px] text-gray-400">{info!.totalCount} vehicle{info!.totalCount !== 1 ? "s" : ""} in fleet</span>
