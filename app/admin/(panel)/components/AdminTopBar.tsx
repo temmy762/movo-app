@@ -129,19 +129,19 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
   ];
 
   return (
-    <header className="h-14 border-b flex items-center justify-between px-4 md:px-6 shrink-0 z-10" style={{ background: "#0A0A0F", borderColor: "#2A3055" }}>
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 md:px-6 shrink-0 z-10">
       {/* Hamburger — mobile only */}
       <button
         onClick={onToggleSidebar}
         className="no-hover-fx md:hidden w-9 h-9 rounded-xl flex items-center justify-center mr-2 shrink-0 transition-colors"
-        style={{ background: sidebarOpen ? "rgba(42,48,85,0.6)" : "rgba(42,48,85,0.3)" }}
+        style={{ background: sidebarOpen ? "#f3f0ff" : "#f9fafb" }}
         aria-label="Toggle sidebar">
         {sidebarOpen ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8F9E" strokeWidth="2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         )}
@@ -162,7 +162,7 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
             </Link>
           )}
-          <h1 className="text-[17px] font-bold" style={{ color: "#F5F5F2", fontFamily: "var(--font-heading)" }}>{title}</h1>
+          <h1 className="text-[17px] font-bold text-gray-900">{title}</h1>
         </div>
       </div>
 
@@ -170,14 +170,14 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
 
         {/* Search bar (inline) */}
         {showSearch && (
-          <div className="hidden md:flex items-center gap-2 rounded-xl px-3 py-1.5" style={{ background: "rgba(42,48,85,0.5)", border: "1px solid #2A3055" }}>
+          <div className="hidden md:flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-1.5 bg-gray-50/80">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input autoFocus type="text" placeholder="Search bookings, clients…"
               value={searchVal} onChange={e => setSearchVal(e.target.value)}
               onKeyDown={handleSearch}
-              className="text-[12px] focus:outline-none w-48 bg-transparent" style={{ color: "#F5F5F2" }} suppressHydrationWarning/>
+              className="text-[12px] focus:outline-none w-48 bg-transparent placeholder-gray-300" suppressHydrationWarning/>
             <button onClick={() => { setShowSearch(false); setSearchVal(""); }}
               className="no-hover-fx text-gray-400 text-[16px] leading-none">×</button>
           </div>
@@ -185,10 +185,10 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
 
         {/* Search toggle */}
         <button className="no-hover-fx w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: showSearch ? "rgba(42,48,85,0.7)" : "rgba(42,48,85,0.3)" }}
+          style={{ background: showSearch ? "#f3f0ff" : "#f9fafb" }}
           onClick={() => { setShowSearch(v => !v); setShowNotif(false); setShowSettings(false); }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-            stroke={showSearch ? "#C6BFB2" : "#8A8F9E"} strokeWidth="2">
+            stroke={showSearch ? "#7c3aed" : "#6b7280"} strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
         </button>
@@ -196,26 +196,26 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
         {/* Settings dropdown */}
         <div className="relative" ref={settingsRef}>
           <button className="no-hover-fx w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: showSettings ? "rgba(42,48,85,0.7)" : "rgba(42,48,85,0.3)" }}
+            style={{ background: showSettings ? "#f3f0ff" : "#f9fafb" }}
             onClick={() => { setShowSettings(v => !v); setShowNotif(false); setShowSearch(false); }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-              stroke={showSettings ? "#C6BFB2" : "#8A8F9E"} strokeWidth="2">
+              stroke={showSettings ? "#7c3aed" : "#6b7280"} strokeWidth="2">
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </button>
           {showSettings && (
-            <div className="absolute right-0 top-full mt-2 w-52 rounded-xl shadow-lg py-1 z-50" style={{ background: "#131936", border: "1px solid #2A3055" }}>
-              <p className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#8A8F9E" }}>Quick Navigation</p>
+            <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 rounded-xl shadow-lg py-1 z-50">
+              <p className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Quick Navigation</p>
               {settingsLinks.map(item => (
                 <Link key={item.href} href={item.href} onClick={() => setShowSettings(false)}
-                  className="no-hover-fx flex items-center gap-2.5 w-full px-4 py-2.5 text-left text-[12px]" style={{ color: "#F5F5F2" }}>
+                  className="no-hover-fx flex items-center gap-2.5 w-full px-4 py-2.5 text-left text-[12px] text-gray-700 hover:bg-gray-50">
                   {item.label}
                 </Link>
               ))}
-              <div className="mt-1 pt-1" style={{ borderTop: "1px solid #2A3055" }}>
+              <div className="border-t border-gray-100 mt-1 pt-1">
                 <button onClick={handleSignOut}
-                  className="no-hover-fx w-full px-4 py-2.5 text-left text-[12px] text-red-400 flex items-center gap-2.5">
+                  className="no-hover-fx w-full px-4 py-2.5 text-left text-[12px] text-red-500 hover:bg-red-50 flex items-center gap-2.5">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                     <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
@@ -244,9 +244,9 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
             )}
           </button>
           {showNotif && (
-            <div className="absolute right-0 top-full mt-2 w-80 rounded-xl shadow-lg z-50 overflow-hidden" style={{ background: "#131936", border: "1px solid #2A3055" }}>
-              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "#2A3055" }}>
-                <p className="text-[13px] font-bold" style={{ color: "#F5F5F2" }}>Notifications</p>
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <p className="text-[13px] font-bold text-gray-900">Notifications</p>
                 {notifs.length > 0 && (
                   <span className="text-[10px] font-semibold text-white bg-red-500 px-2 py-0.5 rounded-full">
                     {notifs.length} new
@@ -258,7 +258,7 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
                   <p className="px-4 py-8 text-center text-[12px] text-gray-400">All caught up!</p>
                 ) : notifs.map(n => (
                   <button key={n.id} onClick={() => handleNotificationClick(n)}
-                    className="no-hover-fx w-full flex items-start gap-3 px-4 py-3 transition-colors text-left" style={{ borderBottom: "1px solid #2A3055" }}>
+                    className="no-hover-fx w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
                       style={{ background: n.type === "booking" ? "#eff6ff" : n.type === "payout" ? "#f0fdf4" : n.type === "incident" ? "#fff7ed" : "#fef2f2" }}>
                       {n.type === "booking" && (
@@ -284,17 +284,17 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-semibold truncate" style={{ color: "#F5F5F2" }}>{n.title}</p>
-                      <p className="text-[11px] truncate" style={{ color: "#8A8F9E" }}>{n.sub}</p>
+                      <p className="text-[12px] font-semibold text-gray-800 truncate">{n.title}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{n.sub}</p>
                     </div>
                     <span className="text-[10px] text-gray-300 shrink-0 mt-0.5">{timeAgo(n.time)}</span>
                   </button>
                 ))}
               </div>
               {notifs.length > 0 && (
-                <div className="px-4 py-2.5 border-t" style={{ borderColor: "#2A3055" }}>
+                <div className="px-4 py-2.5 border-t border-gray-100">
                   <Link href="/admin/bookings" onClick={() => setShowNotif(false)}
-                    className="no-hover-fx block text-center text-[11px] font-semibold" style={{ color: "#C6BFB2" }}>
+                    className="no-hover-fx block text-center text-[11px] font-semibold text-indigo-600 hover:text-indigo-700">
                     View all bookings →
                   </Link>
                 </div>
@@ -304,14 +304,14 @@ export default function AdminTopBar({ onToggleSidebar, sidebarOpen }: { onToggle
         </div>
 
         {/* User avatar + name */}
-        <div className="flex items-center gap-2 md:gap-2.5 pl-2 md:pl-3 border-l" style={{ borderColor: "#2A3055" }}>
+        <div className="flex items-center gap-2 md:gap-2.5 pl-2 md:pl-3 border-l border-gray-100">
           <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-white text-[13px] font-bold"
-            style={{ background: "linear-gradient(135deg,#131936,#2A3055)" }}>
+            style={{ background: "linear-gradient(135deg,#131936,#7c3aed)" }}>
             {userInitials}
           </div>
           <div className="hidden md:flex flex-col leading-tight">
-            <span className="text-[13px] font-semibold" style={{ color: "#F5F5F2" }}>{userName}</span>
-            <span className="text-[10px]" style={{ color: "#8A8F9E" }}>Admin</span>
+            <span className="text-[13px] font-semibold text-gray-800">{userName}</span>
+            <span className="text-[10px] text-gray-400">Admin</span>
           </div>
         </div>
       </div>

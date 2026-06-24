@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen w-full flex overflow-hidden" style={{ background: "#0F1120", fontFamily: "var(--font-body)" }}>
+    <div className="h-screen w-full flex overflow-hidden bg-gray-50" style={{ fontFamily: "var(--font-body)" }}>
       <AdminShell>{children}</AdminShell>
     </div>
   );
