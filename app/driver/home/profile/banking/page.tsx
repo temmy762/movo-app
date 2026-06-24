@@ -98,7 +98,7 @@ function BankingInner() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <div className="flex items-center gap-3 px-5 pt-6 pb-4 bg-white border-b border-gray-100">
@@ -117,7 +117,7 @@ function BankingInner() {
 
         {loading ? (
           <div className="flex items-center justify-center py-16 gap-2 text-[13px] text-gray-400">
-            <span className="w-5 h-5 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" />
+            <span className="w-5 h-5 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin" />
             Loading…
           </div>
         ) : !editing ? (
@@ -164,7 +164,7 @@ function BankingInner() {
               <p className="text-[14px] font-bold text-gray-800">Linked Bank Account</p>
               <button type="button" onClick={startEdit}
                 className="px-3 py-1.5 rounded-xl text-[12px] font-semibold text-white"
-                style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
+                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
                 {banking ? "Update" : "Add Account"}
               </button>
             </div>
@@ -228,7 +228,7 @@ function BankingInner() {
                     placeholder={placeholder}
                     value={form[key]}
                     onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#2D0A53]"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#131936]"
                   />
                 </div>
               ))}
@@ -241,7 +241,7 @@ function BankingInner() {
               onClick={handleSave}
               disabled={saving}
               className="w-full py-3 rounded-xl text-white font-bold text-[14px]"
-              style={{ background: saving ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}
+              style={{ background: saving ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}
             >
               {saving ? "Saving…" : "Save Banking Details"}
             </button>
@@ -264,7 +264,7 @@ function BankingInner() {
 
 export default function BankingPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><span className="w-6 h-6 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><span className="w-6 h-6 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin" /></div>}>
       <BankingInner />
     </Suspense>
   );

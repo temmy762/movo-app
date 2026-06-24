@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -28,7 +28,7 @@ const navItems: NavEntry[] = [
     label: "Dashboard", href: "/admin",
     match: (p) => p === "/admin",
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
         <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
       </svg>
@@ -39,7 +39,7 @@ const navItems: NavEntry[] = [
     label: "Bookings", href: "/admin/bookings",
     match: (p) => p.startsWith("/admin/bookings"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <rect x="3" y="4" width="18" height="17" rx="2" />
         <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
         <line x1="3" y1="10" x2="21" y2="10" />
@@ -51,7 +51,7 @@ const navItems: NavEntry[] = [
     label: "Units", href: "/admin/units",
     match: (p) => p.startsWith("/admin/units"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <rect x="2" y="10" width="20" height="9" rx="2" />
         <path d="M5 10V8a7 7 0 0 1 14 0v2" />
       </svg>
@@ -62,12 +62,12 @@ const navItems: NavEntry[] = [
     label: "Calendar", href: "/admin/calendar",
     match: (p) => p.startsWith("/admin/calendar"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <rect x="3" y="4" width="18" height="17" rx="2" />
         <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
         <line x1="3" y1="10" x2="21" y2="10" />
-        <circle cx="8" cy="15" r="1" fill={a ? "#2D0A53" : "#9ca3af"} />
-        <circle cx="12" cy="15" r="1" fill={a ? "#2D0A53" : "#9ca3af"} />
+        <circle cx="8" cy="15" r="1" fill={a ? "#131936" : "#9ca3af"} />
+        <circle cx="12" cy="15" r="1" fill={a ? "#131936" : "#9ca3af"} />
       </svg>
     ),
   },
@@ -76,7 +76,7 @@ const navItems: NavEntry[] = [
     label: "Clients", href: "/admin/clients",
     match: (p) => p.startsWith("/admin/clients"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <circle cx="9" cy="7" r="4" /><path d="M2 21c0-4 3.1-7 7-7" />
         <circle cx="17" cy="9" r="3" /><path d="M22 21c0-3-2.2-5.5-5-5.5" />
       </svg>
@@ -87,7 +87,7 @@ const navItems: NavEntry[] = [
     label: "Drivers", href: "/admin/drivers",
     match: (p) => p.startsWith("/admin/drivers"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
       </svg>
     ),
@@ -97,7 +97,7 @@ const navItems: NavEntry[] = [
     label: "Financials",
     groupMatch: (p) => p.startsWith("/admin/financials"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
       </svg>
     ),
@@ -113,7 +113,7 @@ const navItems: NavEntry[] = [
     label: "Tracking", href: "/admin/tracking",
     match: (p) => p.startsWith("/admin/tracking"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <circle cx="12" cy="12" r="3" /><circle cx="12" cy="12" r="9" />
         <line x1="12" y1="3" x2="12" y2="1" /><line x1="12" y1="23" x2="12" y2="21" />
         <line x1="3" y1="12" x2="1" y2="12" /><line x1="23" y1="12" x2="21" y2="12" />
@@ -125,7 +125,7 @@ const navItems: NavEntry[] = [
     label: "Messages", href: "/admin/messages",
     match: (p) => p.startsWith("/admin/messages"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
     ),
@@ -135,7 +135,7 @@ const navItems: NavEntry[] = [
     label: "Onboarding", href: "/admin/onboarding",
     match: (p) => p.startsWith("/admin/onboarding"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
         <polyline points="16 11 18 13 22 9"/>
       </svg>
@@ -146,7 +146,7 @@ const navItems: NavEntry[] = [
     label: "Incidents", href: "/admin/incidents",
     match: (p) => p.startsWith("/admin/incidents"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
         <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
       </svg>
@@ -157,7 +157,7 @@ const navItems: NavEntry[] = [
     label: "Pricing", href: "/admin/pricing",
     match: (p) => p.startsWith("/admin/pricing"),
     icon: (a) => (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#2D0A53" : "#9ca3af"} strokeWidth="2">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
         <line x1="12" y1="1" x2="12" y2="23" />
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
       </svg>
@@ -197,13 +197,13 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
   const toggleGroup = (label: string) => setExpanded(p => ({ ...p, [label]: !p[label] }));
 
   return (
-    <aside className={`fixed inset-y-0 left-0 z-40 flex flex-col w-[220px] shrink-0 bg-white border-r border-gray-100 py-5 transition-transform duration-300 ${
+    <aside className={`fixed inset-y-0 left-0 z-40 flex flex-col w-[220px] shrink-0 bg-[#0A0A0F] border-r border-[#2A3055] py-5 transition-transform duration-300 ${
       open ? "translate-x-0" : "-translate-x-full"
     } md:static md:translate-x-0 md:h-full`}>
 
       {/* Logo */}
-      <div className="relative w-36 h-10 mx-auto mb-6">
-        <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+      <div className="relative w-40 h-12 mx-auto mb-6">
+        <Image src="/images/logo/logo-horizontal-ivory.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
       </div>
 
       {/* Nav */}
@@ -217,17 +217,17 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
                 <button
                   onClick={() => toggleGroup(entry.label)}
                   className="no-hover-fx flex items-center gap-3 px-3 py-2.5 rounded-xl w-full relative"
-                  style={{ background: groupActive ? "linear-gradient(90deg,rgba(45,10,83,0.08),rgba(139,117,0,0.06))" : "transparent" }}
+                  style={{ background: groupActive ? "rgba(19,25,54,0.7)" : "transparent" }}
                 >
                   {groupActive && (
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full"
-                      style={{ background: "linear-gradient(180deg,#2D0A53,#8B7500)" }}/>
+                      style={{ background: "linear-gradient(180deg,#C6BFB2,#8A8F9E)" }}/>
                   )}
                   {entry.icon(groupActive)}
-                  <span className="text-[13px] font-medium flex-1 text-left" style={{ color: groupActive ? "#2D0A53" : "#6b7280" }}>
+                  <span className="text-[13px] font-medium flex-1 text-left" style={{ color: groupActive ? "#F5F5F2" : "#8A8F9E" }}>
                     {entry.label}
                   </span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={groupActive ? "#2D0A53" : "#9ca3af"} strokeWidth="2.5"
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={groupActive ? "#F5F5F2" : "#8A8F9E"} strokeWidth="2.5"
                     style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
                     <polyline points="9 18 15 12 9 6"/>
                   </svg>
@@ -239,10 +239,10 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
                       return (
                         <Link key={child.href} href={child.href}
                           className="no-hover-fx flex items-center gap-2.5 px-3 py-2 rounded-xl relative"
-                          style={{ background: childActive ? "rgba(45,10,83,0.06)" : "transparent" }}>
+                          style={{ background: childActive ? "rgba(197,191,178,0.12)" : "transparent" }}>
                           <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                            style={{ background: childActive ? "#2D0A53" : "#d1d5db" }}/>
-                          <span className="text-[12px] font-medium" style={{ color: childActive ? "#2D0A53" : "#6b7280" }}>
+                            style={{ background: childActive ? "#C6BFB2" : "#4b5563" }}/>
+                          <span className="text-[12px] font-medium" style={{ color: childActive ? "#F5F5F2" : "#8A8F9E" }}>
                             {child.label}
                           </span>
                         </Link>
@@ -259,18 +259,18 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
               key={entry.href}
               href={entry.href}
               className="no-hover-fx flex items-center gap-3 px-3 py-2.5 rounded-xl relative"
-              style={{ background: active ? "linear-gradient(90deg,rgba(45,10,83,0.08),rgba(139,117,0,0.06))" : "transparent" }}
+              style={{ background: active ? "rgba(197,191,178,0.1)" : "transparent" }}
             >
               {active && (
                 <span
                   className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full"
-                  style={{ background: "linear-gradient(180deg,#2D0A53,#8B7500)" }}
+                  style={{ background: "linear-gradient(180deg,#C6BFB2,#8A8F9E)" }}
                 />
               )}
               {entry.icon(active)}
               <span
                 className="text-[13px] font-medium flex-1"
-                style={{ color: active ? "#2D0A53" : "#6b7280" }}
+                style={{ color: active ? "#F5F5F2" : "#8A8F9E" }}
               >
                 {entry.label}
               </span>
@@ -299,7 +299,7 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
           </svg>
-          <span className="text-[13px] font-medium text-gray-400">Logout</span>
+          <span className="text-[13px] font-medium" style={{color:"#8A8F9E"}}>Logout</span>
         </button>
       </div>
 

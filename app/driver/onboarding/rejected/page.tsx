@@ -41,14 +41,14 @@ export default function RejectedPage() {
   }
 
   return (
-    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center">
         <div className="w-full max-w-[480px] px-6 text-center">
 
           {/* Logo */}
           <div className="flex items-center justify-center mb-8">
             <div className="relative w-36 h-36">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -118,7 +118,7 @@ export default function RejectedPage() {
             <button
               onClick={() => router.push("/driver/onboarding/type")}
               className="w-full py-3 rounded-xl text-white font-bold text-[14px] text-center"
-              style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
             >
               Start New Application
             </button>

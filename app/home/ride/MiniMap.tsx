@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
@@ -8,9 +8,9 @@ const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
 const DEST_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
-    <circle cx="14" cy="14" r="14" fill="#8B7500"/>
+    <circle cx="14" cy="14" r="14" fill="#C6BFB2"/>
     <circle cx="14" cy="14" r="5" fill="white"/>
-    <polygon points="7,26 21,26 14,36" fill="#8B7500"/>
+    <polygon points="7,26 21,26 14,36" fill="#C6BFB2"/>
   </svg>`
 );
 

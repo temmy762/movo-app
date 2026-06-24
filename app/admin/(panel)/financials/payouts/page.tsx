@@ -74,7 +74,7 @@ export default function PayoutsPage() {
   const pending   = payouts.filter((p) => p.status === "PENDING").length;
 
   return (
-    <div className="min-h-full bg-gray-50 p-4 md:p-6" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 p-4 md:p-6" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
@@ -115,7 +115,7 @@ export default function PayoutsPage() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-16 text-[13px] text-gray-400">
-          <span className="w-5 h-5 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin mr-2" />
+          <span className="w-5 h-5 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin mr-2" />
           Loading…
         </div>
       )}

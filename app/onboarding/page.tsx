@@ -21,7 +21,7 @@ export default function SplashPage() {
       <div className="flex items-center justify-center" style={{ height: "55%" }}>
         <div className="relative w-64 h-64 sm:w-72 sm:h-72">
           <Image
-            src="/images/image_1.png"
+            src="/images/logo/logo-stacked-navy.svg"
             alt="MOVO PRIVÉ Logo"
             fill
             className="object-contain"

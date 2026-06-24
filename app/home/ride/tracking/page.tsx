@@ -213,7 +213,7 @@ function RideTrackingContent() {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-gray-900" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-screen overflow-hidden flex flex-col bg-gray-900" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Map */}
       <div className="relative flex-shrink-0 overflow-hidden" style={{ height: "44vh", minHeight: "220px" }}>
@@ -233,12 +233,12 @@ function RideTrackingContent() {
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">Driver is on the way</p>
           </div>
 
-          <div className="h-[2px] w-full rounded-full mb-4" style={{ background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)" }} />
+          <div className="h-[2px] w-full rounded-full mb-4" style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }} />
 
           {/* Driver + Car */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-[18px] font-bold shrink-0" style={{ background: "linear-gradient(135deg, #2D0A53 0%, #8B7500 100%)" }}>
+              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-[18px] font-bold shrink-0" style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
                 {driverInitial}
               </div>
               <div>
@@ -253,7 +253,7 @@ function RideTrackingContent() {
                 <Image src={carImg} alt={car} fill className="object-contain p-1" unoptimized />
               </div>
               {tierLabel && (
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)" }}>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}>
                   {tierLabel}
                 </span>
               )}
@@ -276,8 +276,8 @@ function RideTrackingContent() {
 
           {/* View toggle */}
           <div className="flex gap-2 mb-4 p-1 bg-gray-100 rounded-full">
-            <button type="button" onClick={() => setView("route")} className="flex-1 py-1.5 text-[12px] font-semibold rounded-full transition-all duration-200" style={view === "route" ? { background: "linear-gradient(90deg, #2D0A53, #8B7500)", color: "white" } : { color: "#6b7280" }}>Route</button>
-            <button type="button" onClick={() => setView("actions")} className="flex-1 py-1.5 text-[12px] font-semibold rounded-full transition-all duration-200" style={view === "actions" ? { background: "linear-gradient(90deg, #2D0A53, #8B7500)", color: "white" } : { color: "#6b7280" }}>Actions</button>
+            <button type="button" onClick={() => setView("route")} className="flex-1 py-1.5 text-[12px] font-semibold rounded-full transition-all duration-200" style={view === "route" ? { background: "linear-gradient(90deg, #131936, #C6BFB2)", color: "white" } : { color: "#6b7280" }}>Route</button>
+            <button type="button" onClick={() => setView("actions")} className="flex-1 py-1.5 text-[12px] font-semibold rounded-full transition-all duration-200" style={view === "actions" ? { background: "linear-gradient(90deg, #131936, #C6BFB2)", color: "white" } : { color: "#6b7280" }}>Actions</button>
           </div>
 
           {/* Route view */}
@@ -316,17 +316,17 @@ function RideTrackingContent() {
                 {[
                   {
                     label: "Change\nDestination",
-                    icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>),
+                    icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>),
                     onClick: () => router.push(`/home/pickup?tier=all&pickup=${encodeURIComponent(pickup)}`),
                   },
                   {
                     label: "Add Stop",
-                    icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>),
+                    icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>),
                     onClick: () => setShowAddStop(true),
                   },
                   {
                     label: "Support",
-                    icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>),
+                    icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>),
                     onClick: () => setShowSupport(true),
                   },
                   {
@@ -351,7 +351,7 @@ function RideTrackingContent() {
       <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100 z-[1001]">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
           {view === "route" ? (
-            <button type="button" onClick={() => setShowCancelConfirm(true)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide" style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}>
+            <button type="button" onClick={() => setShowCancelConfirm(true)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide" style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
               Cancel Ride
             </button>
           ) : (
@@ -376,10 +376,10 @@ function RideTrackingContent() {
               </div>
             ) : (
               <>
-                <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type your message…" rows={3} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 resize-none focus:outline-none focus:border-[#2D0A53]" />
+                <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type your message…" rows={3} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 resize-none focus:outline-none focus:border-[#131936]" />
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => { setShowMessage(false); setMessageText(""); }} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600">Cancel</button>
-                  <button onClick={handleSendMessage} disabled={!messageText.trim()} className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-40" style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)" }}>Send</button>
+                  <button onClick={handleSendMessage} disabled={!messageText.trim()} className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-40" style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}>Send</button>
                 </div>
               </>
             )}
@@ -392,10 +392,10 @@ function RideTrackingContent() {
         <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50">
           <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg">
             <h3 className="text-[15px] font-bold text-gray-900 mb-3">Add a Stop</h3>
-            <input type="text" value={stopAddress} onChange={(e) => setStopAddress(e.target.value)} placeholder="Enter stop address" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#2D0A53]" />
+            <input type="text" value={stopAddress} onChange={(e) => setStopAddress(e.target.value)} placeholder="Enter stop address" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936]" />
             <div className="flex gap-2 mt-3">
               <button onClick={() => { setShowAddStop(false); setStopAddress(""); }} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600">Cancel</button>
-              <button onClick={() => { setShowAddStop(false); setStopAddress(""); }} className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold" style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)" }}>Add Stop</button>
+              <button onClick={() => { setShowAddStop(false); setStopAddress(""); }} className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold" style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}>Add Stop</button>
             </div>
           </div>
         </div>
@@ -439,7 +439,7 @@ function RideTrackingContent() {
                 onClick={handleCancelRide}
                 disabled={cancelling}
                 className="flex-1 py-3 rounded-xl text-white text-[13px] font-bold disabled:opacity-60"
-                style={{ background: "linear-gradient(90deg, #1a1a2e, #2D0A53)" }}
+                style={{ background: "linear-gradient(90deg, #1a1a2e, #131936)" }}
               >
                 {cancelling ? "Cancelling…" : "Yes, Cancel"}
               </button>

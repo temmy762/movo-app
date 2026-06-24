@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
-import { normalizeTier } from "@/lib/normalize-tier";
 
 export async function PATCH(
   req: NextRequest,
@@ -80,7 +79,7 @@ export async function PATCH(
               model: onboarding.firstVehicleModel,
               year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.firstVehiclePlate,
-              tier: normalizeTier(onboarding.firstVehicleClass),
+              tier: onboarding.firstVehicleClass || "ECONOMY",
               photoUrl: (vehiclePhotoDoc as any)?.fileUrl || null,
             },
           });
@@ -93,7 +92,7 @@ export async function PATCH(
               model: onboarding.vehicleModel,
               year: parseInt(onboarding.vehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.vehiclePlate,
-              tier: normalizeTier(onboarding.vehicleTier),
+              tier: onboarding.vehicleTier || "ECONOMY",
               photoUrl: (vehiclePhotoDoc as any)?.fileUrl || null,
             },
           });

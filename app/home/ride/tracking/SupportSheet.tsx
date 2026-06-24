@@ -27,7 +27,7 @@ const MENU_ITEMS: { category: Category; label: string; sub: string; icon: React.
     label: "Contact Driver",
     sub: "Call or message your driver",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2">
         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.6 19.79 19.79 0 0 1 1.61 5.06 2 2 0 0 1 3.58 3h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 10.91a16 16 0 0 0 6.1 6.1l1.08-1.08a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
       </svg>
     ),
@@ -37,7 +37,7 @@ const MENU_ITEMS: { category: Category; label: string; sub: string; icon: React.
     label: "Report Ride Issue",
     sub: "Route, driver, or vehicle problem",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
         <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
       </svg>
@@ -48,7 +48,7 @@ const MENU_ITEMS: { category: Category; label: string; sub: string; icon: React.
     label: "Payment Help",
     sub: "Charges, receipts, or refunds",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2">
         <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
         <line x1="1" y1="10" x2="23" y2="10" />
       </svg>
@@ -59,7 +59,7 @@ const MENU_ITEMS: { category: Category; label: string; sub: string; icon: React.
     label: "Chat Support",
     sub: "Message the Movo support team",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
     ),
@@ -126,7 +126,7 @@ export default function SupportSheet({
       className="px-3 py-1.5 rounded-full border text-[12px] font-medium transition-all"
       style={
         issue === label
-          ? { background: "linear-gradient(90deg,#2D0A53,#8B7500)", color: "white", borderColor: "transparent" }
+          ? { background: "linear-gradient(90deg,#131936,#C6BFB2)", color: "white", borderColor: "transparent" }
           : { background: "white", color: "#374151", borderColor: "#d1d5db" }
       }
     >
@@ -143,7 +143,7 @@ export default function SupportSheet({
     >
       <div
         className="bg-white rounded-t-2xl w-full max-w-lg"
-        style={{ fontFamily: "var(--font-poppins)", maxHeight: "85vh", overflowY: "auto" }}
+        style={{ fontFamily: "var(--font-body)", maxHeight: "85vh", overflowY: "auto" }}
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
@@ -202,7 +202,7 @@ export default function SupportSheet({
             </div>
 
             <div className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl mb-5">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 text-[16px]" style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0 text-[16px]" style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
                 {driverName.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -216,7 +216,7 @@ export default function SupportSheet({
                 type="button"
                 onClick={() => driverPhone ? (window.location.href = `tel:${driverPhone}`) : alert("Phone number not available")}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-[13px]"
-                style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.6 19.79 19.79 0 0 1 1.61 5.06 2 2 0 0 1 3.58 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.91a16 16 0 0 0 6.1 6.1l1.08-1.08a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -281,7 +281,7 @@ export default function SupportSheet({
                     : "Describe what happened (optional)…"
                 }
                 rows={4}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 resize-none focus:outline-none focus:border-[#2D0A53]"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 resize-none focus:outline-none focus:border-[#131936]"
               />
             </div>
 
@@ -304,7 +304,7 @@ export default function SupportSheet({
                 ((category === "RIDE_ISSUE" || category === "PAYMENT_HELP") && !issue)
               }
               className="w-full py-3 rounded-xl text-white font-bold text-[14px] tracking-wide disabled:opacity-40"
-              style={{ background: "linear-gradient(90deg,#1a1a2e,#2D0A53,#8B7500)" }}
+              style={{ background: "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}
             >
               {submitting ? "Submitting…" : "SUBMIT REQUEST"}
             </button>
@@ -330,7 +330,7 @@ export default function SupportSheet({
               type="button"
               onClick={onClose}
               className="w-full py-3 rounded-xl text-white font-bold text-[14px]"
-              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+              style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}
             >
               Done
             </button>

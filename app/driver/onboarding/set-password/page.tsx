@@ -63,14 +63,14 @@ export default function DriverSetPasswordPage() {
   return (
     <div
       className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto px-8 pt-6"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="w-full max-w-[420px]">
 
         {/* Logo */}
         <div className="flex items-center justify-center mb-3">
           <div className="relative w-36 h-36">
-            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
@@ -85,7 +85,7 @@ export default function DriverSetPasswordPage() {
           <span
             className="font-medium"
             style={{
-              background: "linear-gradient(90deg, #2D0A53, #8B7500)",
+              background: "linear-gradient(90deg, #131936, #C6BFB2)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
             }}
@@ -110,12 +110,12 @@ export default function DriverSetPasswordPage() {
           <PasswordField
             label="*New Password"
             indicator="Good"
-            indicatorColor="#2D0A53"
+            indicatorColor="#131936"
           />
           <PasswordField
             label="*Confirm New Password"
             indicator="Match"
-            indicatorColor="#8B7500"
+            indicatorColor="#C6BFB2"
           />
         </div>
 
@@ -126,7 +126,7 @@ export default function DriverSetPasswordPage() {
           type="button"
           onClick={() => router.push("/driver/onboarding/login")}
           className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide"
-          style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
         >
           Change Password
         </button>

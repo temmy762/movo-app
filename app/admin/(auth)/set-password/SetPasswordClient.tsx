@@ -74,7 +74,7 @@ export default function SetPasswordClient() {
     return (
       <div
         className="min-h-screen bg-gray-100 flex items-center justify-center p-4"
-        style={{ fontFamily: "var(--font-poppins)" }}
+        style={{ fontFamily: "var(--font-body)" }}
       >
         <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm px-8 py-10 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
@@ -94,12 +94,12 @@ export default function SetPasswordClient() {
   return (
     <div
       className="min-h-screen bg-gray-100 flex items-center justify-center p-4"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm px-8 py-10">
         <div className="flex flex-col items-center mb-7">
           <div className="relative" style={{ width: "300px", height: "96px" }}>
-            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export default function SetPasswordClient() {
                 placeholder="Enter new password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#2D0A53] placeholder-gray-300 pr-10"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#131936] placeholder-gray-300 pr-10"
                 required
                 minLength={6}
               />
@@ -143,7 +143,7 @@ export default function SetPasswordClient() {
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#2D0A53] placeholder-gray-300 pr-10"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#131936] placeholder-gray-300 pr-10"
                 required
               />
               <button

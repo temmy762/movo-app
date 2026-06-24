@@ -95,7 +95,7 @@ function RideCompletedContent() {
   const amount = booking?.total ?? 0;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-screen bg-gray-100 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       <div className="px-5 pt-6 pb-3">
         <span className="text-gray-500 text-[15px] font-semibold">Ride</span>
@@ -106,7 +106,7 @@ function RideCompletedContent() {
 
           {/* Check icon */}
           <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4 mt-2"
-            style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+            style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
             <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12" />
             </svg>
@@ -159,7 +159,7 @@ function RideCompletedContent() {
                     onClick={handleSubmitRating}
                     disabled={submitting}
                     className="w-full py-2.5 rounded-xl text-white font-bold text-[13px] mb-2"
-                    style={{ background: submitting ? "#9ca3af" : "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+                    style={{ background: submitting ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
                   >
                     {submitting ? "Submitting…" : "Submit Rating"}
                   </button>
@@ -175,7 +175,7 @@ function RideCompletedContent() {
             type="button"
             onClick={() => router.push("/home")}
             className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mb-3 flex items-center justify-center gap-2"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
               <rect x="1" y="11" width="22" height="10" rx="2" /><path d="M4 11V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v4" />

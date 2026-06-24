@@ -40,13 +40,13 @@ export default function AdminForgotPasswordPage() {
   return (
     <div
       className="min-h-screen bg-gray-100 flex items-center justify-center p-4"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm px-8 py-10">
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
           <div className="relative" style={{ width: "300px", height: "96px" }}>
-            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
@@ -65,7 +65,7 @@ export default function AdminForgotPasswordPage() {
               placeholder="Enter your phone number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#2D0A53] placeholder-gray-300"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#131936] placeholder-gray-300"
               suppressHydrationWarning
               required
             />
@@ -86,7 +86,7 @@ export default function AdminForgotPasswordPage() {
         <div className="flex items-center justify-center mt-5">
           <button
             onClick={() => router.push("/admin/login")}
-            className="text-[12px] text-[#2D0A53] hover:underline"
+            className="text-[12px] text-[#131936] hover:underline"
           >
             Back to Login
           </button>

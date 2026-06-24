@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +16,7 @@ export default function BottomNav() {
   return (
     <div
       className="fixed bottom-0 left-0 right-0 flex items-center justify-around px-2 py-3 z-50"
-      style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
+      style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
     >
       {navItems.map((item) => {
         const isActive = item.match(pathname);

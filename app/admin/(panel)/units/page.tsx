@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -613,7 +613,7 @@ export default function UnitsPage() {
 
         <button onClick={() => setShowCreateVehicle(true)}
           className="no-hover-fx flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[12px] font-bold tracking-wide"
-          style={{ background: "#2D0A53" }}>
+          style={{ background: "#131936" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>

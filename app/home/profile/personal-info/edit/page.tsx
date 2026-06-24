@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 
 const gradientBorder = {
   background:
-    "linear-gradient(white, white) padding-box, linear-gradient(135deg, #2D0A53 0%, #8B7500 100%) border-box",
+    "linear-gradient(white, white) padding-box, linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%) border-box",
   border: "1.5px solid transparent",
 };
 
@@ -146,7 +146,7 @@ export default function EditPersonalInfoPage() {
   return (
     <div
       className="min-h-screen bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
@@ -169,14 +169,14 @@ export default function EditPersonalInfoPage() {
             className="no-hover-fx"
             aria-label="Save"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </button>
         </div>
         <div
           className="h-[2px] mt-2"
-          style={{ background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)" }}
+          style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }}
         />
       </div>
 
@@ -241,7 +241,7 @@ export default function EditPersonalInfoPage() {
             onClick={handleSave}
             disabled={saving}
             className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mt-2 disabled:opacity-60"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             {saving ? "Saving…" : "Save changes"}
           </button>

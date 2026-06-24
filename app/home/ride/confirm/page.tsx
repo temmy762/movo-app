@@ -101,7 +101,7 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
             style={{
               background: !stripe || submitting
                 ? "#9ca3af"
-                : "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
+                : "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
             }}
           >
             {submitting ? "Processing…" : "Confirm Booking"}
@@ -171,7 +171,7 @@ function ConfirmPayContent() {
   return (
     <div
       className="min-h-screen flex flex-col bg-white"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="flex-1 overflow-y-auto pb-28">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 md:px-10 pt-6 md:pt-10">
@@ -201,7 +201,7 @@ function ConfirmPayContent() {
 
               {/* Pickup address */}
               <div className="flex items-start gap-3">
-                <div className="w-[18px] h-[18px] rounded-full shrink-0 z-10 mt-0.5 flex items-center justify-center" style={{ background: "#2D0A53" }}>
+                <div className="w-[18px] h-[18px] rounded-full shrink-0 z-10 mt-0.5 flex items-center justify-center" style={{ background: "#131936" }}>
                   <div className="w-2 h-2 bg-white rounded-full" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -234,7 +234,7 @@ function ConfirmPayContent() {
             )}
             {!clientSecret && !intentError && (
               <div className="flex items-center gap-2 text-[13px] text-gray-400 py-4">
-                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin shrink-0" />
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
                 Loading payment…
               </div>
             )}
@@ -257,12 +257,12 @@ function ConfirmPayContent() {
             className="rounded-xl p-4 flex flex-col gap-2 border border-transparent"
             style={{
               background:
-                "linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #2D0A53 0%, #8B7500 100%) border-box",
+                "linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%) border-box",
             }}
           >
             {estimating ? (
               <div className="flex items-center gap-2 text-[13px] text-gray-400 py-2">
-                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin shrink-0" />
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
                 Calculating fare…
               </div>
             ) : (

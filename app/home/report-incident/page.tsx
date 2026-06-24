@@ -53,7 +53,7 @@ function ReportIncidentContent() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white" style={{ fontFamily: "var(--font-body)" }}>
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
             <polyline points="20 6 9 17 4 12" />
@@ -66,7 +66,7 @@ function ReportIncidentContent() {
         <button
           onClick={() => router.back()}
           className="no-hover-fx px-8 py-3 rounded-xl text-white font-semibold text-[14px]"
-          style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}
+          style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}
         >
           Done
         </button>
@@ -75,7 +75,7 @@ function ReportIncidentContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-5 pb-4 border-b border-gray-100">
         <button onClick={() => router.back()} className="no-hover-fx w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -106,7 +106,7 @@ function ReportIncidentContent() {
                 onClick={() => setType(t.value)}
                 className="no-hover-fx py-2.5 px-3 rounded-xl text-[12px] font-medium border transition-all"
                 style={type === t.value
-                  ? { background: "#2D0A53", color: "white", borderColor: "#2D0A53" }
+                  ? { background: "#131936", color: "white", borderColor: "#131936" }
                   : { background: "white", color: "#374151", borderColor: "#e5e7eb" }}
               >
                 {t.label}
@@ -137,7 +137,7 @@ function ReportIncidentContent() {
           type="submit"
           disabled={loading}
           className="no-hover-fx w-full py-3.5 rounded-xl text-white font-bold text-[15px] mt-auto"
-          style={{ background: loading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}
+          style={{ background: loading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}
         >
           {loading ? "Submitting…" : "Submit Report"}
         </button>

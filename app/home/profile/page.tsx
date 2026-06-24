@@ -68,7 +68,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="h-screen overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-screen overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Banner — sticky at top, stays behind as white section scrolls over */}
       <div className="sticky top-0 z-0 w-full" style={{ height: 260 }}>
@@ -93,7 +93,7 @@ export default function ProfilePage() {
         {/* Gradient divider */}
         <div
           className="mx-5 h-[2px] mb-2"
-          style={{ background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)" }}
+          style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }}
         />
 
         {/* Menu */}

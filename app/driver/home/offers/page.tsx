@@ -24,7 +24,7 @@ function CheckRow({
       <div
         onClick={onChange}
         className="w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 cursor-pointer"
-        style={{ borderColor: checked ? "#2D0A53" : "#d1d5db", background: checked ? "linear-gradient(135deg,#2D0A53,#8B7500)" : "white" }}
+        style={{ borderColor: checked ? "#131936" : "#d1d5db", background: checked ? "linear-gradient(135deg,#131936,#C6BFB2)" : "white" }}
       >
         {checked && (
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5">
@@ -55,7 +55,7 @@ function FilterPanel({
   }
 
   return (
-    <div className="h-full flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full flex flex-col bg-white" style={{ fontFamily: "var(--font-body)" }}>
       {/* Filter header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ function FilterPanel({
         </div>
         <button
           className="no-hover-fx text-[13px] font-semibold"
-          style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+          style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
           onClick={() => setFilters({ vehicleClass: [], date: [], location: [], rideType: [] })}
         >
           Clear all
@@ -116,7 +116,7 @@ function FilterPanel({
           type="button"
           onClick={onClose}
           className="w-full py-3 rounded-xl text-white font-bold text-[15px]"
-          style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
         >
           Apply
         </button>
@@ -136,14 +136,14 @@ export default function OffersPage() {
   });
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
         <h1 className="text-[18px] font-bold text-gray-900">Offers</h1>
         <button
           className="no-hover-fx text-[13px] font-semibold"
-          style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+          style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
           onClick={() => setShowFilter(true)}
         >
           Filter
@@ -167,7 +167,7 @@ export default function OffersPage() {
           </p>
           <button
             className="no-hover-fx text-[13px] font-semibold"
-            style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+            style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
             onClick={() => router.refresh()}
           >
             Refresh
@@ -180,7 +180,7 @@ export default function OffersPage() {
             {/* Mobile overlay */}
             <div
               className="fixed inset-0 z-40 bg-white md:hidden"
-              style={{ fontFamily: "var(--font-poppins)" }}
+              style={{ fontFamily: "var(--font-body)" }}
             >
               <FilterPanel filters={filters} setFilters={setFilters} onClose={() => setShowFilter(false)} />
             </div>

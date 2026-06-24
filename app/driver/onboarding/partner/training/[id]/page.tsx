@@ -92,14 +92,14 @@ export default function ModulePage() {
   }
 
   return (
-    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
         <div className="w-full max-w-[480px] px-6">
 
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-28 h-28">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 

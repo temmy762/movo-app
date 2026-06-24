@@ -28,7 +28,7 @@ export default function PersonalInfoPage() {
   return (
     <div
       className="min-h-screen bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
@@ -47,7 +47,7 @@ export default function PersonalInfoPage() {
         {/* Gradient underline */}
         <div
           className="mt-2 h-[2px]"
-          style={{ background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)" }}
+          style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }}
         />
       </div>
 
@@ -88,7 +88,7 @@ export default function PersonalInfoPage() {
             type="button"
             onClick={() => router.push("/home/profile/personal-info/edit")}
             className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mt-8"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Change information
           </button>

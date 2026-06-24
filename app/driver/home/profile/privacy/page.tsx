@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 export default function PrivacyPolicyPage() {
   const router = useRouter();
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
         <button className="no-hover-fx p-1" onClick={() => router.back()}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">

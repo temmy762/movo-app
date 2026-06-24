@@ -7,14 +7,14 @@ export default function OnboardingTypePage() {
   const router = useRouter();
 
   return (
-    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
         <div className="w-full max-w-[420px] px-6">
 
           {/* Logo */}
           <div className="flex items-center justify-center pt-8">
             <div className="relative w-28 h-28">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -30,11 +30,11 @@ export default function OnboardingTypePage() {
             type="button"
             onClick={() => router.push("/driver/onboarding/register?type=INDIVIDUAL")}
             className="no-hover-fx w-full text-left mb-4 rounded-2xl border-2 p-5 transition-all"
-            style={{ borderColor: "#2D0A53", background: "linear-gradient(135deg,#2D0A5308 0%,#8B750008 100%)" }}
+            style={{ borderColor: "#131936", background: "linear-gradient(135deg,#13193608 0%,#C6BFB208 100%)" }}
           >
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "linear-gradient(135deg, #2D0A53 0%, #8B7500 100%)" }}>
+                style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
@@ -48,11 +48,11 @@ export default function OnboardingTypePage() {
                 <div className="flex flex-wrap gap-2 mt-3">
                   {["Flexible hours", "Premium clients", "Fast onboarding"].map(tag => (
                     <span key={tag} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: "#f3e8ff", color: "#2D0A53" }}>{tag}</span>
+                      style={{ background: "#f3e8ff", color: "#131936" }}>{tag}</span>
                   ))}
                 </div>
               </div>
-              <svg className="shrink-0 mt-1" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
+              <svg className="shrink-0 mt-1" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2.5">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </div>
@@ -94,7 +94,7 @@ export default function OnboardingTypePage() {
           <p className="text-center text-[12px] text-gray-400 pb-8">
             Already have an account?{" "}
             <button type="button" onClick={() => router.push("/driver/onboarding/login")}
-              className="font-semibold" style={{ color: "#2D0A53" }}>
+              className="font-semibold" style={{ color: "#131936" }}>
               Log In
             </button>
           </p>

@@ -122,7 +122,7 @@ export default function AdminOnboardingPage() {
   ] : [];
 
   return (
-    <div className="flex h-full overflow-hidden" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="flex h-full overflow-hidden" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* ── Left panel ── */}
       <div className={`${selected ? "hidden lg:flex" : "flex"} flex-col w-full lg:w-[300px] lg:shrink-0 border-r border-gray-100 bg-white overflow-hidden`}>
@@ -167,7 +167,7 @@ export default function AdminOnboardingPage() {
             return (
               <button key={o.id} type="button" onClick={() => { setSelected(o); setNote(o.adminNote ?? ""); }}
                 className="no-hover-fx w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
-                style={{ background: "white", border: isSel ? "1.5px solid #2D0A53" : "1.5px solid transparent", boxShadow: isSel ? "0 1px 8px rgba(45,10,83,0.1)" : "0 1px 3px rgba(0,0,0,0.05)" }}>
+                style={{ background: "white", border: isSel ? "1.5px solid #131936" : "1.5px solid transparent", boxShadow: isSel ? "0 1px 8px rgba(45,10,83,0.1)" : "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-bold shrink-0"
                   style={{ background: ac(name) }}>
                   {ini(name)}
@@ -330,7 +330,7 @@ export default function AdminOnboardingPage() {
                       <div key={doc.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100 gap-2">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                            style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+                            style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                             </svg>
@@ -356,7 +356,7 @@ export default function AdminOnboardingPage() {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-white"
-                              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+                              style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}
                             >
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>

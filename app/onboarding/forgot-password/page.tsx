@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="h-full bg-white flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-poppins)" }}>
+      <div className="h-full bg-white flex flex-col items-center justify-center" style={{ fontFamily: "var(--font-body)" }}>
         <div className="text-center px-8">
           <div className="text-5xl mb-4">✓</div>
           <h1 className="text-[20px] font-semibold text-gray-900">Check your email</h1>
@@ -59,11 +59,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
       <div className="w-full max-w-[420px]">
         <div className="flex items-center justify-center pt-8">
           <div className="relative w-28 h-28">
-            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
             onClick={handleSubmit}
             disabled={loading}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px] mt-6 tracking-wide disabled:opacity-60"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             {loading ? "Sending..." : "Send Reset Link"}
           </button>

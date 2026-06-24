@@ -7,14 +7,14 @@ export default function StartPage() {
       className="flex flex-col h-full"
       style={{
         background:
-          "linear-gradient(180deg, #333333 0%, #2D0A53 30%, #8B7500 60%)",
+          "linear-gradient(180deg, #333333 0%, #131936 30%, #C6BFB2 60%)",
       }}
     >
       {/* Top half — logo centered */}
       <div className="flex items-center justify-center" style={{ height: "36%" }}>
         <div className="relative w-64 h-64">
           <Image
-            src="/images/image_1.png"
+            src="/images/logo/logo-stacked-navy.svg"
             alt="MOVO PRIVÉ"
             fill
             className="object-contain"
@@ -54,7 +54,7 @@ export default function StartPage() {
           className="flex items-center justify-center w-full max-w-[320px] py-4 rounded-full text-white font-bold tracking-[0.2em] uppercase text-sm"
           style={{
             background:
-              "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)",
+              "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
           }}
         >
           LETS GET STARTED

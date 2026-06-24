@@ -6,7 +6,7 @@ export default function DriverNewsPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">

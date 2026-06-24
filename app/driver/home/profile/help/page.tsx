@@ -7,7 +7,7 @@ function ContactRow({ icon, label, value, href }: { icon: React.ReactNode; label
     <a href={href}
       className="flex items-center gap-4 py-3.5 border-b border-gray-100 last:border-0">
       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-        style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+        style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
         {icon}
       </div>
       <div>
@@ -21,7 +21,7 @@ function ContactRow({ icon, label, value, href }: { icon: React.ReactNode; label
 export default function HelpPage() {
   const router = useRouter();
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
         <button className="no-hover-fx p-1" onClick={() => router.back()}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">

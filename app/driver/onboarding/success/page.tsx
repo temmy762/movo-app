@@ -21,20 +21,20 @@ export default function OnboardingSuccessPage() {
   };
 
   return (
-    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center">
         <div className="w-full max-w-[480px] px-6 text-center">
 
           {/* Logo */}
           <div className="flex items-center justify-center mb-8">
             <div className="relative w-36 h-36">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
           {/* Success icon */}
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-            style={{ background: "linear-gradient(135deg, #2D0A53, #8B7500)" }}>
+            style={{ background: "linear-gradient(135deg, #131936, #C6BFB2)" }}>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12" />
             </svg>
@@ -89,7 +89,7 @@ export default function OnboardingSuccessPage() {
               onClick={handleLogout}
               disabled={isLoggingOut}
               className="w-full py-3 rounded-xl text-white font-bold text-[14px] text-center disabled:opacity-60"
-              style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
             >
               {isLoggingOut ? "Logging out..." : "Log Out & Check Email"}
             </button>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -59,7 +59,7 @@ export default function DriverBottomNav() {
   return (
     <nav
       className="w-full flex items-center justify-around py-3 shrink-0"
-      style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+      style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
     >
       {navItems.map((item) => {
         const active = item.match(pathname);

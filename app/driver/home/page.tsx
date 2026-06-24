@@ -301,7 +301,7 @@ export default function DriverHomePage() {
   }
 
   return (
-    <div className="relative h-full flex flex-col overflow-hidden" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="relative h-full flex flex-col overflow-hidden" style={{ fontFamily: "var(--font-body)" }}>
 
       <DriverMap position={driverPos} />
 
@@ -330,7 +330,7 @@ export default function DriverHomePage() {
               onClick={handleToggleOnline}
               className="no-hover-fx flex items-center gap-2 px-4 py-1.5 rounded-full shadow font-semibold text-[13px] transition-all duration-300"
               style={isOnline
-                ? { background: "linear-gradient(90deg,#2D0A53,#8B7500)", color: "white" }
+                ? { background: "linear-gradient(90deg,#131936,#C6BFB2)", color: "white" }
                 : { background: "white", color: "#374151" }}
             >
               {isOnline ? "Online 🇬🇧" : "Offline"}
@@ -374,7 +374,7 @@ export default function DriverHomePage() {
         {/* Searching / waiting */}
         {ridePhase === "searching" && (
           <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-5 pb-6 flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-gray-200 border-t-[#2D0A53] rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-gray-200 border-t-[#131936] rounded-full animate-spin" />
             <p className="text-[14px] font-semibold text-gray-700">Looking for ride requests…</p>
             <p className="text-[11px] text-gray-400">New requests will appear automatically</p>
           </div>
@@ -416,7 +416,7 @@ export default function DriverHomePage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-[14px] font-semibold" style={{ color: "#2D0A53" }}>{activeBooking.clientName}</p>
+                      <p className="text-[14px] font-semibold" style={{ color: "#131936" }}>{activeBooking.clientName}</p>
                       <p className="text-[11px] text-gray-400">Booking #{activeBooking.id.slice(0, 8)}</p>
                     </div>
                   </div>
@@ -436,7 +436,7 @@ export default function DriverHomePage() {
             </div>
             <div className="flex flex-col gap-1.5 mb-3 pl-1">
               <div className="flex items-start gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#2D0A53] shrink-0 mt-0.5" />
+                <span className="w-3 h-3 rounded-full bg-[#131936] shrink-0 mt-0.5" />
                 <p className="text-[12px] text-gray-600 leading-tight">{activeBooking.pickup}</p>
               </div>
               <div className="flex items-start gap-2">
@@ -450,7 +450,7 @@ export default function DriverHomePage() {
               <>
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[12px] font-semibold text-gray-700">Payment</p>
-                  <p className="text-[13px] font-bold" style={{ color: "#8B7500" }}>${activeBooking.total.toFixed(2)}</p>
+                  <p className="text-[13px] font-bold" style={{ color: "#C6BFB2" }}>${activeBooking.total.toFixed(2)}</p>
                 </div>
                 <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 mb-4">
                   <div className="flex items-center gap-2">
@@ -482,7 +482,7 @@ export default function DriverHomePage() {
                 <button type="button" onClick={handleAccept}
                   disabled={actionLoading}
                   className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
-                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
                   {actionLoading ? "…" : "Accept"}
                 </button>
               </div>
@@ -491,7 +491,7 @@ export default function DriverHomePage() {
             {ridePhase === "accepted" && (
               <button type="button" onClick={handleArrived}
                 className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
                 I&apos;ve Arrived at Pickup
               </button>
             )}
@@ -505,7 +505,7 @@ export default function DriverHomePage() {
                 <button type="button" onClick={handleStartRide}
                   disabled={actionLoading}
                   className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
                   {actionLoading ? "Starting…" : "Start Ride"}
                 </button>
               </div>
@@ -516,7 +516,7 @@ export default function DriverHomePage() {
                 <button type="button" onClick={handleEndRide}
                   disabled={actionLoading}
                   className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
                   {actionLoading ? "Saving…" : "End Ride"}
                 </button>
                 <button type="button"
@@ -539,7 +539,7 @@ export default function DriverHomePage() {
           {/* Drawer */}
           <aside
             className="relative w-64 h-full flex flex-col py-6 px-4 shadow-2xl"
-            style={{ background: "linear-gradient(180deg, #1a1a2e 0%, #2D0A53 60%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(180deg, #1a1a2e 0%, #131936 60%, #C6BFB2 100%)" }}
             onClick={e => e.stopPropagation()}
           >
             {/* Close */}
@@ -595,7 +595,7 @@ export default function DriverHomePage() {
               <button type="button"
                 onClick={handleDecline}
                 className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[14px]"
-                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
                 Sure
               </button>
             </div>
@@ -647,7 +647,7 @@ export default function DriverHomePage() {
                 router.push("/driver/home/finish");
               }}
               className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}>
+              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
               Ok
             </button>
           </div>

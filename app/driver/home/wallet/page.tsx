@@ -139,7 +139,7 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
@@ -156,7 +156,7 @@ export default function WalletPage() {
 
         {/* Balance card */}
         <div className="rounded-2xl px-6 py-5 mb-5 text-white"
-          style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #2D0A53 55%, #8B7500 100%)" }}>
+          style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #131936 55%, #C6BFB2 100%)" }}>
           <p className="text-[13px] opacity-75 mb-1">Available Balance</p>
           {loading ? (
             <div className="h-9 w-32 bg-white/20 rounded-lg animate-pulse mt-1" />
@@ -186,12 +186,12 @@ export default function WalletPage() {
         <div className="flex gap-3 mb-6">
           <button type="button" onClick={() => { setModal("payout"); setAmount(""); }}
             className="no-hover-fx flex-1 py-2.5 rounded-xl font-bold text-[14px] border-2"
-            style={{ borderColor: "#2D0A53", background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            style={{ borderColor: "#131936", background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Send To Bank
           </button>
           <button type="button" onClick={() => { setModal("topup"); setAmount(""); }}
             className="no-hover-fx flex-1 py-2.5 rounded-xl font-bold text-[14px] border-2"
-            style={{ borderColor: "#8B7500", background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            style={{ borderColor: "#C6BFB2", background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Add Money
           </button>
         </div>
@@ -259,7 +259,7 @@ export default function WalletPage() {
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 text-[15px] font-semibold focus:outline-none focus:border-[#2D0A53]"
+                className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 text-[15px] font-semibold focus:outline-none focus:border-[#131936]"
               />
             </div>
 
@@ -270,7 +270,7 @@ export default function WalletPage() {
               </button>
               <button type="button" onClick={handleSubmit} disabled={submitting || !amount}
                 className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
-                style={{ background: submitting || !amount ? "#9ca3af" : "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
+                style={{ background: submitting || !amount ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}>
                 {submitting ? "…" : modal === "payout" ? "Send" : "Add"}
               </button>
             </div>

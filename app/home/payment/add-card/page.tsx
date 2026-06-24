@@ -63,7 +63,7 @@ function SetupForm() {
         style={{
           background: !stripe || submitting
             ? "#9ca3af"
-            : "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
+            : "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
         }}
       >
         {submitting ? "Saving…" : "Save card"}
@@ -88,7 +88,7 @@ function AddCardContent() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="flex items-center px-5 py-4 border-b border-gray-100 relative">
@@ -116,7 +116,7 @@ function AddCardContent() {
             )}
             {!clientSecret && !loadError && (
               <div className="flex items-center gap-2 text-[13px] text-gray-400 py-6 justify-center">
-                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin shrink-0" />
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
                 Loading…
               </div>
             )}

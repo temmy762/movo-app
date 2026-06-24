@@ -90,11 +90,11 @@ export default function HelpPage() {
   const router = useRouter();
 
   return (
-    <div className="h-screen overflow-y-auto bg-gray-50" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-screen overflow-y-auto bg-gray-50" style={{ fontFamily: "var(--font-body)" }}>
       {/* Header */}
       <div
         className="sticky top-0 z-10 px-4 py-4 flex items-center gap-3"
-        style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
+        style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
       >
         <button
           onClick={() => router.push("/home")}
@@ -125,7 +125,7 @@ export default function HelpPage() {
           <input
             type="text"
             placeholder="Search for help..."
-            className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2D0A53]"
+            className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#131936]"
           />
         </div>
       </div>
@@ -138,9 +138,9 @@ export default function HelpPage() {
             <button
               key={topic.id}
               onClick={() => alert(`${topic.title} - Coming soon!`)}
-              className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-[#2D0A53] transition-colors text-left"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-[#131936] transition-colors text-left"
             >
-              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-[#2D0A53]">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-[#131936]">
                 {topic.icon}
               </div>
               <div className="flex-1">
@@ -193,12 +193,12 @@ export default function HelpPage() {
 
       {/* Contact Support */}
       <div className="px-4 pb-24">
-        <div className="bg-gradient-to-r from-[#2D0A53] to-[#8B7500] rounded-2xl p-4 text-white">
+        <div className="bg-gradient-to-r from-[#131936] to-[#C6BFB2] rounded-2xl p-4 text-white">
           <h3 className="font-semibold mb-1">Still need help?</h3>
           <p className="text-sm text-white/80 mb-3">Our support team is available 24/7</p>
           <button
             onClick={() => router.push("/home/report-incident")}
-            className="w-full py-3 bg-white text-[#2D0A53] rounded-xl font-medium text-sm hover:bg-gray-100 transition-colors"
+            className="w-full py-3 bg-white text-[#131936] rounded-xl font-medium text-sm hover:bg-gray-100 transition-colors"
           >
             Contact Support
           </button>

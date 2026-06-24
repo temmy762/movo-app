@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { Resend } from "resend";
@@ -205,14 +205,14 @@ export async function POST(req: NextRequest) {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
               </head>
               <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
-                <div style="background: linear-gradient(135deg, #2D0A53, #8B7500); padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                <div style="background: linear-gradient(135deg, #131936, #C6BFB2); padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
                   <h1 style="color: white; margin: 0; font-size: 24px;">Movo Privé</h1>
                 </div>
                 <div style="background: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;">
-                  <h2 style="color: #2D0A53; margin-top: 0;">Thank you for submitting your onboarding application!</h2>
+                  <h2 style="color: #131936; margin-top: 0;">Thank you for submitting your onboarding application!</h2>
                   <p>Dear ${driver.firstName || "Driver"},</p>
                   <p>We have received your <strong>${type === "FLEET" ? "fleet partner" : "chauffeur"}</strong> onboarding application.</p>
-                  <div style="background: white; padding: 15px; border-left: 4px solid #8B7500; margin: 20px 0;">
+                  <div style="background: white; padding: 15px; border-left: 4px solid #C6BFB2; margin: 20px 0;">
                     <p style="margin: 0;"><strong>What happens next:</strong></p>
                     <ul style="margin: 10px 0; padding-left: 20px;">
                       <li>Our team will review your information and documents</li>
@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
                       <li>This typically takes 1-3 business days</li>
                     </ul>
                   </div>
-                  <p>If you have any questions, please contact our support team at <a href="mailto:support@movoprive.com" style="color: #2D0A53; text-decoration: none;"><strong>support@movoprive.com</strong></a></p>
+                  <p>If you have any questions, please contact our support team at <a href="mailto:support@movoprive.com" style="color: #131936; text-decoration: none;"><strong>support@movoprive.com</strong></a></p>
                   <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
                   <p style="color: #666; font-size: 12px; margin: 0;">Best regards,<br/><strong>The Movo Privé Team</strong></p>
                 </div>

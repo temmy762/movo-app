@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const tiers = [
@@ -24,7 +23,6 @@ interface Props {
 }
 
 export default function ServiceBottomSheet({ service, onClose }: Props) {
-  const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [selected, setSelected] = useState("classic");
 
@@ -54,7 +52,7 @@ export default function ServiceBottomSheet({ service, onClose }: Props) {
       {/* Sheet — bottom sheet on mobile, centered modal on desktop */}
       <div
         className={`relative bg-white w-full md:w-full md:max-w-lg md:rounded-3xl rounded-t-3xl overflow-y-auto max-h-[92vh] md:max-h-[85vh] transition-all duration-300 ${visible ? "translate-y-0 md:scale-100 md:opacity-100" : "translate-y-full md:translate-y-0 md:scale-95 md:opacity-0"}`}
-        style={{ fontFamily: "var(--font-poppins)" }}
+        style={{ fontFamily: "var(--font-body)" }}
       >
         {/* Drag handle — mobile only */}
         <div className="flex justify-center pt-3 pb-1 md:hidden">
@@ -65,7 +63,7 @@ export default function ServiceBottomSheet({ service, onClose }: Props) {
           {/* Page label */}
           <div className="px-4 pt-1 pb-1 md:pt-4">
             <p className={`text-[12px] ${service.isPartyBus ? "font-semibold" : "text-gray-400"}`}
-              style={service.isPartyBus ? { color: "#2D0A53" } : {}}>
+              style={service.isPartyBus ? { color: "#131936" } : {}}>
               {service.pageLabel}
             </p>
           </div>
@@ -96,7 +94,8 @@ export default function ServiceBottomSheet({ service, onClose }: Props) {
                 <button
                   type="button"
                   onClick={() => setSelected(selected === "black" ? "" : "black")}
-                  className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5 ${selected === "black" ? "bg-blue-600" : "bg-gray-200"}`}
+                  className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5`}
+                  style={{ background: selected === "black" ? "#131936" : "#e5e7eb" }}
                 >
                   <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${selected === "black" ? "translate-x-5" : "translate-x-1"}`} />
                 </button>
@@ -136,7 +135,8 @@ export default function ServiceBottomSheet({ service, onClose }: Props) {
                     <button
                       type="button"
                       onClick={() => setSelected(tier.id)}
-                      className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5 ${selected === tier.id ? "bg-blue-600" : "bg-gray-200"}`}
+                      className={`relative w-10 h-6 rounded-full transition-colors shrink-0 mt-0.5`}
+                      style={{ background: selected === tier.id ? "#131936" : "#e5e7eb" }}
                     >
                       <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${selected === tier.id ? "translate-x-5" : "translate-x-1"}`} />
                     </button>
@@ -155,9 +155,8 @@ export default function ServiceBottomSheet({ service, onClose }: Props) {
           <div className="px-4 mt-5 pb-8">
             <button
               type="button"
-              onClick={() => { handleClose(); router.push(`/home/pickup?tier=${selected}`); }}
               className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
-              style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
+              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
             >
               Book now
             </button>

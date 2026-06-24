@@ -93,7 +93,7 @@ function PickupContent() {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-screen overflow-hidden flex flex-col bg-white" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Map */}
       <div className="relative flex-1">
@@ -107,16 +107,16 @@ function PickupContent() {
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2">
           {lookingUp ? (
             <div className="bg-white rounded-full px-3 py-1.5 shadow-md text-[12px] text-gray-600 font-medium flex items-center gap-2">
-              <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" />
+              <span className="w-3 h-3 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin" />
               Finding address…
             </div>
           ) : (
             <div className="bg-white rounded-full px-3 py-1.5 shadow-md text-[12px] font-semibold flex items-center gap-1.5">
               <span
                 className="w-2.5 h-2.5 rounded-full"
-                style={{ background: mapMode === "pickup" ? "#2D0A53" : "#8B7500" }}
+                style={{ background: mapMode === "pickup" ? "#131936" : "#C6BFB2" }}
               />
-              <span style={{ color: mapMode === "pickup" ? "#2D0A53" : "#8B7500" }}>
+              <span style={{ color: mapMode === "pickup" ? "#131936" : "#C6BFB2" }}>
                 Tap map to set {mapMode === "pickup" ? "pickup" : "destination"}
               </span>
             </div>
@@ -133,8 +133,8 @@ function PickupContent() {
 
           {/* Pickup */}
           <div className="flex items-center gap-3" onClick={() => setMapMode("pickup")}>
-            <div className="w-[10px] h-[10px] rounded-full shrink-0 z-10 transition-colors" style={{ background: mapMode === "pickup" ? "#2D0A53" : "#1a1a2e" }} />
-            <div className="flex-1 rounded-lg px-3 py-2.5 border-[1.5px]" style={{ borderColor: "#2D0A53" }}>
+            <div className="w-[10px] h-[10px] rounded-full shrink-0 z-10 transition-colors" style={{ background: mapMode === "pickup" ? "#131936" : "#1a1a2e" }} />
+            <div className="flex-1 rounded-lg px-3 py-2.5 border-[1.5px]" style={{ borderColor: "#131936" }}>
               {isLoaded ? (
                 <Autocomplete
                   onLoad={(ref) => { pickupAutoRef.current = ref; }}
@@ -162,7 +162,7 @@ function PickupContent() {
 
           {/* Dropoff */}
           <div className="flex items-center gap-3" onClick={() => setMapMode("dropoff")}>
-            <div className="w-[10px] h-[10px] rounded-full shrink-0 z-10 transition-colors" style={{ background: mapMode === "dropoff" ? "#8B7500" : "#d1d5db", border: mapMode === "dropoff" ? "none" : "1px solid #9ca3af" }} />
+            <div className="w-[10px] h-[10px] rounded-full shrink-0 z-10 transition-colors" style={{ background: mapMode === "dropoff" ? "#C6BFB2" : "#d1d5db", border: mapMode === "dropoff" ? "none" : "1px solid #9ca3af" }} />
             <div className="flex-1 rounded-lg px-3 py-2.5 bg-gray-100 border border-gray-200">
               {isLoaded ? (
                 <Autocomplete
@@ -195,7 +195,7 @@ function PickupContent() {
           disabled={!pickup || !dropoff}
           onClick={handleConfirm}
           className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-50"
-          style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
+          style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
         >
           Confirm pickup
         </button>

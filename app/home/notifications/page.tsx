@@ -19,7 +19,7 @@ function GradientToggle({
       className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-all duration-200"
       style={{
         background: checked
-          ? "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)"
+          ? "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)"
           : "#d1d5db",
       }}
     >
@@ -45,7 +45,7 @@ export default function NotificationsPage() {
   return (
     <div
       className="min-h-screen bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* White card */}
       <div className="flex-1 flex flex-col">

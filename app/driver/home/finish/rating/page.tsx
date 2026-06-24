@@ -50,7 +50,7 @@ export default function RatingPage() {
     new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
@@ -67,7 +67,7 @@ export default function RatingPage() {
       {!loading && data && (
         <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center gap-4">
           <div className="flex flex-col items-center justify-center w-16 h-16 rounded-2xl shadow-sm"
-            style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+            style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
             <p className="text-[22px] font-black text-white leading-none">
               {data.avgRating != null ? data.avgRating.toFixed(1) : "–"}
             </p>
@@ -112,7 +112,7 @@ export default function RatingPage() {
         {!loading && data?.reviews?.map((r) => (
           <div key={r.id} className="bg-white rounded-2xl px-4 py-4 shadow-sm mb-3 flex gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+              style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8">
                 <circle cx="12" cy="8" r="4" />
                 <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />

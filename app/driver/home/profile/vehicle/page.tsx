@@ -34,7 +34,7 @@ export default function VehiclePage() {
   }, []);
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
         <button className="no-hover-fx p-1" onClick={() => router.back()}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -101,7 +101,7 @@ export default function VehiclePage() {
             <p className="text-[11px] text-gray-400 mt-1">Complete onboarding to add your vehicle.</p>
             <button onClick={() => router.push("/driver/onboarding/partner/vehicle")}
               className="mt-4 px-5 py-2 rounded-xl text-white text-[13px] font-semibold"
-              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
+              style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
               Add Vehicle
             </button>
           </div>

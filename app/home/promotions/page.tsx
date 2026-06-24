@@ -9,7 +9,7 @@ export default function PromotionsPage() {
   return (
     <div
       className="min-h-screen bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* White card */}
       <div className="flex-1 flex flex-col">

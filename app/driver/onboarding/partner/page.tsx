@@ -19,7 +19,7 @@ function ProgressBar({ step }: { step: number }) {
             style={{
               background:
                 i < step
-                  ? "linear-gradient(135deg, #2D0A53 0%, #8B7500 100%)"
+                  ? "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)"
                   : "#d1d5db",
             }}
           >
@@ -36,7 +36,7 @@ function ProgressBar({ step }: { step: number }) {
               style={{
                 background:
                   i < step - 1
-                    ? "linear-gradient(90deg, #2D0A53, #8B7500)"
+                    ? "linear-gradient(90deg, #131936, #C6BFB2)"
                     : "#e5e7eb",
               }}
             />
@@ -91,7 +91,7 @@ export default function PartnerOnboardingStep1() {
   return (
     <div
       className="h-full bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
         <div className="w-full max-w-[480px] px-6">
@@ -99,7 +99,7 @@ export default function PartnerOnboardingStep1() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -115,7 +115,7 @@ export default function PartnerOnboardingStep1() {
             <span
               className="font-semibold"
               style={{
-                background: "linear-gradient(90deg, #2D0A53, #8B7500)",
+                background: "linear-gradient(90deg, #131936, #C6BFB2)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -126,7 +126,7 @@ export default function PartnerOnboardingStep1() {
             <span
               className="font-semibold"
               style={{
-                background: "linear-gradient(90deg, #2D0A53, #8B7500)",
+                background: "linear-gradient(90deg, #131936, #C6BFB2)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -228,7 +228,7 @@ export default function PartnerOnboardingStep1() {
             <Link
               href="#"
               className="font-semibold underline"
-              style={{ color: "#2D0A53" }}
+              style={{ color: "#131936" }}
             >
               here
             </Link>
@@ -239,7 +239,7 @@ export default function PartnerOnboardingStep1() {
             type="button"
             onClick={() => router.push("/driver/onboarding/partner/fleet")}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide mb-8"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Next
           </button>

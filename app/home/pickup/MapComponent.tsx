@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
@@ -19,17 +19,17 @@ const CAR_SVG = encodeURIComponent(
 
 const PIN_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44">
-    <circle cx="17" cy="17" r="17" fill="#2D0A53"/>
+    <circle cx="17" cy="17" r="17" fill="#131936"/>
     <circle cx="17" cy="17" r="7" fill="white"/>
-    <polygon points="9,31 25,31 17,44" fill="#2D0A53"/>
+    <polygon points="9,31 25,31 17,44" fill="#131936"/>
   </svg>`
 );
 
 const DROPOFF_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44">
-    <circle cx="17" cy="17" r="17" fill="#8B7500"/>
+    <circle cx="17" cy="17" r="17" fill="#C6BFB2"/>
     <circle cx="17" cy="17" r="7" fill="white"/>
-    <polygon points="9,31 25,31 17,44" fill="#8B7500"/>
+    <polygon points="9,31 25,31 17,44" fill="#C6BFB2"/>
   </svg>`
 );
 

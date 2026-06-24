@@ -44,7 +44,7 @@ function YourRidesContent() {
   return (
     <div
       className="min-h-screen flex flex-col bg-white"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="flex-1 overflow-y-auto pb-28">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 md:px-10 pt-6 md:pt-10">
@@ -73,7 +73,7 @@ function YourRidesContent() {
               One way
               <span
                 className="absolute left-0 right-0 -bottom-[1px] h-[2px] rounded-full"
-                style={{ background: "#2D0A53" }}
+                style={{ background: "#131936" }}
               />
             </button>
           </div>
@@ -87,7 +87,7 @@ function YourRidesContent() {
               <div className="w-[10px] h-[10px] rounded-full bg-gray-900 shrink-0 z-10" />
               <div
                 className="flex-1 rounded-lg px-3 py-2.5 border-[1.5px]"
-                style={{ borderColor: "#2D0A53" }}
+                style={{ borderColor: "#131936" }}
               >
                 <input
                   type="text"
@@ -125,7 +125,7 @@ function YourRidesContent() {
           >
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: "#2D0A53" }}
+              style={{ background: "#131936" }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                 <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" />
@@ -140,11 +140,11 @@ function YourRidesContent() {
             <div className="flex items-center justify-between mb-1">
               <p className="text-[13px] md:text-[14px] font-semibold text-gray-900">
                 My Current{" "}
-                <span style={{ color: "#8B7500" }}>Location</span>
+                <span style={{ color: "#C6BFB2" }}>Location</span>
               </p>
               {lookingUp && (
                 <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                  <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" />
+                  <span className="w-3 h-3 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin" />
                   Finding address…
                 </div>
               )}
@@ -152,7 +152,7 @@ function YourRidesContent() {
             <p className="text-[11px] text-gray-400 mb-2">Tap the map to set your destination</p>
             <div
               className="rounded-xl overflow-hidden border-[2px]"
-              style={{ borderColor: selectedPoint ? "#8B7500" : "#2D0A53", height: "200px" }}
+              style={{ borderColor: selectedPoint ? "#C6BFB2" : "#131936", height: "200px" }}
             >
               <MiniMap
                 selectedPoint={selectedPoint}
@@ -178,7 +178,7 @@ function YourRidesContent() {
               router.push(`/home/ride/confirm?${new URLSearchParams(p).toString()}`);
             }}
             className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Confirm Ride
           </button>

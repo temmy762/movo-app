@@ -38,7 +38,7 @@ function ProgressBar({ step }: { step: number }) {
         <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
           Step {step} of {TOTAL_STEPS}
         </span>
-        <span className="text-[11px] font-bold" style={{ color: "#2D0A53" }}>
+        <span className="text-[11px] font-bold" style={{ color: "#131936" }}>
           {STEP_LABELS[step - 1]}
         </span>
       </div>
@@ -47,7 +47,7 @@ function ProgressBar({ step }: { step: number }) {
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${((step) / TOTAL_STEPS) * 100}%`,
-            background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)",
+            background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)",
           }}
         />
       </div>
@@ -56,7 +56,7 @@ function ProgressBar({ step }: { step: number }) {
           <div
             key={label}
             className="w-1.5 h-1.5 rounded-full"
-            style={{ background: i < step ? "linear-gradient(135deg,#2D0A53,#8B7500)" : "#e5e7eb" }}
+            style={{ background: i < step ? "linear-gradient(135deg,#131936,#C6BFB2)" : "#e5e7eb" }}
           />
         ))}
       </div>
@@ -168,9 +168,9 @@ function Checkbox({ checked, onChange, children }: {
   return (
     <button type="button" onClick={() => onChange(!checked)}
       className="no-hover-fx flex items-start gap-3 w-full text-left p-3 rounded-xl border transition-all"
-      style={{ borderColor: checked ? "#2D0A53" : "#e5e7eb", background: checked ? "#f5f0ff" : "#fafafa" }}>
+      style={{ borderColor: checked ? "#131936" : "#e5e7eb", background: checked ? "#f5f0ff" : "#fafafa" }}>
       <div className="w-5 h-5 rounded-md shrink-0 mt-0.5 flex items-center justify-center border-2 transition-all"
-        style={{ borderColor: checked ? "#2D0A53" : "#d1d5db", background: checked ? "#2D0A53" : "white" }}>
+        style={{ borderColor: checked ? "#131936" : "#d1d5db", background: checked ? "#131936" : "white" }}>
         {checked && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5"><polyline points="20 6 9 17 4 12" /></svg>}
       </div>
       <span className="text-[12px] text-gray-700 leading-relaxed">{children}</span>
@@ -184,7 +184,7 @@ function ConsentCard({ icon, title, description, required = true }: {
   return (
     <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
       <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+        style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
         {icon}
       </div>
       <div>
@@ -202,7 +202,7 @@ function InfoCard({ icon, title, items }: {
   return (
     <div className="rounded-xl border border-gray-100 overflow-hidden mb-3">
       <div className="flex items-center gap-2 px-4 py-2.5"
-        style={{ background: "linear-gradient(90deg,#2D0A5310,#8B750010)" }}>
+        style={{ background: "linear-gradient(90deg,#13193610,#C6BFB210)" }}>
         <span>{icon}</span>
         <p className="text-[13px] font-bold text-gray-800">{title}</p>
       </div>
@@ -210,7 +210,7 @@ function InfoCard({ icon, title, items }: {
         {items.map((item, i) => (
           <li key={i} className="flex items-start gap-2 text-[12px] text-gray-600">
             <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-              style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }} />
+              style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }} />
             {item}
           </li>
         ))}
@@ -366,7 +366,7 @@ export default function ChauffeurOnboardingPage() {
       style={{
         background: disabled || saving
           ? "#d1d5db"
-          : "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
+          : "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
       }}
     >
       {saving ? "Saving…" : label}
@@ -392,7 +392,7 @@ export default function ChauffeurOnboardingPage() {
         return (
           <div>
             <div className="rounded-2xl overflow-hidden mb-5"
-              style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #2D0A53 60%, #8B7500 100%)" }}>
+              style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #131936 60%, #C6BFB2 100%)" }}>
               <div className="px-5 pt-6 pb-4">
                 <p className="text-[11px] font-semibold text-purple-200 uppercase tracking-widest mb-1">
                   Chauffeur Onboarding
@@ -427,7 +427,7 @@ export default function ChauffeurOnboardingPage() {
               ].map(item => (
                 <div key={item.n} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
                   <span className="text-[11px] font-black w-7 text-center shrink-0"
-                    style={{ color: "#2D0A53" }}>{item.n}</span>
+                    style={{ color: "#131936" }}>{item.n}</span>
                   <div>
                     <p className="text-[12px] font-semibold text-gray-800">{item.label}</p>
                     <p className="text-[11px] text-gray-400">{item.desc}</p>
@@ -451,7 +451,7 @@ export default function ChauffeurOnboardingPage() {
               <button
                 type="button"
                 className="no-hover-fx relative w-24 h-24 rounded-full overflow-hidden border-4 mb-2"
-                style={{ borderColor: "#2D0A53" }}
+                style={{ borderColor: "#131936" }}
                 onClick={() => document.getElementById("profile-upload")?.click()}
               >
                 {profilePreview ? (
@@ -464,7 +464,7 @@ export default function ChauffeurOnboardingPage() {
                   </div>
                 )}
                 <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+                  style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
@@ -752,12 +752,12 @@ export default function ChauffeurOnboardingPage() {
               ]}
             />
 
-            <div className="p-4 rounded-xl border-2 mb-4" style={{ borderColor: "#2D0A53", background: "#f5f0ff" }}>
+            <div className="p-4 rounded-xl border-2 mb-4" style={{ borderColor: "#131936", background: "#f5f0ff" }}>
               <div className="flex items-center gap-2 mb-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2">
                   <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
                 </svg>
-                <p className="text-[12px] font-bold" style={{ color: "#2D0A53" }}>GPS Tracking Notice</p>
+                <p className="text-[12px] font-bold" style={{ color: "#131936" }}>GPS Tracking Notice</p>
               </div>
               <p className="text-[12px] text-gray-600 leading-relaxed">
                 Movo Privé uses <strong>real-time GPS tracking</strong> during active trips for client safety, route verification, and dispute resolution. Location data is stored securely and used only for operational and safety purposes. You may review our Privacy Policy for full details.
@@ -848,7 +848,7 @@ export default function ChauffeurOnboardingPage() {
 
             <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100"
-                style={{ background: "linear-gradient(90deg,#2D0A5308,#8B750008)" }}>
+                style={{ background: "linear-gradient(90deg,#13193608,#C6BFB208)" }}>
                 <p className="text-[12px] font-bold text-gray-800">Chauffeur Services Agreement</p>
                 <p className="text-[11px] text-gray-400">Movo Privé · Independent Chauffeur</p>
               </div>
@@ -894,7 +894,7 @@ export default function ChauffeurOnboardingPage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border-2 mb-3" style={{ borderColor: "#8B7500", background: "#fffbeb" }}>
+            <div className="p-4 rounded-xl border-2 mb-3" style={{ borderColor: "#C6BFB2", background: "#fffbeb" }}>
               <p className="text-[11px] font-bold text-yellow-700 mb-1">Digital Signature</p>
               <p className="text-[11px] text-yellow-600 mb-2">
                 Type your full legal name below to sign this agreement. By signing, you confirm you have read and agree to all terms.
@@ -961,7 +961,7 @@ export default function ChauffeurOnboardingPage() {
           return (
             <div className="flex flex-col items-center py-8">
               <div className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-                style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+                style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
@@ -976,7 +976,7 @@ export default function ChauffeurOnboardingPage() {
                   {["Our team will review your documents", "A background verification will be initiated", "You'll receive an email confirmation within 24h", "Account activation follows approval"].map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-[12px] text-gray-500">
                       <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-                        style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }} />
+                        style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }} />
                       {s}
                     </li>
                   ))}
@@ -986,7 +986,7 @@ export default function ChauffeurOnboardingPage() {
                 type="button"
                 onClick={() => router.push("/driver/onboarding/login")}
                 className="w-full py-3.5 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: "linear-gradient(90deg,#1a1a2e,#2D0A53,#8B7500)" }}
+                style={{ background: "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}
               >
                 Return to Login
               </button>
@@ -1034,7 +1034,7 @@ export default function ChauffeurOnboardingPage() {
                   onClick={handleSubmit}
                   disabled={saving}
                   className="w-full py-3.5 rounded-xl text-white font-bold text-[15px]"
-                  style={{ background: saving ? "#d1d5db" : "linear-gradient(90deg,#1a1a2e,#2D0A53,#8B7500)" }}
+                  style={{ background: saving ? "#d1d5db" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}
                 >
                   {saving ? "Submitting…" : "Submit Application"}
                 </button>
@@ -1050,18 +1050,18 @@ export default function ChauffeurOnboardingPage() {
   };
 
   return (
-    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
         <div className="w-full max-w-[480px] px-5">
 
           {/* Logo + heading */}
           <div className="flex items-center justify-center pt-6 pb-1">
             <div className="relative w-20 h-20">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
           <h1 className="text-[14px] font-bold text-center mb-4"
-            style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Chauffeur Onboarding
           </h1>
 

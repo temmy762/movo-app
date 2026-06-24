@@ -22,20 +22,13 @@ const TIER_DESCS: Record<string, string> = {
   black:   "Unparalleled luxury — your personal concierge.",
 };
 
-const MIN_FARES_FALLBACK: Record<string, number> = {
+const MIN_FARES: Record<string, number> = {
   classic: 18,
   premium: 25,
   black:   35,
 };
 
 const TIERS = ["classic", "premium", "black"] as const;
-
-function safeNormalizeTier(raw: string): typeof TIERS[number] {
-  const lower = raw.toLowerCase();
-  if (lower.includes("black") || lower.includes("luxury") || lower.includes("executive") || lower.includes("vip")) return "black";
-  if (lower.includes("premium") || lower.includes("business") || lower.includes("comfort")) return "premium";
-  return "classic";
-}
 
 interface FleetDriver {
   id: string;
@@ -100,26 +93,10 @@ function AvailableCarsContent() {
 
   const [tierInfos,    setTierInfos]    = useState<Record<string, TierInfo>>({});
   const [carsByTier,   setCarsByTier]   = useState<Record<string, CarCard[]>>({});
-  const [minFares,     setMinFares]     = useState<Record<string, number>>(MIN_FARES_FALLBACK);
   const [loading,      setLoading]      = useState(true);
   const [selectedTier, setSelectedTier] = useState<string | null>(
     TIERS.includes(tierParam as typeof TIERS[number]) ? tierParam : null
   );
-
-  useEffect(() => {
-    fetch("/api/admin/pricing")
-      .then(r => r.json())
-      .then(d => {
-        if (d.tiers) {
-          const map: Record<string, number> = { ...MIN_FARES_FALLBACK };
-          for (const t of d.tiers) {
-            if (t.tier && t.minFare != null) map[t.tier.toLowerCase()] = t.minFare;
-          }
-          setMinFares(map);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     let userLat: number | null = null;
@@ -130,7 +107,7 @@ function AvailableCarsContent() {
       const carsResult: Record<string, CarCard[]> = {};
 
       for (const t of TIERS) {
-        const tierDrivers   = drivers.filter(d => d.vehicle !== null && safeNormalizeTier(d.vehicle.tier) === t);
+        const tierDrivers   = drivers.filter(d => d.vehicle?.tier.toLowerCase() === t);
         const onlineDrivers = tierDrivers.filter(d => d.isOnline && d.lat !== null && d.lng !== null);
 
         let bestEtaMins: number | null = null;
@@ -185,7 +162,7 @@ function AvailableCarsContent() {
               vehicleId: v.id, driverId: d.id,
               driverName: `${d.firstName} ${d.lastName}`,
               tier: t, make: v.make, model: v.model, year: v.year,
-              img: v.photoUrl ?? TIER_IMAGES[safeNormalizeTier(v.tier)] ?? "/images/movo classic.png",
+              img: v.photoUrl ?? TIER_IMAGES[t] ?? "/images/movo classic.png",
               isOnline: d.isOnline, etaLabel,
             };
           })
@@ -235,7 +212,7 @@ function AvailableCarsContent() {
     const cars = carsByTier[selectedTier] ?? [];
     const info = tierInfos[selectedTier];
     return (
-      <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+      <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
         <div className="px-4 pt-5 pb-3 border-b border-gray-100">
           <div className="max-w-lg mx-auto">
             <button type="button" onClick={() => setSelectedTier(null)}
@@ -248,13 +225,13 @@ function AvailableCarsContent() {
             <div className="flex items-center gap-2">
               <h1 className="text-[22px] font-bold text-gray-900">{TIER_LABELS[selectedTier]}</h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
-                From ${minFares[selectedTier] ?? MIN_FARES_FALLBACK[selectedTier]}
+                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
+                From ${MIN_FARES[selectedTier]}
               </span>
             </div>
             {loading ? (
               <p className="text-[13px] text-gray-400 mt-0.5 flex items-center gap-1.5">
-                <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin inline-block" />
+                <span className="w-3 h-3 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin inline-block" />
                 Loading vehicles…
               </p>
             ) : (
@@ -297,7 +274,7 @@ function AvailableCarsContent() {
                 <p className="text-[13px] text-gray-400 mt-1">Our fleet is growing.<br />Please check another category or try again shortly.</p>
                 <button type="button" onClick={() => setSelectedTier(null)}
                   className="mt-4 px-5 py-2 rounded-full text-white text-[13px] font-bold"
-                  style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
+                  style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
                   See all categories
                 </button>
               </div>
@@ -319,7 +296,7 @@ function AvailableCarsContent() {
                       <p className="text-[15px] font-bold text-gray-900">{car.make} {car.model} ({car.year})</p>
                       <p className="text-[11px] text-gray-500 mt-0.5">Driver: {car.driverName}</p>
                       <div className="flex items-center gap-1 mt-1">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2.5">
                           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                         </svg>
                         <p className="text-[11px] text-gray-500">{car.etaLabel}</p>
@@ -331,7 +308,7 @@ function AvailableCarsContent() {
                   </div>
                   <button type="button" onClick={() => handleBookCar(car)}
                     className="w-full py-2.5 rounded-lg text-white font-bold text-[13px] tracking-widest"
-                    style={{ background: "linear-gradient(90deg,#333333 0%,#2D0A53 30%,#8B7500 60%)" }}>
+                    style={{ background: "linear-gradient(90deg,#333333 0%,#131936 30%,#C6BFB2 60%)" }}>
                     {car.isOnline ? "BOOK NOW" : "SCHEDULE RIDE"}
                   </button>
                 </div>
@@ -345,7 +322,7 @@ function AvailableCarsContent() {
 
   /* ── Level 1: tier category cards ── */
   return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <div className="px-4 pt-5 pb-3 border-b border-gray-100">
@@ -360,12 +337,12 @@ function AvailableCarsContent() {
           <h1 className="text-[22px] font-bold text-gray-900 leading-tight">Choose your ride</h1>
           {loading ? (
             <p className="text-[13px] text-gray-400 mt-0.5 flex items-center gap-1.5">
-              <span className="w-3 h-3 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin inline-block" />
+              <span className="w-3 h-3 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin inline-block" />
               Checking availability…
             </p>
           ) : (
             <p className="text-[13px] text-gray-400 mt-0.5">
-              {TIERS.filter(t => (tierInfos[t]?.totalCount ?? 0) > 0).length} categor{TIERS.filter(t => (tierInfos[t]?.totalCount ?? 0) > 0).length === 1 ? "y" : "ies"} available
+              3 categories available
               {totalOnline > 0 && (
                 <span className="ml-2 text-green-600 font-medium">· {totalOnline} driver{totalOnline !== 1 ? "s" : ""} online now</span>
               )}
@@ -421,18 +398,18 @@ function AvailableCarsContent() {
                       <div className="flex items-center gap-3 flex-wrap">
                         {isAvailableNow && info?.bestEtaMins != null && (
                           <div className="flex items-center gap-1">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2D0A53" strokeWidth="2.5">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2.5">
                               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                             </svg>
                             <span className="text-[11px] text-gray-600 font-medium">~{info.bestEtaMins} min away</span>
                           </div>
                         )}
                         <div className="flex items-center gap-1">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#8B7500" strokeWidth="2.5">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5">
                             <line x1="12" y1="1" x2="12" y2="23"/>
                             <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
                           </svg>
-                          <span className="text-[11px] text-gray-600 font-medium">From ${minFares[t] ?? MIN_FARES_FALLBACK[t]}</span>
+                          <span className="text-[11px] text-gray-600 font-medium">From ${MIN_FARES[t]}</span>
                         </div>
                         {(info?.totalCount ?? 0) > 0 && (
                           <span className="text-[10px] text-gray-400">{info!.totalCount} vehicle{info!.totalCount !== 1 ? "s" : ""} in fleet</span>

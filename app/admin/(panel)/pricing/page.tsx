@@ -22,7 +22,7 @@ function Field({ label, value, onChange, step = "0.01", prefix = "$", suffix = "
   return (
     <div>
       <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">{label}</label>
-      <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-3 py-2 focus-within:border-[#2D0A53]">
+      <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-3 py-2 focus-within:border-[#131936]">
         {prefix && <span className="text-[13px] text-gray-400 shrink-0">{prefix}</span>}
         <input
           type="number"
@@ -91,13 +91,13 @@ export default function PricingPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-6 h-6 border-2 border-gray-200 border-t-[#2D0A53] rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-gray-200 border-t-[#131936] rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-screen bg-gray-50 px-4 py-8" style={{ fontFamily: "var(--font-body)" }}>
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
@@ -110,7 +110,7 @@ export default function PricingPage() {
             onClick={save}
             disabled={saving}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-[13px] font-bold shadow"
-            style={{ background: saving ? "#9ca3af" : "linear-gradient(90deg, #1a1a2e, #2D0A53, #8B7500)" }}
+            style={{ background: saving ? "#9ca3af" : "linear-gradient(90deg, #1a1a2e, #131936, #C6BFB2)" }}
           >
             {saving ? "Saving…" : saved ? "✓ Saved" : "Save Changes"}
           </button>

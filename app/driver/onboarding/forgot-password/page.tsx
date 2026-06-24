@@ -52,14 +52,14 @@ export default function DriverForgotPasswordPage() {
   return (
     <div
       className="h-full bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
         <div className="w-full max-w-[420px] px-8">
           {/* Logo */}
           <div className="flex items-center justify-center pt-6">
             <div className="relative w-44 h-44">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -107,7 +107,7 @@ export default function DriverForgotPasswordPage() {
               <button
                 onClick={() => setSubmitted(false)}
                 className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide mb-3"
-                style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+                style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
               >
                 Send Another Email
               </button>
@@ -150,7 +150,7 @@ export default function DriverForgotPasswordPage() {
                 onClick={handleForgotPassword}
                 disabled={loading}
                 className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60 mb-3"
-                style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+                style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
               >
                 {loading ? "Sending..." : "Send Reset Link"}
               </button>

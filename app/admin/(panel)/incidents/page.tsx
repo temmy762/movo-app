@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 
@@ -262,7 +262,7 @@ function IncidentDetailPanel({
             onClick={handleSave}
             disabled={saving}
             className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[14px]"
-            style={{ background: saving ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}
+            style={{ background: saving ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}
           >
             {saving ? "Saving…" : "Save Review"}
           </button>

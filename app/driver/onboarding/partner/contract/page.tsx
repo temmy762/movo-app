@@ -13,7 +13,7 @@ function ProgressBar({ step }: { step: number }) {
         <div key={i} className="flex items-center flex-1 last:flex-none">
           <div
             className="w-3.5 h-3.5 rounded-full shrink-0 flex items-center justify-center"
-            style={{ background: i < step ? "linear-gradient(135deg, #2D0A53 0%, #8B7500 100%)" : "#d1d5db" }}
+            style={{ background: i < step ? "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" : "#d1d5db" }}
           >
             {i < step && (
               <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
@@ -22,7 +22,7 @@ function ProgressBar({ step }: { step: number }) {
             )}
           </div>
           {i < TOTAL_STEPS - 1 && (
-            <div className="h-[2px] flex-1" style={{ background: i < step - 1 ? "linear-gradient(90deg, #2D0A53, #8B7500)" : "#e5e7eb" }} />
+            <div className="h-[2px] flex-1" style={{ background: i < step - 1 ? "linear-gradient(90deg, #131936, #C6BFB2)" : "#e5e7eb" }} />
           )}
         </div>
       ))}
@@ -34,14 +34,14 @@ export default function PartnerContractPage() {
   const router = useRouter();
 
   return (
-    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
         <div className="w-full max-w-[480px] px-6">
 
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -72,7 +72,7 @@ export default function PartnerContractPage() {
               <p className="text-gray-500 text-[12px] mt-2">Hereinafter referred to as &quot;Partner&quot; and</p>
               <p
                 className="font-semibold text-[13px]"
-                style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
               >
                 Movo Privé, Fasanenstrasse 59, 10827 Berlin, Germany
               </p>
@@ -83,7 +83,7 @@ export default function PartnerContractPage() {
           <Link
             href="#"
             className="block text-[12px] underline text-center mb-5"
-            style={{ color: "#2D0A53" }}
+            style={{ color: "#131936" }}
           >
             click here to download a copy of your contractual agreement
           </Link>
@@ -100,7 +100,7 @@ export default function PartnerContractPage() {
             type="button"
             onClick={() => router.push("/driver/onboarding/partner/payment")}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide mb-8"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Sign your contract
           </button>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 
@@ -40,8 +40,8 @@ function StatCard({
 function BarGroup({ data, maxVal }: { data: MonthData; maxVal: number }) {
   const h = (v: number) => Math.max(2, Math.round((v / maxVal) * 140));
   const bars = [
-    { key: "grossRevenue", color: "#2D0A53", label: "Revenue" },
-    { key: "commission",   color: "#8B7500", label: "Commission" },
+    { key: "grossRevenue", color: "#131936", label: "Revenue" },
+    { key: "commission",   color: "#C6BFB2", label: "Commission" },
     { key: "payouts",      color: "#0284c7", label: "Payouts" },
     { key: "refunds",      color: "#ef4444", label: "Refunds" },
   ] as const;
@@ -86,8 +86,8 @@ export default function EarningsAnalyticsPage() {
     : 1;
 
   const statCards = [
-    { label: "Gross Revenue",        value: `$${(s?.grossRevenue ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,     color: "#2D0A53" },
-    { label: "Commission Earned",     value: `$${(s?.commissionEarned ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,  color: "#8B7500" },
+    { label: "Gross Revenue",        value: `$${(s?.grossRevenue ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,     color: "#131936" },
+    { label: "Commission Earned",     value: `$${(s?.commissionEarned ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,  color: "#C6BFB2" },
     { label: "Driver Payouts Issued", value: `$${(s?.payoutsIssued ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,    color: "#0284c7" },
     { label: "Outstanding Payouts",   value: `$${(s?.outstandingPayouts ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: "#d97706", sub: "Pending approval" },
     { label: "Refunds Issued",        value: `$${(s?.refundsIssued ?? 0).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,    color: "#ef4444" },
@@ -143,8 +143,8 @@ export default function EarningsAnalyticsPage() {
             <p className="text-[14px] font-bold text-gray-900">Monthly Breakdown — {year}</p>
             <div className="flex flex-wrap items-center gap-3">
               {[
-                { label: "Revenue",    color: "#2D0A53" },
-                { label: "Commission", color: "#8B7500" },
+                { label: "Revenue",    color: "#131936" },
+                { label: "Commission", color: "#C6BFB2" },
                 { label: "Payouts",    color: "#0284c7" },
                 { label: "Refunds",    color: "#ef4444" },
               ].map(({ label, color }) => (
@@ -194,7 +194,7 @@ export default function EarningsAnalyticsPage() {
                     <tr key={m.month} className="border-b border-gray-50 hover:bg-gray-50/60">
                       <td className="px-4 py-3 font-semibold text-gray-700">{m.month}</td>
                       <td className="px-4 py-3 text-gray-800 font-medium">${m.grossRevenue.toFixed(2)}</td>
-                      <td className="px-4 py-3 font-medium" style={{ color: "#8B7500" }}>${m.commission.toFixed(2)}</td>
+                      <td className="px-4 py-3 font-medium" style={{ color: "#C6BFB2" }}>${m.commission.toFixed(2)}</td>
                       <td className="px-4 py-3 font-medium" style={{ color: "#0284c7" }}>${m.payouts.toFixed(2)}</td>
                       <td className="px-4 py-3 font-medium" style={{ color: "#ef4444" }}>${m.refunds.toFixed(2)}</td>
                       <td className="px-4 py-3 font-bold" style={{ color: net >= 0 ? "#16a34a" : "#ef4444" }}>
@@ -209,7 +209,7 @@ export default function EarningsAnalyticsPage() {
                   <tr className="border-t-2 border-gray-200 bg-gray-50/50">
                     <td className="px-4 py-3 font-bold text-gray-900">Total</td>
                     <td className="px-4 py-3 font-bold text-gray-900">${cashflow.reduce((s, m) => s + m.grossRevenue, 0).toFixed(2)}</td>
-                    <td className="px-4 py-3 font-bold" style={{ color: "#8B7500" }}>${cashflow.reduce((s, m) => s + m.commission, 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 font-bold" style={{ color: "#C6BFB2" }}>${cashflow.reduce((s, m) => s + m.commission, 0).toFixed(2)}</td>
                     <td className="px-4 py-3 font-bold" style={{ color: "#0284c7" }}>${cashflow.reduce((s, m) => s + m.payouts, 0).toFixed(2)}</td>
                     <td className="px-4 py-3 font-bold" style={{ color: "#ef4444" }}>${cashflow.reduce((s, m) => s + m.refunds, 0).toFixed(2)}</td>
                     <td className="px-4 py-3 font-bold" style={{ color: "#16a34a" }}>${s?.netRevenue.toFixed(2) ?? "0.00"}</td>

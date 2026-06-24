@@ -32,7 +32,7 @@ export default function ServiceDetailPage({ title, bannerImg }: Props) {
   const [selected, setSelected] = useState("classic");
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
       <div className="w-full max-w-[480px] md:max-w-2xl flex flex-col flex-1 pt-4 md:pt-0">
         {/* Banner */}
         <div className="relative mx-4 md:mx-0 rounded-2xl md:rounded-t-none md:rounded-b-3xl overflow-hidden h-48 md:h-72">
@@ -91,7 +91,7 @@ export default function ServiceDetailPage({ title, bannerImg }: Props) {
             type="button"
             onClick={() => router.push(`/home/pickup?tier=${selected}`)}
             className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
-            style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Book now
           </button>

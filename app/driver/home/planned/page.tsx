@@ -6,14 +6,14 @@ export default function PlannedPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
         <h1 className="text-[18px] font-bold text-gray-900">Planned</h1>
         <button
           className="no-hover-fx text-[13px] font-semibold"
-          style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+          style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
           onClick={() => router.push("/driver/home/finish/my-rides")}
         >
           My rides
@@ -35,7 +35,7 @@ export default function PlannedPage() {
         </p>
         <button
           className="no-hover-fx text-[13px] font-semibold"
-          style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+          style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
           onClick={() => router.refresh()}
         >
           Refresh

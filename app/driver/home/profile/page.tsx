@@ -74,7 +74,7 @@ export default function DriverProfilePage() {
   }
 
   return (
-    <div className="min-h-full bg-gray-50" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
@@ -129,10 +129,10 @@ export default function DriverProfilePage() {
             </div>
             <label
               className="text-[12px] font-bold cursor-pointer flex items-center gap-1.5"
-              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+              style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
             >
               {uploading ? (
-                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#2D0A53] rounded-full animate-spin" style={{ WebkitTextFillColor: "initial" }} />
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin" style={{ WebkitTextFillColor: "initial" }} />
               ) : "UPLOAD"}
               <input
                 type="file"
@@ -176,7 +176,7 @@ export default function DriverProfilePage() {
             type="button"
             onClick={handleLogout}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px]"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Log out
           </button>

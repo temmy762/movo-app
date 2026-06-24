@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 
@@ -435,7 +435,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                           onClick={() => handleConfirm(b.id)}
                           disabled={confirming === b.id}
                           className="no-hover-fx px-3 py-1 rounded-lg text-white text-[11px] font-semibold"
-                          style={{ background: confirming === b.id ? "#9ca3af" : "#2D0A53" }}>
+                          style={{ background: confirming === b.id ? "#9ca3af" : "#131936" }}>
                           {confirming === b.id ? "…" : "Confirm"}
                         </button>
                       )}
@@ -494,7 +494,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
               {/* Row 3: Route */}
               <div className="flex flex-col gap-1 mb-2 pl-1">
                 <div className="flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#2D0A53] shrink-0 mt-1" />
+                  <span className="w-2 h-2 rounded-full bg-[#131936] shrink-0 mt-1" />
                   <p className="text-[11px] text-gray-500 leading-tight truncate">{b.pickup}</p>
                 </div>
                 <div className="flex items-start gap-2">
@@ -528,7 +528,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                     onClick={() => handleConfirm(b.id)}
                     disabled={confirming === b.id}
                     className="no-hover-fx px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold"
-                    style={{ background: confirming === b.id ? "#9ca3af" : "#2D0A53" }}>
+                    style={{ background: confirming === b.id ? "#9ca3af" : "#131936" }}>
                     {confirming === b.id ? "…" : "Confirm"}
                   </button>
                 )}
@@ -566,7 +566,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
               placeholder={`Full refund = $${refundModal.total.toFixed(2)}`}
               value={refundAmt}
               onChange={e => setRefundAmt(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-[#2D0A53] mb-1"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-[#131936] mb-1"
             />
             <p className="text-[11px] text-gray-400 mb-5">Leave empty for full refund.</p>
             <div className="flex gap-3">
@@ -601,7 +601,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
             <button key={n}
               className="no-hover-fx w-7 h-7 rounded text-[11px] font-medium"
-              style={{ background: n === page ? "linear-gradient(90deg,#2D0A53,#8B7500)" : "transparent", color: n === page ? "white" : "#6b7280" }}
+              style={{ background: n === page ? "linear-gradient(90deg,#131936,#C6BFB2)" : "transparent", color: n === page ? "white" : "#6b7280" }}
               onClick={() => setPage(n)}>{n}</button>
           ))}
           <button className="no-hover-fx w-7 h-7 rounded flex items-center justify-center text-gray-400 text-[12px] disabled:opacity-30"

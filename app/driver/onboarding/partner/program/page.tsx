@@ -13,7 +13,7 @@ function ProgressBar({ step }: { step: number }) {
         <div key={i} className="flex items-center flex-1 last:flex-none">
           <div
             className="w-4 h-4 rounded-full shrink-0 flex items-center justify-center"
-            style={{ background: i < step ? "linear-gradient(135deg, #2D0A53 0%, #8B7500 100%)" : "#d1d5db" }}
+            style={{ background: i < step ? "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" : "#d1d5db" }}
           >
             {i < step && (
               <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
@@ -22,7 +22,7 @@ function ProgressBar({ step }: { step: number }) {
             )}
           </div>
           {i < TOTAL_STEPS - 1 && (
-            <div className="h-[2px] flex-1" style={{ background: i < step - 1 ? "linear-gradient(90deg, #2D0A53, #8B7500)" : "#e5e7eb" }} />
+            <div className="h-[2px] flex-1" style={{ background: i < step - 1 ? "linear-gradient(90deg, #131936, #C6BFB2)" : "#e5e7eb" }} />
           )}
         </div>
       ))}
@@ -50,14 +50,14 @@ export default function OnboardingProgramPage() {
   const router = useRouter();
 
   return (
-    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
         <div className="w-full max-w-[480px] px-6">
 
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -72,7 +72,7 @@ export default function OnboardingProgramPage() {
             Thank you for providing your company details, we are excited to have you drive with us soon. As a{" "}
             <span
               className="font-semibold"
-              style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+              style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
             >
               Movo Privé
             </span>{" "}
@@ -84,7 +84,7 @@ export default function OnboardingProgramPage() {
               <li key={b} className="flex items-start gap-2 text-[12px] text-gray-600">
                 <span
                   className="w-2 h-2 rounded-full shrink-0 mt-1"
-                  style={{ background: "linear-gradient(135deg, #2D0A53, #8B7500)" }}
+                  style={{ background: "linear-gradient(135deg, #131936, #C6BFB2)" }}
                 />
                 {b}
               </li>
@@ -96,7 +96,7 @@ export default function OnboardingProgramPage() {
             Before you can perform your first ride and join{" "}
             <span
               className="font-semibold"
-              style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+              style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
             >
               Movo Privé
             </span>{" "}
@@ -108,7 +108,7 @@ export default function OnboardingProgramPage() {
               <li key={s} className="flex items-start gap-3 text-[12px] text-gray-600">
                 <span
                   className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-white text-[10px] font-bold mt-0"
-                  style={{ background: "linear-gradient(135deg, #2D0A53, #8B7500)" }}
+                  style={{ background: "linear-gradient(135deg, #131936, #C6BFB2)" }}
                 >
                   {i + 1}
                 </span>
@@ -125,7 +125,7 @@ export default function OnboardingProgramPage() {
           <Link
             href="/driver/onboarding/partner/documents"
             className="block text-center text-[13px] font-bold underline mb-5"
-            style={{ color: "#2D0A53" }}
+            style={{ color: "#131936" }}
           >
             CLICK HERE to Upload Document
           </Link>
@@ -135,7 +135,7 @@ export default function OnboardingProgramPage() {
             type="button"
             onClick={() => router.push("/driver/onboarding/partner/documents")}
             className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide mb-8"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Next
           </button>

@@ -9,7 +9,7 @@ export default function PaymentPage() {
   return (
     <div
       className="min-h-screen bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* White card */}
       <div className="flex-1 flex flex-col">
@@ -54,7 +54,7 @@ export default function PaymentPage() {
               type="button"
               onClick={() => router.push("/home/payment/add-card")}
               className="w-full py-3 rounded-xl text-white font-bold text-[13px] mt-5"
-              style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
             >
               Add payment method
             </button>

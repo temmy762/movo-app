@@ -28,7 +28,7 @@ export default function FeedbackPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+      <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
         <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
           <button className="no-hover-fx p-1" onClick={() => router.back()}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -40,7 +40,7 @@ export default function FeedbackPage() {
         </header>
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-            style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}>
+            style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
               <polyline points="20 6 9 17 4 12" />
             </svg>
@@ -49,7 +49,7 @@ export default function FeedbackPage() {
           <p className="text-[13px] text-gray-500">Your feedback helps us improve Movo Privé for everyone.</p>
           <button onClick={() => router.back()}
             className="mt-6 px-8 py-3 rounded-xl text-white font-bold text-[14px]"
-            style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
+            style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
             Back to Profile
           </button>
         </div>
@@ -58,7 +58,7 @@ export default function FeedbackPage() {
   }
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
         <button className="no-hover-fx p-1" onClick={() => router.back()}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -78,7 +78,7 @@ export default function FeedbackPage() {
             <button key={c.value} type="button" onClick={() => setCategory(c.value)}
               className="no-hover-fx px-3.5 py-1.5 rounded-full text-[12px] font-semibold border transition-all"
               style={category === c.value
-                ? { background: "linear-gradient(90deg,#2D0A53,#8B7500)", color: "white", borderColor: "transparent" }
+                ? { background: "linear-gradient(90deg,#131936,#C6BFB2)", color: "white", borderColor: "transparent" }
                 : { background: "white", color: "#6b7280", borderColor: "#e5e7eb" }}>
               {c.label}
             </button>
@@ -91,12 +91,12 @@ export default function FeedbackPage() {
           placeholder="Tell us what's on your mind…"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[13px] text-gray-800 resize-none focus:outline-none focus:border-[#2D0A53] mb-5"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[13px] text-gray-800 resize-none focus:outline-none focus:border-[#131936] mb-5"
         />
 
         <button type="button" onClick={handleSubmit} disabled={submitting || !message.trim()}
           className="w-full py-3.5 rounded-xl text-white font-bold text-[15px]"
-          style={{ background: submitting || !message.trim() ? "#9ca3af" : "linear-gradient(90deg,#2D0A53,#8B7500)" }}>
+          style={{ background: submitting || !message.trim() ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}>
           {submitting ? "Sending…" : "Submit Feedback"}
         </button>
       </div>

@@ -74,8 +74,8 @@ export default function DriverLoginPage() {
 
   return (
     <div
-      className="h-full bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      className="h-full flex flex-col"
+      style={{ background: "#F5F5F2", fontFamily: "var(--font-body)" }}
     >
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto flex flex-col items-center">
@@ -83,8 +83,8 @@ export default function DriverLoginPage() {
 
           {/* Logo */}
           <div className="flex items-center justify-center pt-6">
-            <div className="relative w-44 h-44">
-              <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <div className="relative" style={{ width: "160px", height: "140px" }}>
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -96,7 +96,7 @@ export default function DriverLoginPage() {
               <span
                 className="font-semibold"
                 style={{
-                  background: "linear-gradient(90deg, #2D0A53, #8B7500)",
+                  background: "linear-gradient(90deg, #131936, #C6BFB2)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                 }}
@@ -154,7 +154,7 @@ export default function DriverLoginPage() {
               <Link
                 href="/driver/onboarding/forgot-password"
                 className="text-[12px] font-semibold underline"
-                style={{ color: "#2D0A53" }}
+                style={{ color: "#131936" }}
               >
                 Forgot password?
               </Link>
@@ -169,7 +169,7 @@ export default function DriverLoginPage() {
               onClick={handleLogin}
               disabled={loading}
               className="w-full py-3 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
-              style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
             >
               Log In
             </button>
@@ -181,14 +181,14 @@ export default function DriverLoginPage() {
       {/* Bottom bar — Become a Partner */}
       <div
         className="px-6 py-5 text-center"
-        style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
       >
         <p className="text-[13px] text-white/70">
           Don&apos;t have an account yet?{" "}
           <Link
             href="/auth/select"
             className="font-bold"
-            style={{ color: "#c9a227" }}
+            style={{ color: "#C6BFB2" }}
           >
             Become a Partner
           </Link>

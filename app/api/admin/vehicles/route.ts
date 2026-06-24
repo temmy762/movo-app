@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { normalizeTier } from "@/lib/normalize-tier";
 
 export async function POST(req: NextRequest) {
   try {
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
         make: carMake,
         model: carModel,
         plate: carPlate,
-        tier: normalizeTier(carType),
+        tier: carType || "classic",
         year: new Date().getFullYear(),
         driverId: driverId,
       },

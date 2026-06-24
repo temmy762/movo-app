@@ -11,7 +11,7 @@ function GradientToggle({ checked }: { checked: boolean }) {
       className="relative inline-flex h-7 w-12 shrink-0 rounded-full transition-all duration-200"
       style={{
         background: checked
-          ? "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)"
+          ? "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)"
           : "#d1d5db",
       }}
     >
@@ -27,10 +27,10 @@ function RadioDot({ selected }: { selected: boolean }) {
   return (
     <div
       className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0"
-      style={{ borderColor: selected ? "#2D0A53" : "#d1d5db" }}
+      style={{ borderColor: selected ? "#131936" : "#d1d5db" }}
     >
       {selected && (
-        <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#2D0A53" }} />
+        <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#131936" }} />
       )}
     </div>
   );
@@ -43,7 +43,7 @@ export default function SettingsPage() {
   return (
     <div
       className="min-h-screen bg-white flex flex-col"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
@@ -62,7 +62,7 @@ export default function SettingsPage() {
         {/* Gradient underline */}
         <div
           className="mt-2 h-[2px]"
-          style={{ background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)" }}
+          style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }}
         />
       </div>
 

@@ -60,7 +60,7 @@ function ChatInner() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full flex flex-col bg-white" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 shrink-0">
@@ -75,7 +75,7 @@ function ChatInner() {
             <p className="text-[15px] font-bold text-gray-900">
               {bookingId ? `Booking #${bookingId.slice(0, 8)}` : "Chat"}
             </p>
-            <p className="text-[11px]" style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Live Chat</p>
+            <p className="text-[11px]" style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Live Chat</p>
           </div>
         </div>
         <button className="no-hover-fx p-1">
@@ -110,7 +110,7 @@ function ChatInner() {
                 className="max-w-[75%] px-4 py-2.5 rounded-2xl text-[14px] leading-snug whitespace-pre-line"
                 style={
                   isMe
-                    ? { background: "linear-gradient(135deg,#2D0A53,#8B7500)", color: "white", borderBottomRightRadius: "4px" }
+                    ? { background: "linear-gradient(135deg,#131936,#C6BFB2)", color: "white", borderBottomRightRadius: "4px" }
                     : { background: "#f3f4f6", color: "#1f2937", borderBottomLeftRadius: "4px" }
                 }
               >
@@ -127,7 +127,7 @@ function ChatInner() {
       <div className="shrink-0 px-4 py-3 border-t border-gray-100">
         <div
           className="flex items-center gap-2 rounded-2xl px-4 py-3"
-          style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+          style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
         >
           <input
             type="text"
@@ -156,7 +156,7 @@ export default function ChatPage() {
   return (
     <Suspense fallback={
       <div className="h-full flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-gray-200 border-t-[#2D0A53] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-[#131936] rounded-full animate-spin" />
       </div>
     }>
       <ChatInner />

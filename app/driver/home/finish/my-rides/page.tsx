@@ -61,7 +61,7 @@ function RideCard({
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }}
+            style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8">
               <circle cx="12" cy="8" r="4" />
@@ -74,7 +74,7 @@ function RideCard({
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className="text-[14px] font-bold" style={{ color: "#2D0A53" }}>
+          <span className="text-[14px] font-bold" style={{ color: "#131936" }}>
             £{ride.fare.toFixed(2)}
           </span>
           {isUpcoming && <StatusBadge status={ride.status} />}
@@ -84,7 +84,7 @@ function RideCard({
       {/* Route */}
       <div className="flex flex-col gap-1.5 mb-3 pl-1">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "linear-gradient(135deg,#2D0A53,#8B7500)" }} />
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "linear-gradient(135deg,#131936,#C6BFB2)" }} />
           <p className="text-[12px] text-gray-600 line-clamp-1">{ride.pickup}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ function RideCard({
             disabled={busy}
             onClick={() => onAction(ride.id, "accept")}
             className="no-hover-fx py-2.5 rounded-xl text-[13px] font-bold text-white disabled:opacity-50"
-            style={{ background: busy ? "#d1d5db" : "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+            style={{ background: busy ? "#d1d5db" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
           >
             {busy ? "…" : "Accept"}
           </button>
@@ -129,7 +129,7 @@ function RideCard({
             type="button"
             onClick={() => onGoToRide(ride.id)}
             className="no-hover-fx w-full py-2.5 rounded-xl text-[13px] font-bold text-white"
-            style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#2D0A53 50%,#8B7500 100%)" }}
+            style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}
           >
             Go to Ride →
           </button>
@@ -188,7 +188,7 @@ export default function MyRidesPage() {
   }, [loadRides]);
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100">
@@ -208,13 +208,13 @@ export default function MyRidesPage() {
             key={t}
             onClick={() => setTab(t)}
             className="no-hover-fx flex-1 py-3 text-[14px] font-semibold capitalize relative"
-            style={{ color: tab === t ? "#2D0A53" : "#9ca3af" }}
+            style={{ color: tab === t ? "#131936" : "#9ca3af" }}
           >
             {t === "past" ? "Past" : "Upcoming"}
             {tab === t && (
               <span
                 className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)" }}
+                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}
               />
             )}
           </button>

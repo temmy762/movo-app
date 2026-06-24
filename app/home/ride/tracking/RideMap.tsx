@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { GoogleMap, Marker, DirectionsRenderer, useJsApiLoader } from "@react-google-maps/api";
@@ -18,9 +18,9 @@ const PICKUP_SVG = encodeURIComponent(
 
 const DEST_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
-    <circle cx="14" cy="14" r="14" fill="#8B7500"/>
+    <circle cx="14" cy="14" r="14" fill="#C6BFB2"/>
     <circle cx="14" cy="14" r="5" fill="white"/>
-    <polygon points="7,26 21,26 14,36" fill="#8B7500"/>
+    <polygon points="7,26 21,26 14,36" fill="#C6BFB2"/>
   </svg>`
 );
 
@@ -116,7 +116,7 @@ export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsF
           options={{
             suppressMarkers: true,
             polylineOptions: {
-              strokeColor: "#8B7500",
+              strokeColor: "#C6BFB2",
               strokeWeight: 5,
               strokeOpacity: 0.9,
             },

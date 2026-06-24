@@ -60,11 +60,11 @@ export default function DriverSidebar() {
   return (
     <aside
       className="w-56 h-full flex flex-col py-6 px-4 shrink-0"
-      style={{ background: "linear-gradient(180deg, #1a1a2e 0%, #2D0A53 60%, #8B7500 100%)" }}
+      style={{ background: "linear-gradient(180deg, #0A0A0F 0%, #131936 60%, #2A3055 100%)" }}
     >
       {/* Logo */}
       <div className="relative w-48 h-24 mx-auto mb-8">
-        <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" />
+        <Image src="/images/logo/logo-horizontal-ivory.svg" alt="MOVO PRIVÉ" fill className="object-contain" />
       </div>
 
       {/* Nav links */}

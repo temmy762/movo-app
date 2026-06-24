@@ -59,14 +59,14 @@ export default function FinishPage() {
     new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="min-h-full bg-gray-50 flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
         <h1 className="text-[18px] font-bold text-gray-900">Finished</h1>
         <button
           className="no-hover-fx text-[13px] font-semibold"
-          style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+          style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
           onClick={() => router.push("/driver/home/finish/my-rides")}
         >
           My rides
@@ -110,7 +110,7 @@ export default function FinishPage() {
             </p>
             <button
               className="no-hover-fx text-[13px] font-semibold"
-              style={{ background: "linear-gradient(90deg,#2D0A53,#8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+              style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
               onClick={fetchRides}
             >
               Refresh
@@ -138,11 +138,11 @@ export default function FinishPage() {
             </div>
             <div className="flex flex-col gap-1 mb-3">
               <div className="flex items-start gap-2">
-                <span className="w-2 h-2 mt-1 rounded-full bg-[#2D0A53] shrink-0" />
+                <span className="w-2 h-2 mt-1 rounded-full bg-[#131936] shrink-0" />
                 <p className="text-[12px] text-gray-700 line-clamp-1">{ride.pickup}</p>
               </div>
               <div className="flex items-start gap-2">
-                <span className="w-2 h-2 mt-1 rounded-full bg-[#8B7500] shrink-0" />
+                <span className="w-2 h-2 mt-1 rounded-full bg-[#C6BFB2] shrink-0" />
                 <p className="text-[12px] text-gray-700 line-clamp-1">{ride.dropoff}</p>
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function FinishPage() {
               </div>
               <div className="text-right">
                 <p className="text-[11px] text-gray-400">Earnings</p>
-                <p className="text-[15px] font-bold" style={{ color: "#2D0A53" }}>${ride.fare.toFixed(2)}</p>
+                <p className="text-[15px] font-bold" style={{ color: "#131936" }}>${ride.fare.toFixed(2)}</p>
               </div>
             </div>
           </div>

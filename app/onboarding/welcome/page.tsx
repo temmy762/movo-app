@@ -43,7 +43,7 @@ export default function WelcomePage() {
   return (
     <div
       className="flex flex-col h-full bg-gradient-to-b from-white via-[#fdf8f5] to-[#fdf0ea]"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* Skip */}
       <div className="flex justify-end px-6 pt-3">

@@ -20,7 +20,7 @@ export default function HomePage() {
   const { user } = useCurrentUser();
 
   return (
-    <div className="h-full flex flex-col bg-gray-100" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-full flex flex-col" style={{ background: "#F5F5F2", fontFamily: "var(--font-body)" }}>
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto pb-20">
 
@@ -50,7 +50,7 @@ export default function HomePage() {
               onClick={() => router.push("/home/pickup")}
               role="button"
               className="flex items-center px-4 py-2.5 rounded-full gap-2 cursor-pointer"
-              style={{ background: "linear-gradient(90deg, #333333 0%, #2D0A53 30%, #8B7500 60%)" }}
+              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
             >
               <svg className="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />

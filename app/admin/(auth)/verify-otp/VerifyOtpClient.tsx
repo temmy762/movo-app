@@ -93,12 +93,12 @@ export default function VerifyOtpClient() {
   return (
     <div
       className="min-h-screen bg-gray-100 flex items-center justify-center p-4"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm px-8 py-10">
         <div className="flex flex-col items-center mb-7">
           <div className="relative" style={{ width: "300px", height: "96px" }}>
-            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export default function VerifyOtpClient() {
                 value={digit}
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="w-10 h-12 text-center text-lg font-bold border border-gray-300 rounded-lg focus:outline-none focus:border-[#2D0A53] text-gray-900"
+                className="w-10 h-12 text-center text-lg font-bold border border-gray-300 rounded-lg focus:outline-none focus:border-[#131936] text-gray-900"
               />
             ))}
           </div>
@@ -144,7 +144,7 @@ export default function VerifyOtpClient() {
           ) : (
             <button
               onClick={handleResend}
-              className="text-[12px] text-[#2D0A53] hover:underline"
+              className="text-[12px] text-[#131936] hover:underline"
             >
               Resend code
             </button>

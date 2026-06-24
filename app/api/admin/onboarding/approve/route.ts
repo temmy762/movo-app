@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
-import { normalizeTier } from "@/lib/normalize-tier";
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,7 +77,7 @@ export async function POST(req: NextRequest) {
               model: onboarding.vehicleModel,
               year: parseInt(onboarding.vehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.vehiclePlate,
-              tier: normalizeTier(onboarding.vehicleTier),
+              tier: onboarding.vehicleTier || "classic",
             },
           });
           console.log(`[Admin] Vehicle created for individual chauffeur: ${driver.id}`);
@@ -95,7 +94,7 @@ export async function POST(req: NextRequest) {
               model: onboarding.firstVehicleModel,
               year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.firstVehiclePlate,
-              tier: normalizeTier(onboarding.firstVehicleClass),
+              tier: onboarding.firstVehicleClass || "classic",
             },
           });
           console.log(`[Admin] Vehicle created for fleet partner: ${driver.id}`);

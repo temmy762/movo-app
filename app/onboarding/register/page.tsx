@@ -70,13 +70,13 @@ function RegisterContent() {
   return (
     <div
       className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="w-full max-w-[420px]">
         {/* Logo */}
         <div className="flex items-center justify-center pt-4 sm:pt-3">
           <div className="relative w-52 h-52 sm:w-48 sm:h-48">
-            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
@@ -146,7 +146,7 @@ function RegisterContent() {
             onClick={handleRegister}
             disabled={loading}
             className="w-full py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
-            style={{ background: "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Sign up
           </button>

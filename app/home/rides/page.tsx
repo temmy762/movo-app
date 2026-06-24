@@ -67,7 +67,7 @@ export default function RidesPage() {
   return (
     <div
       className="h-screen flex flex-col bg-white"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto pb-32 md:pb-24 flex flex-col">
@@ -92,7 +92,7 @@ export default function RidesPage() {
                   {active && (
                     <span
                       className="absolute left-0 right-0 -bottom-[1px] h-[2px] md:h-[3px] rounded-full"
-                      style={{ background: "#8B7500" }}
+                      style={{ background: "#C6BFB2" }}
                     />
                   )}
                 </button>
@@ -113,7 +113,7 @@ export default function RidesPage() {
                   className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-3 border border-transparent"
                   style={{
                     background:
-                      "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(135deg, #2D0A53 0%, #8B7500 100%) border-box",
+                      "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%) border-box",
                   }}
                 >
                   {/* Top row: info + image */}
@@ -145,12 +145,12 @@ export default function RidesPage() {
                       className="w-full py-2.5 rounded-xl border border-transparent text-[13px] font-bold tracking-widest"
                       style={{
                         background:
-                          "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(90deg, #2D0A53 0%, #8B7500 100%) border-box",
+                          "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(90deg, #131936 0%, #C6BFB2 100%) border-box",
                       }}
                     >
                       <span
                         style={{
-                          background: "linear-gradient(90deg, #2D0A53 0%, #8B7500 100%)",
+                          background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)",
                           WebkitBackgroundClip: "text",
                           backgroundClip: "text",
                           color: "transparent",
@@ -188,7 +188,7 @@ export default function RidesPage() {
               type="button"
               onClick={() => router.push("/home/pickup")}
               className="w-full py-3.5 md:py-4 rounded-full border-[1.5px] text-[14px] md:text-[15px] font-semibold"
-              style={{ borderColor: "#2D0A53", color: "#2D0A53" }}
+              style={{ borderColor: "#131936", color: "#131936" }}
             >
               Book a ride
             </button>

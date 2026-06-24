@@ -11,7 +11,7 @@ export default function DriverHomeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen w-full flex overflow-hidden" style={{ fontFamily: "var(--font-poppins)" }}>
+    <div className="h-screen w-full flex overflow-hidden" style={{ fontFamily: "var(--font-body)" }}>
 
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:flex">

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import { useMemo } from "react";
@@ -8,7 +8,7 @@ const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
 const CAR_ICON_SVG = encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-    <circle cx="20" cy="20" r="20" fill="#2D0A53" opacity="0.9"/>
+    <circle cx="20" cy="20" r="20" fill="#131936" opacity="0.9"/>
     <path d="M11 19l2-6h14l2 6M9 19h22v8H9zM13 27v2M27 27v2" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
     <circle cx="14" cy="27" r="2" fill="white"/>
     <circle cx="26" cy="27" r="2" fill="white"/>

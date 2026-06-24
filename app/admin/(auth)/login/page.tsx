@@ -34,23 +34,23 @@ export default function AdminLoginPage() {
 
   return (
     <div
-      className="min-h-screen bg-gray-100 flex items-center justify-center p-4"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: "linear-gradient(135deg,#0A0A0F 0%,#131936 100%)", fontFamily: "var(--font-body)" }}
     >
-      <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm px-8 py-10">
+      <div className="rounded-3xl shadow-2xl w-full max-w-sm px-8 py-10" style={{ background: "#131936", border: "1px solid #2A3055" }}>
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
-          <div className="relative" style={{ width: "300px", height: "96px" }}>
-            <Image src="/images/image_1.png" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+          <div className="relative" style={{ width: "240px", height: "80px" }}>
+            <Image src="/images/logo/logo-stacked-tagline-ivory.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
           </div>
         </div>
 
-        <h2 className="text-[16px] font-bold text-gray-900 mb-5">Log In to Admin Panel</h2>
+        <h2 className="text-[16px] font-bold mb-5" style={{ color: "#F5F5F2" }}>Log In to Admin Panel</h2>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div>
-            <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "#8A8F9E" }}>
               Phone Number
             </label>
             <input
@@ -58,12 +58,13 @@ export default function AdminLoginPage() {
               placeholder="Enter your phone number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#2D0A53] placeholder-gray-300"
+              className="w-full rounded-xl px-4 py-3 text-[13px] focus:outline-none placeholder-[#8A8F9E]"
+              style={{ background: "#0A0A0F", border: "1px solid #2A3055", color: "#F5F5F2" }}
               suppressHydrationWarning
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "#8A8F9E" }}>
               Password
             </label>
             <input
@@ -71,7 +72,8 @@ export default function AdminLoginPage() {
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] text-gray-700 focus:outline-none focus:border-[#2D0A53] placeholder-gray-300"
+              className="w-full rounded-xl px-4 py-3 text-[13px] focus:outline-none placeholder-[#8A8F9E]"
+              style={{ background: "#0A0A0F", border: "1px solid #2A3055", color: "#F5F5F2" }}
               suppressHydrationWarning
             />
           </div>
@@ -82,7 +84,7 @@ export default function AdminLoginPage() {
             type="submit"
             disabled={loading}
             className="w-full py-3.5 rounded-xl text-white font-semibold text-[14px] mt-1 disabled:opacity-60"
-            style={{ background: "#1a1a2e" }}
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
             Log In
           </button>
@@ -91,7 +93,7 @@ export default function AdminLoginPage() {
         <div className="flex items-center justify-center mt-5">
           <Link
             href="/admin/forgot-password"
-            className="text-[12px] text-gray-400 hover:text-[#2D0A53] transition-colors"
+            className="text-[12px] hover:text-[#C6BFB2] transition-colors" style={{ color: "#8A8F9E" }}
           >
             Forgot Password?
           </Link>

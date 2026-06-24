@@ -57,7 +57,7 @@ function LoginContent() {
   return (
     <div
       className="h-full bg-white flex flex-col items-center justify-start overflow-y-auto"
-      style={{ fontFamily: "var(--font-poppins)" }}
+      style={{ fontFamily: "var(--font-body)" }}
     >
       <div className="w-full max-w-[420px]">
       {/* Back button */}
@@ -76,9 +76,9 @@ function LoginContent() {
 
       {/* Logo */}
       <div className="flex items-center justify-center pt-2 sm:pt-1">
-        <div className="relative w-40 h-40 sm:w-36 sm:h-36">
+        <div className="relative" style={{ width: "160px", height: "140px" }}>
           <Image
-            src="/images/image_1.png"
+            src="/images/logo/logo-stacked-navy.svg"
             alt="MOVO PRIVÉ"
             fill
             className="object-contain"
@@ -91,7 +91,7 @@ function LoginContent() {
       <div className="text-center px-8 mt-1">
         <p
           className="text-[18px] font-bold"
-          style={{ background: "linear-gradient(90deg, #2D0A53, #8B7500)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+          style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
         >
           Welcome back!
         </p>
@@ -202,7 +202,7 @@ function LoginContent() {
           className="w-full py-3 sm:py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
           style={{
             background:
-              "linear-gradient(90deg, #1a1a2e 0%, #2D0A53 50%, #8B7500 100%)",
+              "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
           }}
         >
           Log In
