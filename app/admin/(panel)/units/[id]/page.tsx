@@ -1,45 +1,28 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 
-// ── Mock data ────────────────────────────────────────────────────────────────
-const unit = {
-  id: 1,
-  category: "Sedan",
-  brand: "Audi",
-  model: "A6",
-  status: "Available" as const,
-  units: 12,
-  price: 50,
-  about:
-    "Audi A6 is a luxurious and sophisticated sedan, ideal for both daily commutes and extended journeys. Renowned for its powerful performance and advanced technology features, the A6 provides a refined driving experience with exceptional comfort.",
-  images: [
-    "/images/movo classic.png",
-    "/images/movo premium.png",
-    "/images/prive black.png",
-    "/images/movo classic.png",
-  ],
-  specs: [
-    { icon: "transmission", label: "Transmission", value: "Automatic" },
-    { icon: "seats",        label: "Capacity",     value: "5 seats"   },
-    { icon: "range",        label: "Range",         value: "400 miles on a full tank" },
-    { icon: "fuel",         label: "Fuel",          value: "Gasoline"  },
-    { icon: "speed",        label: "Top Speed",     value: "120 mph"   },
-    { icon: "accel",        label: "Acceleration",  value: "8.0 seconds (0–60 mph)" },
-  ],
-  features: [
-    "Air Conditioning",
-    "AM/FM Radio with CD Player",
-    "Bluetooth Connectivity",
-    "USB Charging Ports",
-    "Backup Camera",
-    "Spacious Trunk",
-    "Cruise Control",
-    "Advanced Safety Features (e.g., Lane Departure Warning, Automatic Emergency Braking)",
-    "Keyless Entry",
-    "Power Windows and Locks",
-  ],
+// ── Types ─────────────────────────────────────────────────────────────────────
+type UnitStatus = "Available" | "Maintenance" | "Unavailable";
+type VehicleDetail = {
+  id: string; brand: string; model: string; year: number;
+  plate: string; tier: string; image: string; photoUrl: string | null;
+  price: number; status: UnitStatus; transmission: string; seats: number;
+  driverId: string; driverName: string; driverPhone: string | null; driverOnline: boolean;
+};
+
+const STATUS_CFG: Record<UnitStatus, { bg: string; color: string }> = {
+  Available:   { bg: "#dcfce7", color: "#16a34a" },
+  Maintenance: { bg: "#fef3c7", color: "#d97706" },
+  Unavailable: { bg: "#fee2e2", color: "#dc2626" },
+};
+
+const TIER_FEATURES: Record<string, string[]> = {
+  classic: ["Air Conditioning","Bluetooth Connectivity","USB Charging Ports","Backup Camera","Cruise Control","Power Windows and Locks"],
+  premium: ["Air Conditioning","Bluetooth Connectivity","USB Charging Ports","Backup Camera","Cruise Control","Leather Seats","Sunroof","Premium Audio System"],
+  black:   ["Air Conditioning","Bluetooth Connectivity","USB Charging Ports","Backup Camera","Cruise Control","Leather Seats","Sunroof","Premium Audio System","Privacy Glass","Executive Interior"],
 };
 
 const activityData = [
@@ -48,13 +31,6 @@ const activityData = [
   { m: "Jul", km: 30 }, { m: "Aug", km: 25 },
 ];
 const totalKm = 489;
-
-const reminders = [
-  { title: "Scheduled Maintenance for Toyota Corolla", date: "2028-08-10", time: "10:00 AM" },
-  { title: "Unit Return for Honda Civic",              date: "2028-08-12", time: "02:00 PM" },
-  { title: "Tire Replacement for BMW X5",             date: "2028-08-15", time: "03:00 AM" },
-  { title: "Oil Change for Audi Q7",                  date: "2028-08-18", time: "11:30 AM" },
-];
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 function SpecIcon({ type }: { type: string }) {
@@ -163,10 +139,56 @@ function ActivityChart() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function UnitDetailsPage() {
-  const [activeImg, setActiveImg] = useState(0);
+  const params = useParams();
+  const router = useRouter();
+  const id = params?.id as string;
+
+  const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/admin/units/${id}`)
+      .then(r => { if (r.status === 404) { setNotFound(true); return null; } return r.json(); })
+      .then(d => { if (d) setVehicle(d); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) return (
+    <div className="h-full flex items-center justify-center">
+      <div className="w-7 h-7 rounded-full border-2 border-red-400 border-t-transparent animate-spin"/>
+    </div>
+  );
+
+  if (notFound || !vehicle) return (
+    <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-400">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p className="text-[14px] font-medium">Vehicle not found</p>
+      <button onClick={() => router.back()} className="no-hover-fx text-[12px] text-red-500 underline">Go back</button>
+    </div>
+  );
+
+  const sc = STATUS_CFG[vehicle.status];
+  const features = TIER_FEATURES[vehicle.tier.toLowerCase()] ?? TIER_FEATURES.classic;
+  const specs = [
+    { icon: "transmission", label: "Transmission", value: vehicle.transmission },
+    { icon: "seats",        label: "Capacity",     value: `${vehicle.seats} seats` },
+    { icon: "fuel",         label: "Fuel",          value: "Gasoline" },
+    { icon: "speed",        label: "Tier",          value: vehicle.tier.charAt(0).toUpperCase() + vehicle.tier.slice(1) },
+    { icon: "range",        label: "Year",          value: String(vehicle.year) },
+    { icon: "accel",        label: "Plate",         value: vehicle.plate },
+  ];
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6">
+      {/* Back button */}
+      <button onClick={() => router.back()} className="no-hover-fx flex items-center gap-1.5 text-[12px] text-gray-500 mb-4 hover:text-gray-700">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Units
+      </button>
+
       <div className="flex flex-col lg:flex-row gap-6 items-start">
 
         {/* ════════════════════════════════════════
@@ -176,69 +198,57 @@ export default function UnitDetailsPage() {
 
           {/* Hero image */}
           <div className="relative w-full h-56 md:h-72 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
-            <Image src={unit.images[activeImg]} alt={unit.model}
-              fill className="object-contain p-4" sizes="700px"/>
-          </div>
-
-          {/* Thumbnails */}
-          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            {unit.images.map((img, i) => (
-              <button key={i} onClick={() => setActiveImg(i)}
-                className="no-hover-fx shrink-0 relative w-28 h-20 rounded-xl overflow-hidden border-2 transition-colors"
-                style={{ borderColor: i === activeImg ? "#ef4444" : "#e5e7eb", background: "#f9fafb" }}>
-                <Image src={img} alt="" fill className="object-contain p-2" sizes="112px"/>
-              </button>
-            ))}
+            <Image src={vehicle.image} alt={vehicle.model}
+              fill className="object-contain p-6" sizes="700px"/>
           </div>
 
           {/* Car info row */}
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p className="text-[11px] text-gray-400 font-medium mb-0.5">{unit.category}</p>
+              <p className="text-[11px] text-gray-400 font-medium mb-0.5 uppercase tracking-wide">{vehicle.tier} · {vehicle.year}</p>
               <h1 className="text-[28px] font-bold text-gray-900 leading-tight">
-                {unit.brand} {unit.model}
+                {vehicle.brand} {vehicle.model}
               </h1>
+              <p className="text-[12px] text-gray-400 mt-0.5">Plate: <span className="font-semibold text-gray-600">{vehicle.plate}</span></p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-600">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"/>Available
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-500">
-                  {unit.units} Unit
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                  style={{ background: sc.bg, color: sc.color }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: sc.color }}/>
+                  {vehicle.status}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <div className="text-right mr-2">
-                <p className="text-[26px] font-bold text-gray-900 leading-none">${unit.price}</p>
-                <p className="text-[11px] text-gray-400">/days</p>
+                <p className="text-[26px] font-bold text-gray-900 leading-none">${vehicle.price}</p>
+                <p className="text-[11px] text-gray-400">/day</p>
               </div>
-              <button className="no-hover-fx flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-gray-600 border border-gray-200 bg-white">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                Edit
-              </button>
-              <button className="no-hover-fx w-9 h-9 rounded-xl flex items-center justify-center border border-red-100 bg-red-50 text-red-400">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                </svg>
-              </button>
             </div>
           </div>
 
-          {/* About */}
-          <div>
-            <h2 className="text-[15px] font-bold text-gray-900 mb-2">About</h2>
-            <p className="text-[13px] text-gray-500 leading-relaxed">{unit.about}</p>
+          {/* Driver info */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-white text-[14px] font-bold"
+              style={{ background: "#131936" }}>
+              {vehicle.driverName.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-gray-400 font-medium">Assigned Driver</p>
+              <p className="text-[14px] font-bold text-gray-900">{vehicle.driverName}</p>
+              {vehicle.driverPhone && <p className="text-[11px] text-gray-500">{vehicle.driverPhone}</p>}
+            </div>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0"
+              style={{ background: vehicle.driverOnline ? "#dcfce7" : "#f3f4f6", color: vehicle.driverOnline ? "#16a34a" : "#6b7280" }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: vehicle.driverOnline ? "#16a34a" : "#9ca3af" }}/>
+              {vehicle.driverOnline ? "Online" : "Offline"}
+            </span>
           </div>
 
           {/* Specifications */}
           <div>
             <h2 className="text-[15px] font-bold text-gray-900 mb-3">Specifications</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {unit.specs.map((s, i) => (
+              {specs.map((s, i) => (
                 <div key={i} className="bg-white rounded-xl border border-gray-100 px-3.5 py-3 flex flex-col gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <SpecIcon type={s.icon}/>
@@ -275,34 +285,12 @@ export default function UnitDetailsPage() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <p className="text-[14px] font-bold text-gray-900 mb-3">Car Features</p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              {unit.features.map((f, i) => (
+              {features.map((f, i) => (
                 <div key={i} className="flex items-start gap-1.5">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" className="shrink-0 mt-0.5">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
                   <span className="text-[11px] text-gray-600 leading-snug">{f}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Reminders */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[14px] font-bold text-gray-900">Reminders</p>
-              <button className="no-hover-fx text-[11px] text-gray-400 hover:text-gray-600">View All</button>
-            </div>
-            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
-              {reminders.map((r, i) => (
-                <div key={i} className="shrink-0 w-[130px] rounded-xl border border-gray-100 bg-gray-50 p-3">
-                  <div className="w-6 h-6 rounded-full bg-white border border-gray-100 flex items-center justify-center mb-2">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                  </div>
-                  <p className="text-[10px] font-semibold text-gray-700 leading-tight mb-1.5">{r.title}</p>
-                  <p className="text-[9px] text-gray-400">{r.date}</p>
-                  <p className="text-[9px] text-gray-400">{r.time}</p>
                 </div>
               ))}
             </div>
