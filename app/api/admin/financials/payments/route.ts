@@ -52,6 +52,43 @@ export async function GET(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  if (!(await requireAdmin(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    const { client, car, ratePerDay, rentalDays, amount, dueDate, status } = await req.json();
+    if (!client || !car) {
+      return NextResponse.json({ error: "client and car are required" }, { status: 400 });
+    }
+    const psMap: Record<string, string> = {
+      Completed: "PAID", Overdue: "FAILED", Awaiting: "UNPAID",
+    };
+    const booking = await prisma.booking.create({
+      data: {
+        clientName:   client,
+        carName:      car,
+        carTier:      "classic",
+        pickup:       "N/A",
+        dropoff:      "N/A",
+        fare:         Number(ratePerDay) || 0,
+        serviceFee:   0,
+        total:        Number(amount) || 0,
+        paymentStatus: (psMap[status] ?? "UNPAID") as never,
+      },
+    });
+    return NextResponse.json({
+      id:         `INV-${booking.id.slice(-6).toUpperCase()}`,
+      bookingId:  booking.id,
+      dueDate:    dueDate ?? new Date(booking.createdAt).toISOString().split("T")[0],
+      rentalDays: Number(rentalDays) || 1,
+    }, { status: 201 });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Failed to create invoice" }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: NextRequest) {
   if (!(await requireAdmin(req))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
