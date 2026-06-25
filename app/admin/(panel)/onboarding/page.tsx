@@ -374,7 +374,7 @@ export default function AdminOnboardingPage() {
                           </span>
                           {doc.fileUrl ? (
                             <a
-                              href={doc.fileUrl}
+                              href={`/api/admin/onboarding/documents/${doc.id}/file`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-white"
