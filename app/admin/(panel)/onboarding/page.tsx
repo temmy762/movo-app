@@ -66,6 +66,7 @@ export default function AdminOnboardingPage() {
   const [onboardings, setOnboardings] = useState<Onboarding[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Onboarding | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [note, setNote] = useState("");
@@ -81,6 +82,21 @@ export default function AdminOnboardingPage() {
       .then(data => { setOnboardings(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, [filterStatus, filterType]);
+
+  const selectRecord = useCallback((o: Onboarding) => {
+    setNote(o.adminNote ?? "");
+    if ((o as any).documents !== undefined) {
+      setSelected(o);
+      return;
+    }
+    setDetailLoading(true);
+    setSelected({ ...o, documents: [] });
+    fetch(`/api/admin/onboarding/${o.id}`)
+      .then(r => r.json())
+      .then(full => { setSelected(full); setNote(full.adminNote ?? ""); })
+      .catch(() => {})
+      .finally(() => setDetailLoading(false));
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -165,7 +181,7 @@ export default function AdminOnboardingPage() {
             const name = `${o.driver.firstName} ${o.driver.lastName}`;
             const isSel = selected?.id === o.id;
             return (
-              <button key={o.id} type="button" onClick={() => { setSelected(o); setNote(o.adminNote ?? ""); }}
+              <button key={o.id} type="button" onClick={() => selectRecord(o)}
                 className="no-hover-fx w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
                 style={{ background: "white", border: isSel ? "1.5px solid #131936" : "1.5px solid transparent", boxShadow: isSel ? "0 1px 8px rgba(45,10,83,0.1)" : "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-bold shrink-0"
@@ -190,7 +206,7 @@ export default function AdminOnboardingPage() {
 
       {/* ── Right panel ── */}
       {selected ? (
-        <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+        <div className="relative flex-1 flex flex-col overflow-hidden bg-gray-50">
           {/* Mobile back */}
           <div className="lg:hidden flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 bg-white shrink-0">
             <button type="button" onClick={() => setSelected(null)} className="no-hover-fx flex items-center gap-2 text-[12px] text-gray-500">
@@ -198,6 +214,12 @@ export default function AdminOnboardingPage() {
               Applications
             </button>
           </div>
+
+          {detailLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/70 pointer-events-none">
+              <div className="w-6 h-6 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin" />
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto px-4 py-4">
             <div className="max-w-2xl mx-auto flex flex-col gap-4">

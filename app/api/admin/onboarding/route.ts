@@ -20,8 +20,7 @@ export async function GET(req: NextRequest) {
     },
     orderBy: { createdAt: "desc" },
     include: {
-      driver:    { select: { id: true, firstName: true, lastName: true, email: true, phone: true, country: true, city: true, status: true } },
-      documents: { orderBy: { uploadedAt: "asc" } },
+      driver: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, country: true, city: true, status: true } },
     },
   });
 

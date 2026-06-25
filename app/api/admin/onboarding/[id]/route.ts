@@ -4,6 +4,26 @@ import { getSession } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
 import { normalizeTier } from "@/lib/normalizeTier";
 
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession(req);
+  if (session?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+  const { id } = await params;
+  const record = await prisma.driverOnboarding.findUnique({
+    where: { id },
+    include: {
+      driver:    { select: { id: true, firstName: true, lastName: true, email: true, phone: true, country: true, city: true, status: true } },
+      documents: { orderBy: { uploadedAt: "asc" } },
+    },
+  });
+  if (!record) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(record);
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
