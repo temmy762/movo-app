@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type PayStatus = "Completed" | "Awaiting" | "Overdue";
+type PayStatus = "Completed" | "Awaiting" | "Overdue" | "Refunded";
 type Payment = { id:string; bookingId:string; client:string; car:string; ratePerDay:number; rentalDays:number; amount:number; dueDate:string; status:PayStatus; };
 type SortCol = keyof Payment | null;
 type SortDir = "asc" | "desc";
@@ -12,8 +12,9 @@ const STATUS_STYLE: Record<PayStatus,{bg:string;color:string}> = {
   Completed: { bg:"#dcfce7", color:"#16a34a" },
   Awaiting:  { bg:"#dbeafe", color:"#1d4ed8" },
   Overdue:   { bg:"#fee2e2", color:"#dc2626" },
+  Refunded:  { bg:"#f3f4f6", color:"#6b7280" },
 };
-const STATUS_LIST: PayStatus[] = ["Completed","Awaiting","Overdue"];
+const STATUS_LIST: PayStatus[] = ["Completed","Awaiting","Overdue","Refunded"];
 
 function pgPages(cur:number,total:number):(number|"…")[]{
   if(total<=5)return Array.from({length:total},(_,i)=>i+1);
