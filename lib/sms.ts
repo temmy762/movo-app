@@ -13,23 +13,33 @@ function getClient() {
   return client;
 }
 
+/** Normalise any phone string to E.164. Defaults to country code 1 (Canada/US). */
+export function toE164(phone: string, defaultCountryCode = "1"): string {
+  const digits = phone.replace(/\D/g, "");
+  if (phone.startsWith("+")) return `+${digits}`;
+  if (digits.length === 11 && digits.startsWith(defaultCountryCode)) return `+${digits}`;
+  if (digits.length === 10) return `+${defaultCountryCode}${digits}`;
+  return `+${digits}`;
+}
+
 export async function sendSMS(to: string, message: string): Promise<boolean> {
   try {
     const twilioClient = getClient();
+    const normalised = toE164(to);
 
     if (!twilioClient || !fromPhone) {
       console.warn("[SMS] Twilio not configured. Message not sent.");
-      console.log(`[SMS] To: ${to}, Message: ${message}`);
+      console.log(`[SMS] To: ${normalised}, Message: ${message}`);
       return false;
     }
 
     const result = await twilioClient.messages.create({
       body: message,
       from: fromPhone,
-      to,
+      to: normalised,
     });
 
-    console.log(`[SMS] Sent to ${to}: ${result.sid}`);
+    console.log(`[SMS] Sent to ${normalised}: ${result.sid}`);
     return true;
   } catch (error) {
     console.error("[SMS] Failed to send:", error);

@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
       await prisma.passwordResetToken.create({ data: { email: "", token, expiresAt, phone, otp } });
-      await sendSMS(phone, `Your MOVO verification code is: ${otp}. Valid for 10 minutes.`);
+      const smsSent = await sendSMS(phone, `Your MOVO verification code is: ${otp}. Valid for 10 minutes.`);
+      if (!smsSent) console.error(`[forgot-password] SMS failed for phone: ${phone}`);
       return NextResponse.json({ success: true, method: "phone" });
     }
 
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/onboarding/reset-password?token=${resetToken}`;
     await sendNotification({
       eventType: "RIDER_PASSWORD_RESET",
-      recipient: { type: "user", id: user.id, email: user.email, firstName: user.firstName },
+      recipient: { type: "user", id: user.id, email: user.email, firstName: user.firstName ?? undefined },
       data: { resetToken, resetUrl, expiresAt: expiresAt.toLocaleString() },
     });
 

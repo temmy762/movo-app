@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
       await prisma.passwordResetToken.create({ data: { email: "", token, expiresAt, phone, otp } });
-      await sendSMS(phone, `Your MOVO verification code is: ${otp}. Valid for 10 minutes.`);
+      const smsSent = await sendSMS(phone, `Your MOVO verification code is: ${otp}. Valid for 10 minutes.`);
+      if (!smsSent) console.error(`[driver/forgot-password] SMS failed for phone: ${phone}`);
       return NextResponse.json({ success: true, method: "phone" });
     }
 
