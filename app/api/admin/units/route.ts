@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeTier } from "@/lib/normalizeTier";
 
 const TIER_PRICE: Record<string, number> = { classic: 50, premium: 80, black: 130 };
 const TIER_IMG:   Record<string, string> = {
@@ -21,21 +22,24 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    const units = vehicles.map((v, i) => ({
-      id:           v.id,
-      brand:        v.make,
-      model:        v.model,
-      transmission: "Automatic" as const,
-      seats:        5,
-      status:       deriveStatus(v.driver.status, v.driver.isOnline),
-      units:        v.driver.status === "ACTIVE" ? 1 : 0,
-      price:        TIER_PRICE[v.tier.toLowerCase()] ?? 50,
-      image:        TIER_IMG[v.tier.toLowerCase()]   ?? "/images/movo classic.png",
-      plate:        v.plate,
-      tier:         v.tier,
-      driverName:   `${v.driver.firstName} ${v.driver.lastName}`,
-      sort:         i,
-    }));
+    const units = vehicles.map((v, i) => {
+      const tier = normalizeTier(v.tier);
+      return {
+        id:           v.id,
+        brand:        v.make,
+        model:        v.model,
+        transmission: "Automatic" as const,
+        seats:        5,
+        status:       deriveStatus(v.driver.status, v.driver.isOnline),
+        units:        v.driver.status === "ACTIVE" ? 1 : 0,
+        price:        TIER_PRICE[tier] ?? 50,
+        image:        v.photoUrl ?? TIER_IMG[tier] ?? "/images/movo classic.png",
+        plate:        v.plate,
+        tier,
+        driverName:   `${v.driver.firstName} ${v.driver.lastName}`,
+        sort:         i,
+      };
+    });
 
     return NextResponse.json(units);
   } catch (e) {

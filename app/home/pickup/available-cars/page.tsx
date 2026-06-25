@@ -22,7 +22,7 @@ const TIER_DESCS: Record<string, string> = {
   black:   "Unparalleled luxury — your personal concierge.",
 };
 
-const MIN_FARES: Record<string, number> = {
+const FALLBACK_MIN_FARES: Record<string, number> = {
   classic: 18,
   premium: 25,
   black:   35,
@@ -94,15 +94,13 @@ function AvailableCarsContent() {
   const [tierInfos,    setTierInfos]    = useState<Record<string, TierInfo>>({});
   const [carsByTier,   setCarsByTier]   = useState<Record<string, CarCard[]>>({});
   const [loading,      setLoading]      = useState(true);
+  const [minFares,     setMinFares]     = useState<Record<string, number>>(FALLBACK_MIN_FARES);
   const [selectedTier, setSelectedTier] = useState<string | null>(
     TIERS.includes(tierParam as typeof TIERS[number]) ? tierParam : null
   );
 
   useEffect(() => {
-    let userLat: number | null = null;
-    let userLng: number | null = null;
-
-    const buildData = (drivers: FleetDriver[]) => {
+    const buildData = (drivers: FleetDriver[], userLat: number | null, userLng: number | null) => {
       const tierResult: Record<string, TierInfo> = {};
       const carsResult: Record<string, CarCard[]> = {};
 
@@ -145,7 +143,6 @@ function AvailableCarsContent() {
 
         tierResult[t] = { tier: t, onlineCount: onlineDrivers.length, totalCount: tierDrivers.length, bestEtaMins, bestDriverId, bestVehicleImg, bestMake, bestModel };
 
-        /* Build individual car cards for this tier */
         carsResult[t] = tierDrivers
           .filter(d => d.vehicle !== null)
           .map(d => {
@@ -174,24 +171,31 @@ function AvailableCarsContent() {
       setLoading(false);
     };
 
-    const load = async (lat: number | null, lng: number | null) => {
-      userLat = lat; userLng = lng;
-      try {
-        const res = await fetch("/api/drivers/nearby");
-        if (res.ok) buildData(await res.json());
-        else setLoading(false);
-      } catch { setLoading(false); }
-    };
+    /* Fetch drivers + pricing immediately — no waiting for geolocation */
+    const driversPromise = fetch("/api/drivers/nearby").then(r => r.ok ? r.json() : []).catch(() => []);
+    const pricingPromise = fetch("/api/admin/pricing").then(r => r.ok ? r.json() : null).catch(() => null);
 
-    if (navigator.geolocation) {
+    /* Geolocation with a short 4s timeout — runs in parallel */
+    const geoPromise = new Promise<{ lat: number; lng: number } | null>(resolve => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      const timer = setTimeout(() => resolve(null), 4000);
       navigator.geolocation.getCurrentPosition(
-        pos => load(pos.coords.latitude, pos.coords.longitude),
-        ()  => load(null, null),
-        { timeout: 8000 }
+        pos => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+        ()   => { clearTimeout(timer); resolve(null); },
+        { timeout: 4000, maximumAge: 60000 }
       );
-    } else {
-      load(null, null);
-    }
+    });
+
+    Promise.all([driversPromise, geoPromise, pricingPromise]).then(([drivers, geo, pricing]) => {
+      if (pricing?.tiers) {
+        const fares: Record<string, number> = { ...FALLBACK_MIN_FARES };
+        for (const t of pricing.tiers) {
+          if (t.tier && t.minFare) fares[t.tier.toLowerCase()] = t.minFare;
+        }
+        setMinFares(fares);
+      }
+      buildData(Array.isArray(drivers) ? drivers : [], geo?.lat ?? null, geo?.lng ?? null);
+    });
   }, []);
 
   const totalOnline = TIERS.reduce((s, t) => s + (tierInfos[t]?.onlineCount ?? 0), 0);
@@ -226,7 +230,7 @@ function AvailableCarsContent() {
               <h1 className="text-[22px] font-bold text-gray-900">{TIER_LABELS[selectedTier]}</h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
                 style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
-                From ${MIN_FARES[selectedTier]}
+                From ${minFares[selectedTier]}
               </span>
             </div>
             {loading ? (
@@ -409,7 +413,7 @@ function AvailableCarsContent() {
                             <line x1="12" y1="1" x2="12" y2="23"/>
                             <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
                           </svg>
-                          <span className="text-[11px] text-gray-600 font-medium">From ${MIN_FARES[t]}</span>
+                          <span className="text-[11px] text-gray-600 font-medium">From ${minFares[t]}</span>
                         </div>
                         {(info?.totalCount ?? 0) > 0 && (
                           <span className="text-[10px] text-gray-400">{info!.totalCount} vehicle{info!.totalCount !== 1 ? "s" : ""} in fleet</span>

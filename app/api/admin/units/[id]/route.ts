@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeTier } from "@/lib/normalizeTier";
 
 const TIER_PRICE: Record<string, number> = { classic: 50, premium: 80, black: 130 };
 const TIER_IMG: Record<string, string> = {
@@ -40,16 +41,17 @@ export async function GET(
         ? "Maintenance"
         : "Unavailable";
 
+    const tier = normalizeTier(v.tier);
     return NextResponse.json({
       id:          v.id,
       brand:       v.make,
       model:       v.model,
       year:        v.year,
       plate:       v.plate,
-      tier:        v.tier,
+      tier,
       photoUrl:    v.photoUrl ?? null,
-      image:       v.photoUrl ?? TIER_IMG[v.tier.toLowerCase()] ?? "/images/movo classic.png",
-      price:       TIER_PRICE[v.tier.toLowerCase()] ?? 50,
+      image:       v.photoUrl ?? TIER_IMG[tier] ?? "/images/movo classic.png",
+      price:       TIER_PRICE[tier] ?? 50,
       status,
       transmission: "Automatic",
       seats:        5,

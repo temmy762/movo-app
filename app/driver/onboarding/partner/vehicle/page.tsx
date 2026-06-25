@@ -58,7 +58,7 @@ function TextField({ label, value, onChange }: { label: string; value: string; o
 }
 
 const years = Array.from({ length: 30 }, (_, i) => String(new Date().getFullYear() - i));
-const vehicleClasses = ["First Class", "Business Class", "Business Van", "Economy"];
+const vehicleClasses = ["Economy (Movo Classic)", "Premium (Movo Premium)", "First Class (Movo Privé Black)"];
 const colors = ["Black", "White", "Silver", "Grey", "Dark Blue", "Other"];
 const brands = ["Mercedes-Benz", "BMW", "Audi", "Lexus", "Cadillac", "Lincoln", "Rolls-Royce", "Bentley"];
 

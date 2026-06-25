@@ -26,7 +26,7 @@ const STEP_LABELS = [
   "Welcome", "Personal", "Vehicle", "Standards",
   "Test Assessment", "App Basics", "Safety", "Agreements", "Contract", "Review",
 ];
-const VEHICLE_TIERS = ["First Class", "Business Class", "Business Van", "Economy"];
+const VEHICLE_TIERS = ["Economy (Movo Classic)", "Premium (Movo Premium)", "First Class (Movo Privé Black)"];
 const VEHICLE_COLORS = ["Black", "White", "Silver", "Grey", "Dark Blue", "Other"];
 const VEHICLE_YEARS  = Array.from({ length: 20 }, (_, i) => String(new Date().getFullYear() - i));
 
