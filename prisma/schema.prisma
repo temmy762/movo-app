@@ -219,6 +219,9 @@ model Booking {
   carName               String
   fare                  Float
   serviceFee            Float
+  gst                   Float?
+  additionalStopFee     Float?
+  airportFee            Float?
   total                 Float
   status                BookingStatus @default(PENDING)
   paymentStatus         PaymentStatus @default(UNPAID)
@@ -564,9 +567,12 @@ model PasswordResetToken {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+  phone     String?
+  otp       String?
 
   @@index([email, expiresAt])
   @@index([token])
+  @@index([phone, expiresAt])
 }
 
 model AdminOTP {

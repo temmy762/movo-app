@@ -14,7 +14,15 @@ const carTierMap: Record<string, string> = {
   "Movo Privé Black": "black",
 };
 
-type FareEstimate = { fare: number; serviceFee: number; gst: number; total: number; distanceKm: number | null; durationMin: number | null };
+type FareEstimate = {
+  fare: number; serviceFee: number; gst: number; total: number;
+  additionalStopFee: number; airportFee: number;
+  distanceKm: number | null; durationMin: number | null;
+  gstRate: number; serviceFeeRate: number;
+  stopFeeUnit: number; airportFeeUnit: number;
+  freeWaitingMinutes: number; waitingRatePerMin: number;
+  stops: number; isAirport: boolean;
+};
 
 type CheckoutFormProps = {
   pickup: string; dropoff: string; carName: string;
@@ -36,12 +44,14 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
     setSubmitting(true);
     setError(null);
 
-    const { fare, serviceFee, total } = estimate;
+    const { fare, serviceFee, gst, additionalStopFee, airportFee, total } = estimate;
 
     /* Build return_url for 3DS — includes all booking data so tracking page can create booking */
     const rp: Record<string, string> = {
       pickup, dropoff, car: carName, paid: "1",
-      fare: fare.toString(), serviceFee: serviceFee.toString(), total: total.toString(),
+      fare: fare.toString(), serviceFee: serviceFee.toString(),
+      gst: gst.toString(), additionalStopFee: additionalStopFee.toString(),
+      airportFee: airportFee.toString(), total: total.toString(),
       intentId,
     };
     if (tier)     rp.tier     = tier;
@@ -68,7 +78,7 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
       body: JSON.stringify({
         clientName, pickup, dropoff,
         carTier: resolvedTier, carName,
-        fare, serviceFee, total,
+        fare, serviceFee, gst, additionalStopFee, airportFee, total,
         paymentStatus: "PAID",
         stripePaymentIntentId: intentId,
         ...(driverId ? { driverId } : {}),
@@ -112,6 +122,10 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
   );
 }
 
+/* Detect if a location string looks like an airport */
+const AIRPORT_KEYWORDS = /\b(airport|aeroport|aéroport|YUL|YYZ|YVR|YYC|YEG|YOW|YHZ|YWG|terminal)\b/i;
+function isAirportLocation(loc: string) { return AIRPORT_KEYWORDS.test(loc); }
+
 function ConfirmPayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -127,28 +141,38 @@ function ConfirmPayContent() {
   const [intentError, setIntentError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<FareEstimate | null>(null);
   const [estimating, setEstimating] = useState(true);
+  const [stops, setStops] = useState(0);
+  const [airportPickup, setAirportPickup] = useState(false);
   const { user } = useCurrentUser();
   const clientName = user ? `${user.firstName} ${user.lastName}`.trim() : "Guest";
   const resolvedTier = tier || carTierMap[carName] || "classic";
 
-  /* Step 1 — Fetch fare estimate */
+  /* Auto-detect airport on mount */
+  useEffect(() => {
+    if (isAirportLocation(pickup) || isAirportLocation(dropoff)) setAirportPickup(true);
+  }, [pickup, dropoff]);
+
+  /* Step 1 — Fetch fare estimate (re-runs when stops or airportPickup changes) */
   useEffect(() => {
     if (!pickup || !dropoff) { setEstimating(false); return; }
     setEstimating(true);
-    fetch(`/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}`)
+    setClientSecret(null);
+    setIntentId(null);
+    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${airportPickup}`;
+    fetch(url)
       .then((r) => r.json())
       .then((d) => { if (d.fare != null) setEstimate(d); })
       .catch(() => {})
       .finally(() => setEstimating(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, dropoff, resolvedTier]);
+  }, [pickup, dropoff, resolvedTier, stops, airportPickup]);
 
   /* Step 2 — Once estimate + user ready, create ONLY the payment intent */
   useEffect(() => {
     if (!clientName || clientName === "Guest" || !estimate) return;
 
     const { total } = estimate;
-    const idempotencyKey = `pi-${clientName}-${resolvedTier}-${Math.round(total * 100)}-${pickup.slice(0, 20)}`.replace(/\s+/g, "_");
+    const idempotencyKey = `pi-${clientName}-${resolvedTier}-${stops}-${airportPickup ? 1 : 0}-${Math.round(total * 100)}-${pickup.slice(0, 20)}`.replace(/\s+/g, "_");
 
     fetch("/api/stripe/create-payment-intent", {
       method: "POST",
@@ -252,6 +276,53 @@ function ConfirmPayContent() {
           {/* Divider */}
           <div className="h-px bg-gray-100 my-5" />
 
+          {/* Additional Charges */}
+          <div>
+            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">Additional Charges</p>
+
+            {/* Additional Stop */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <div className="flex-1 min-w-0 pr-3">
+                <p className="text-[13px] font-semibold text-gray-800">Additional Stop</p>
+                <p className="text-[11px] text-gray-400">${estimate?.stopFeeUnit?.toFixed(2) ?? "5.00"} per stop</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button type="button" onClick={() => setStops(s => Math.max(0, s - 1))}
+                  disabled={stops === 0}
+                  className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 disabled:opacity-30 text-[16px] font-bold">−</button>
+                <span className="text-[14px] font-semibold text-gray-900 w-4 text-center">{stops}</span>
+                <button type="button" onClick={() => setStops(s => Math.min(5, s + 1))}
+                  className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">+</button>
+              </div>
+            </div>
+
+            {/* Airport Pickup Fee */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <div className="flex-1 min-w-0 pr-3">
+                <p className="text-[13px] font-semibold text-gray-800">Airport Pickup Fee</p>
+                <p className="text-[11px] text-gray-400">${estimate?.airportFeeUnit?.toFixed(2) ?? "10.00"} — applies to airport pickups</p>
+              </div>
+              <button type="button" onClick={() => setAirportPickup(v => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${airportPickup ? "" : "bg-gray-200"}`}
+                style={airportPickup ? { background: "#131936" } : {}}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${airportPickup ? "translate-x-5" : "translate-x-0.5"}`} />
+              </button>
+            </div>
+
+            {/* Waiting Time Policy */}
+            <div className="flex items-start gap-2 py-3">
+              <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                <span className="font-semibold text-gray-600">Waiting time:</span> First {estimate?.freeWaitingMinutes ?? 5} minutes complimentary, then ${estimate?.waitingRatePerMin?.toFixed(2) ?? "0.75"}/minute. Charges applied at ride completion.
+              </p>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-gray-100 my-5" />
+
           {/* Price breakdown */}
           <div
             className="rounded-xl p-4 flex flex-col gap-2 border border-transparent"
@@ -269,35 +340,41 @@ function ConfirmPayContent() {
               <>
                 <div className="flex justify-between items-center">
                   <span className="text-[13px] md:text-[14px] text-gray-600">Ride Fare</span>
-                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">
-                    {estimate ? `$${estimate.fare.toFixed(2)}` : "—"}
-                  </span>
+                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.fare.toFixed(2)}` : "—"}</span>
                 </div>
-                {estimate?.distanceKm && (
+                {estimate?.distanceKm != null && (
                   <div className="flex justify-between items-center">
-                    <span className="text-[12px] text-gray-400">Distance</span>
-                    <span className="text-[12px] text-gray-400">{estimate.distanceKm} km</span>
+                    <span className="text-[11px] text-gray-400 ml-3">Distance</span>
+                    <span className="text-[11px] text-gray-400">{estimate.distanceKm} km · {estimate.durationMin} min</span>
+                  </div>
+                )}
+                {(estimate?.additionalStopFee ?? 0) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] md:text-[14px] text-gray-600">Additional Stop{stops > 1 ? `s (×${stops})` : ""}</span>
+                    <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">+${estimate!.additionalStopFee.toFixed(2)}</span>
+                  </div>
+                )}
+                {(estimate?.airportFee ?? 0) > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] md:text-[14px] text-gray-600">Airport Pickup Fee</span>
+                    <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">+${estimate!.airportFee.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center">
-                  <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
-                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">
-                    {estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}
-                  </span>
+                  <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee ({Math.round((estimate?.serviceFeeRate ?? 0.12) * 100)}%)</span>
+                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}</span>
                 </div>
+                <div className="h-px bg-gray-100 my-0.5" />
                 <div className="flex justify-between items-center">
-                  <span className="text-[13px] md:text-[14px] text-gray-600">GST (5%)</span>
-                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">
-                    {estimate ? `$${(estimate.gst ?? 0).toFixed(2)}` : "—"}
-                  </span>
+                  <span className="text-[13px] md:text-[14px] text-gray-600">GST ({Math.round((estimate?.gstRate ?? 0.05) * 100)}%)</span>
+                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.gst.toFixed(2)}` : "—"}</span>
                 </div>
                 <div className="h-px bg-gray-100 my-1" />
                 <div className="flex justify-between items-center">
                   <span className="text-[14px] md:text-[15px] font-bold text-gray-900">Total</span>
-                  <span className="text-[14px] md:text-[15px] font-bold text-gray-900">
-                    {estimate ? `$${estimate.total.toFixed(2)}` : "—"}
-                  </span>
+                  <span className="text-[14px] md:text-[15px] font-bold text-gray-900">{estimate ? `$${estimate.total.toFixed(2)}` : "—"}</span>
                 </div>
+                <p className="text-[10px] text-gray-400 mt-1">All prices in CAD. GST included in total.</p>
               </>
             )}
           </div>

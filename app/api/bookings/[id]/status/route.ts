@@ -46,8 +46,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const booking = await prisma.booking.findUnique({
         where: { id },
         include: {
-          user:   { select: { id: true, email: true, firstName: true } },
-          driver: { select: { firstName: true, lastName: true, vehicle: { select: { make: true, model: true, plate: true } } } },
+          user:   { select: { id: true, email: true, firstName: true, phone: true } },
+          driver: { select: { id: true, phone: true, firstName: true, lastName: true, vehicle: { select: { make: true, model: true, plate: true } } } },
         },
       });
 
@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (booking?.user?.email && booking.driver) {
         sendNotification({
           eventType: "RIDER_DRIVER_ASSIGNED",
-          recipient: { type: "user", id: booking.user.id, email: booking.user.email, firstName: booking.user.firstName },
+          recipient: { type: "user", id: booking.user.id, email: booking.user.email, firstName: booking.user.firstName, phone: booking.user.phone ?? undefined },
           data: {
             bookingId: id,
             driverName: `${booking.driver.firstName} ${booking.driver.lastName}`,
@@ -63,6 +63,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             pickup: booking.pickup,
             dropoff: booking.dropoff,
           },
+        }).catch(() => {});
+      }
+
+      /* Notify driver of their new assignment */
+      if (booking?.driver?.id) {
+        sendNotification({
+          eventType: "CHAUFFEUR_BOOKING_ASSIGNED",
+          recipient: { type: "driver", id: booking.driver.id, email: "", firstName: booking.driver.firstName, phone: booking.driver.phone ?? undefined },
+          data: { bookingId: id, pickup: booking?.pickup, dropoff: booking?.dropoff },
         }).catch(() => {});
       }
 
@@ -220,18 +229,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
       /* Notify rider trip is complete */
       if (existing.userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: existing.userId },
-          select: { email: true, firstName: true },
-        });
-        const driver = existing.driverId ? await prisma.driver.findUnique({
-          where: { id: existing.driverId },
-          select: { firstName: true, lastName: true, vehicle: { select: { make: true, model: true } } },
-        }) : null;
+        const [user, driver] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: existing.userId },
+            select: { email: true, firstName: true, phone: true },
+          }),
+          existing.driverId ? prisma.driver.findUnique({
+            where: { id: existing.driverId },
+            select: { firstName: true, lastName: true, vehicle: { select: { make: true, model: true } } },
+          }) : Promise.resolve(null),
+        ]);
         if (user?.email) {
           sendNotification({
             eventType: "RIDER_RIDE_COMPLETED",
-            recipient: { type: "user", id: existing.userId, email: user.email, firstName: user.firstName },
+            recipient: { type: "user", id: existing.userId, email: user.email, firstName: user.firstName, phone: user.phone ?? undefined },
             data: {
               bookingId: id,
               pickup: existing.pickup,

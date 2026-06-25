@@ -56,7 +56,7 @@ const VALID_PAYMENT_STATUSES: PaymentStatus[] = ["UNPAID", "PAID", "FAILED", "RE
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, total, paymentStatus, stripePaymentIntentId, driverId } = body;
+    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, gst, additionalStopFee, airportFee, total, paymentStatus, stripePaymentIntentId, driverId } = body;
 
     if (!clientName || !pickup || !dropoff || !carTier || !carName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -89,6 +89,9 @@ export async function POST(req: NextRequest) {
         carName,
         fare: Number(fare),
         serviceFee: Number(serviceFee),
+        gst: gst != null ? Number(gst) : null,
+        additionalStopFee: additionalStopFee != null ? Number(additionalStopFee) : null,
+        airportFee: airportFee != null ? Number(airportFee) : null,
         total: Number(total),
         paymentStatus: resolvedPaymentStatus,
         status: resolvedStatus,
@@ -102,12 +105,12 @@ export async function POST(req: NextRequest) {
     if (resolvedStatus === "CONFIRMED" && userId) {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, firstName: true, lastName: true },
+        select: { email: true, firstName: true, lastName: true, phone: true },
       });
       if (user?.email) {
         sendNotification({
           eventType: "RIDER_BOOKING_CONFIRMED",
-          recipient: { type: "user", id: userId, email: user.email, firstName: user.firstName },
+          recipient: { type: "user", id: userId, email: user.email, firstName: user.firstName, phone: user.phone ?? undefined },
           data: {
             bookingId: booking.id,
             pickup,
