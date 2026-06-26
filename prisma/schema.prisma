@@ -277,6 +277,21 @@ model BookingMessage {
   @@index([bookingId, createdAt])
 }
 
+// ─── Web Push Subscriptions ───────────────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userId    String?
+  driverId  String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([driverId])
+}
+
 // ─── Support ──────────────────────────────────────────────────────────────────
 
 model SupportTicket {

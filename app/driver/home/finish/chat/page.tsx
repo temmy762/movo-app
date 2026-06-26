@@ -132,6 +132,7 @@ function ChatInner() {
           <input
             type="text"
             className="flex-1 bg-transparent text-white placeholder-white/50 text-[14px] focus:outline-none"
+            style={{ WebkitTextFillColor: "white", caretColor: "white" }}
             placeholder={bookingId ? "Write your message…" : "No active booking"}
             disabled={!bookingId || sending}
             value={input}

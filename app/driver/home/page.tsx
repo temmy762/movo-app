@@ -5,6 +5,7 @@ import { startAlertLoop, getPreferredSound } from "@/lib/driver-alert-sounds";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 const DriverMap = dynamic(() => import("./DriverMap"), { ssr: false, loading: () => <div className="absolute inset-0" style={{ background: "#1a1e3c" }} /> });
 
@@ -40,6 +41,7 @@ export default function DriverHomePage() {
   const audioCtxRef     = useRef<AudioContext | null>(null);
   const alertStopRef    = useRef<(() => void) | null>(null);
   const [navEta,        setNavEta]        = useState<string | null>(null);
+  usePushSubscription();
   const [timeLeft,      setTimeLeft]      = useState<number>(30);
   const [driverPos,     setDriverPos]     = useState<{ lat: number; lng: number } | null>(null);
 

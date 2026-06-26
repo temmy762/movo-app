@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { geocodeAddresses } from "@/lib/geocoding";
 import { PaymentStatus } from "@prisma/client";
 import { sendNotification } from "@/lib/notifications";
+import { pushToOnlineDriversByTier } from "@/lib/webpush";
 
 export async function GET(req: NextRequest) {
   try {
@@ -123,6 +124,14 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
       }
     }
+
+    /* Push ride-request alert to all matching online drivers */
+    pushToOnlineDriversByTier(carTier ?? null, {
+      title: "🚗 New Ride Request",
+      body:  `Pickup: ${pickup}`,
+      tag:   `booking-${booking.id}`,
+      data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
+    }).catch(() => {});
 
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Image from "next/image";
 import SupportSheet from "./SupportSheet";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 const RideMap = dynamic(() => import("./RideMap"), {
   ssr: false,
@@ -57,6 +58,7 @@ function RideTrackingContent() {
   const chatPollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusPollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  usePushSubscription();
 
   /* ── Modal states ── */
   const [showMessage,  setShowMessage]  = useState(false);
@@ -473,6 +475,7 @@ function RideTrackingContent() {
           <div className="shrink-0 px-4 py-3 border-t border-gray-100">
             <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
               <input type="text" className="flex-1 bg-transparent text-white placeholder-white/50 text-[14px] focus:outline-none"
+                style={{ WebkitTextFillColor: "white", caretColor: "white" }}
                 placeholder="Write a message…" value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSendChatMsg()} />

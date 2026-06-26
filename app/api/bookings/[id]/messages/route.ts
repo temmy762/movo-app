@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { pushToDriver, pushToUser } from "@/lib/webpush";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession(req);
@@ -38,6 +39,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const message = await prisma.bookingMessage.create({
     data: { bookingId: id, sender, senderId, text: text.trim() },
   });
+
+  /* Push to the other party */
+  const booking = await prisma.booking.findUnique({
+    where: { id },
+    select: { driverId: true, userId: true, pickup: true },
+  }).catch(() => null);
+
+  if (booking) {
+    const snippet = text.trim().slice(0, 60);
+    if (sender === "rider" && booking.driverId) {
+      pushToDriver(booking.driverId, {
+        title: "New message from rider",
+        body:  snippet,
+        tag:   `msg-${id}`,
+        data:  { type: "new_message_driver", bookingId: id, requireInteraction: "true" },
+      }).catch(() => {});
+    } else if (sender === "driver" && booking.userId) {
+      pushToUser(booking.userId, {
+        title: "Message from your chauffeur",
+        body:  snippet,
+        tag:   `msg-${id}`,
+        data:  { type: "new_message_rider", bookingId: id, requireInteraction: "true" },
+      }).catch(() => {});
+    }
+  }
 
   return NextResponse.json(message);
 }

@@ -81,16 +81,19 @@ a:focus-visible,
   outline-offset: 2px;
 }
 
-/* Global form field text color — ensures all inputs/selects are always readable */
-input,
-select,
-textarea {
-  color: #111827;
-}
+/* Global form field text color — wrapped in @layer base so Tailwind utilities can override */
+@layer base {
+  input,
+  select,
+  textarea {
+    color: #111827;
+    caret-color: currentColor;
+  }
 
-input::placeholder,
-textarea::placeholder {
-  color: #9ca3af;
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
 }
 
 /* Opt-out of global hover/active effects for flat elements like tab buttons. */
