@@ -32,11 +32,12 @@ export function EmailLayout({ context, preview, children }: EmailLayoutProps) {
           <Section style={logoSection}>
             <Img
               src={settings.logoUrl}
-              width="120"
-              height="40"
+              width="50"
+              height="50"
               alt={settings.appName}
               style={logo}
             />
+            <Text style={logoFallbackText}>{settings.appName}</Text>
           </Section>
 
           {/* Content */}
@@ -96,7 +97,21 @@ const logoSection = {
 };
 
 const logo = {
+  display: "block",
   margin: "0 auto",
+  border: "0",
+  outline: "none",
+  textDecoration: "none",
+};
+
+const logoFallbackText = {
+  textAlign: "center" as const,
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontSize: "22px",
+  fontWeight: "700" as const,
+  color: "#131936",
+  letterSpacing: "2px",
+  margin: "4px 0 0",
 };
 
 const contentSection = {

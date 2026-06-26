@@ -11,7 +11,7 @@ const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@movoprive.com";
 const FROM_NAME = process.env.FROM_NAME || "MOVO";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "MOVO";
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@movoprive.com";
-const LOGO_URL = process.env.LOGO_URL || "https://movoprive.com/logo.png";
+const LOGO_URL = process.env.LOGO_URL || "https://movoprive.com/images/logo/logo-icon-navy.png";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://movoprive.com";
 
 /**
