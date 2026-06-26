@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { dispatchDriverLocation } from "@/lib/socket/dispatcher";
 
 export async function GET(
   req: NextRequest,
@@ -59,4 +60,43 @@ export async function GET(
     position,
     driverOnline: booking.driver?.isOnline ?? false,
   });
+}
+
+/**
+ * POST — driver pushes their current GPS position.
+ * Saves a TripLocation snapshot and immediately broadcasts via Socket.IO
+ * so the rider's tracking page updates without any polling.
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: bookingId } = await params;
+  const session = await getSession(req);
+
+  if (!session?.driverId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { lat, lng, heading, speed } = await req.json();
+
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    return NextResponse.json({ error: "lat and lng are required" }, { status: 400 });
+  }
+
+  /* Persist snapshot + update driver's last-known position */
+  await Promise.all([
+    prisma.tripLocation.create({
+      data: { bookingId, lat, lng, heading: heading ?? null, speed: speed ?? null },
+    }),
+    prisma.driver.update({
+      where: { id: session.driverId },
+      data:  { lat, lng },
+    }),
+  ]);
+
+  /* Broadcast to the booking room — rider receives it instantly */
+  dispatchDriverLocation({ bookingId, lat, lng, heading: heading ?? undefined });
+
+  return NextResponse.json({ ok: true });
 }

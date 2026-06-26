@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { pushToDriver, pushToUser } from "@/lib/webpush";
+import { dispatchMessageNew } from "@/lib/socket/dispatcher";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession(req);
@@ -45,6 +46,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { id },
     select: { driverId: true, userId: true, pickup: true },
   }).catch(() => null);
+
+  /* Socket: real-time delivery to both parties */
+  dispatchMessageNew({
+    bookingId: id,
+    id:        message.id,
+    sender,
+    text:      message.text,
+    createdAt: message.createdAt.toISOString(),
+    userId:    booking?.userId,
+    driverId:  booking?.driverId,
+  });
 
   if (booking) {
     const snippet = text.trim().slice(0, 60);

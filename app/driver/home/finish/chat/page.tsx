@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 
 type Message = {
   id: string;
@@ -24,6 +25,7 @@ function ChatInner() {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { join, on } = useSocket();
 
   const loadMessages = useCallback(() => {
     if (!bookingId) return;
@@ -35,11 +37,19 @@ function ChatInner() {
       .catch(() => {});
   }, [bookingId]);
 
+  /* Load history once, then receive new messages via socket */
   useEffect(() => {
     loadMessages();
-    pollRef.current = setInterval(loadMessages, 3000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [loadMessages]);
+    if (!bookingId) return;
+    join({ role: "driver", bookingId });
+    const unsub = on(SOCKET_EVENTS.MESSAGE_NEW, (data) => {
+      const m = data as { bookingId: string; id: string; sender: string; text: string; createdAt: string };
+      if (m.bookingId !== bookingId) return;
+      setMessages(prev => prev.some(x => x.id === m.id) ? prev : [...prev, m as Message]);
+    });
+    return () => { unsub(); if (pollRef.current) clearInterval(pollRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

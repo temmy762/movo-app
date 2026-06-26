@@ -6,7 +6,7 @@
     "dev": "cross-env TURBOPACK=0 next dev --hostname 0.0.0.0",
     "postinstall": "prisma generate",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
     "lint": "eslint",
     "db:seed": "npx ts-node --project tsconfig.seed.json prisma/seed.ts"
   },
@@ -36,6 +36,8 @@
     "react-dom": "19.2.4",
     "react-leaflet": "^5.0.0",
     "resend": "^6.12.4",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "stripe": "^22.1.0",
     "twilio": "^4.10.0",
     "web-push": "^3.6.7"

@@ -4,6 +4,12 @@ import { getSession } from "@/lib/session";
 import { BookingStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { sendNotification } from "@/lib/notifications";
+import {
+  dispatchBookingAccepted,
+  dispatchBookingCancelled,
+  dispatchBookingCompleted,
+  dispatchBookingStatus,
+} from "@/lib/socket/dispatcher";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -74,6 +80,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           data: { bookingId: id, pickup: booking?.pickup, dropoff: booking?.dropoff },
         }).catch(() => {});
       }
+
+      /* Socket: instant update to rider + admin */
+      dispatchBookingAccepted({
+        bookingId: id,
+        driverId:  session.driverId,
+        userId:    booking?.user?.id,
+        driverName: booking?.driver ? `${booking.driver.firstName} ${booking.driver.lastName}` : "",
+        vehicle:   booking?.driver?.vehicle ? `${booking.driver.vehicle.make} ${booking.driver.vehicle.model}` : "",
+        pickup:    booking?.pickup ?? "",
+        dropoff:   booking?.dropoff ?? "",
+      });
 
       return NextResponse.json(booking);
     }
@@ -158,6 +175,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const booking = await prisma.booking.update({
         where: { id },
         data: { status: "CANCELLED", cancelledAt: now, cancelledBy: caller },
+      });
+      /* Socket: notify all parties */
+      dispatchBookingCancelled({
+        bookingId: id,
+        driverId:  existing.driverId,
+        userId:    existing.userId,
+        cancelledBy: caller,
+        refunded: false,
       });
       return NextResponse.json({ ...booking, refunded: false });
     }
@@ -256,6 +281,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
       }
 
+      /* Socket: trip completed */
+      dispatchBookingCompleted({
+        bookingId: id,
+        driverId:  existing.driverId,
+        userId:    existing.userId,
+        total:     existing.total,
+      });
+
       return NextResponse.json(booking);
     }
 
@@ -265,6 +298,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: { status },
     });
 
+    /* Socket: generic status change */
+    dispatchBookingStatus({ bookingId: id, status, userId: null, driverId: null });
     return NextResponse.json(booking);
   } catch {
     return NextResponse.json({ error: "Failed to update status" }, { status: 500 });

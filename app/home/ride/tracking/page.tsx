@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Image from "next/image";
 import SupportSheet from "./SupportSheet";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
+import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 
 const RideMap = dynamic(() => import("./RideMap"), {
   ssr: false,
@@ -59,6 +60,7 @@ function RideTrackingContent() {
   const locationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const statusPollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   usePushSubscription();
+  const { join, leaveBooking, on } = useSocket();
 
   /* ── Modal states ── */
   const [showMessage,  setShowMessage]  = useState(false);
@@ -134,27 +136,68 @@ function RideTrackingContent() {
       .catch(() => {});
   }, [bookingId]);
 
-  /* ── Live driver location polling ── */
+  /* ── Socket room join + realtime events ── */
   useEffect(() => {
     if (!bookingId) return;
+    join({ role: "user", bookingId });
 
+    /* Driver location pushed by driver app → instant map update */
+    const unsubLoc = on(SOCKET_EVENTS.DRIVER_LOCATION, (data) => {
+      const d = data as { bookingId: string; lat: number; lng: number };
+      if (d.bookingId === bookingId) setDriverPosition({ lat: d.lat, lng: d.lng });
+    });
+
+    /* Trip started */
+    const unsubStarted = on(SOCKET_EVENTS.TRIP_STARTED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId === bookingId) setRideStatus("CONFIRMED");
+    });
+
+    /* Booking completed → redirect to completed page */
+    const unsubCompleted = on(SOCKET_EVENTS.BOOKING_COMPLETED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId !== bookingId) return;
+      if (statusPollRef.current) clearInterval(statusPollRef.current);
+      leaveBooking(bookingId);
+      router.replace(`/home/ride/completed?bookingId=${bookingId}`);
+    });
+
+    /* Booking cancelled */
+    const unsubCancelled = on(SOCKET_EVENTS.BOOKING_CANCELLED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId !== bookingId) return;
+      if (statusPollRef.current) clearInterval(statusPollRef.current);
+      leaveBooking(bookingId);
+      router.replace("/home");
+    });
+
+    /* Booking accepted → update status */
+    const unsubAccepted = on(SOCKET_EVENTS.BOOKING_ACCEPTED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId === bookingId) setRideStatus("CONFIRMED");
+    });
+
+    return () => {
+      unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId]);
+
+  /* ── Fallback location polling (used only if socket not connected) ── */
+  useEffect(() => {
+    if (!bookingId) return;
     const poll = () => {
       fetch(`/api/bookings/${bookingId}/driver-location`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
-          if (data?.position?.lat != null && data?.position?.lng != null) {
+          if (data?.position?.lat != null && data?.position?.lng != null)
             setDriverPosition({ lat: data.position.lat, lng: data.position.lng });
-          }
         })
         .catch(() => {});
     };
-
     poll();
-    locationPollRef.current = setInterval(poll, 6000);
-
-    return () => {
-      if (locationPollRef.current) clearInterval(locationPollRef.current);
-    };
+    locationPollRef.current = setInterval(poll, 8000); /* reduced — socket handles primary */
+    return () => { if (locationPollRef.current) clearInterval(locationPollRef.current); };
   }, [bookingId]);
 
   /* ── Booking status polling → auto-redirect on COMPLETED / CANCELLED ── */
@@ -185,18 +228,22 @@ function RideTrackingContent() {
     };
   }, [bookingId, router]);
 
-  /* ── Chat polling ── */
+  /* ── Chat: load history on open + socket for new messages ── */
   useEffect(() => {
     if (!bookingId || !chatOpen) return;
-    const load = () =>
-      fetch(`/api/bookings/${bookingId}/messages`)
-        .then(r => r.ok ? r.json() : [])
-        .then(d => { if (Array.isArray(d)) setChatMsgs(d); })
-        .catch(() => {});
-    load();
-    chatPollRef.current = setInterval(load, 3000);
-    return () => { if (chatPollRef.current) clearInterval(chatPollRef.current); };
-  }, [bookingId, chatOpen]);
+    /* Load history once */
+    fetch(`/api/bookings/${bookingId}/messages`)
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { if (Array.isArray(d)) setChatMsgs(d); })
+      .catch(() => {});
+    /* Real-time incoming messages via socket */
+    const unsub = on(SOCKET_EVENTS.MESSAGE_NEW, (data) => {
+      const m = data as { bookingId: string; id: string; sender: string; text: string; createdAt: string };
+      if (m.bookingId !== bookingId) return;
+      setChatMsgs(prev => prev.some(x => x.id === m.id) ? prev : [...prev, m]);
+    });
+    return () => { unsub(); };
+  }, [bookingId, chatOpen, on]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });

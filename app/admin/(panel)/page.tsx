@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type ApiStats = {
@@ -685,16 +686,36 @@ export default function AdminDashboard() {
   const [apiData, setApiData] = useState<ApiStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [earningsPeriod, setEarningsPeriod] = useState("8m");
+  const { join, on } = useSocket();
 
-  useEffect(() => {
+  const fetchStats = useCallback((period: string) => {
     setLoading(true);
     const url = new URL("/api/admin/stats", window.location.origin);
-    url.searchParams.set("period", earningsPeriod);
+    url.searchParams.set("period", period);
     fetch(url.toString())
       .then(r => r.json())
       .then(setApiData)
       .catch(console.error)
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { fetchStats(earningsPeriod); }, [earningsPeriod, fetchStats]);
+
+  /* Join admin socket room — get live event feed */
+  useEffect(() => {
+    join({ role: "admin" });
+
+    /* Any booking event refreshes stats */
+    const refresh = () => fetchStats(earningsPeriod);
+    const unsubCreated   = on(SOCKET_EVENTS.BOOKING_CREATED,   refresh);
+    const unsubCompleted = on(SOCKET_EVENTS.BOOKING_COMPLETED, refresh);
+    const unsubCancelled = on(SOCKET_EVENTS.BOOKING_CANCELLED, refresh);
+    const unsubAccepted  = on(SOCKET_EVENTS.BOOKING_ACCEPTED,  refresh);
+
+    return () => {
+      unsubCreated(); unsubCompleted(); unsubCancelled(); unsubAccepted();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [earningsPeriod]);
 
   const c = apiData?.counts;

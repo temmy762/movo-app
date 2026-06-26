@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { dispatchTripStarted } from "@/lib/socket/dispatcher";
 
 export async function PATCH(
   req: NextRequest,
@@ -28,6 +29,14 @@ export async function PATCH(
   const updated = await prisma.booking.update({
     where: { id: bookingId },
     data:  { startedAt: new Date() },
+  });
+
+  /* Socket: instantly notify rider + admin the trip has started */
+  dispatchTripStarted({
+    bookingId,
+    driverId:  booking.driverId,
+    userId:    booking.userId,
+    startedAt: updated.startedAt!.toISOString(),
   });
 
   return NextResponse.json({ ok: true, startedAt: updated.startedAt });

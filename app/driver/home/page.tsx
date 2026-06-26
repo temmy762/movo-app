@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
+import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 
 const DriverMap = dynamic(() => import("./DriverMap"), { ssr: false, loading: () => <div className="absolute inset-0" style={{ background: "#1a1e3c" }} /> });
 
@@ -42,6 +43,7 @@ export default function DriverHomePage() {
   const alertStopRef    = useRef<(() => void) | null>(null);
   const [navEta,        setNavEta]        = useState<string | null>(null);
   usePushSubscription();
+  const { join, on } = useSocket();
   const [timeLeft,      setTimeLeft]      = useState<number>(30);
   const [driverPos,     setDriverPos]     = useState<{ lat: number; lng: number } | null>(null);
 
@@ -122,6 +124,47 @@ export default function DriverHomePage() {
     if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume().catch(() => {});
   }, []);
 
+  /* ── Socket: real-time booking notifications ── */
+  useEffect(() => {
+    if (!isOnline) return;
+    /* Fetch driver id once to join the right rooms */
+    fetch("/api/driver/onboarding/status")
+      .then(r => r.json())
+      .then(d => {
+        if (d.driverId) {
+          join({ role: "driver", id: d.driverId });
+          if (d.tier) join({ role: "driver", id: d.tier }); /* tier room */
+        }
+      })
+      .catch(() => {});
+
+    /* New booking arrived → trigger request alert exactly like polling would */
+    const unsubCreated = on(SOCKET_EVENTS.BOOKING_CREATED, (data) => {
+      if (ridePhase !== "searching") return;
+      const b = data as { id: string; pickup: string; dropoff: string; carTier: string; carName: string; total: number; status: string };
+      if (b.status === "PENDING" || b.status === "CONFIRMED") {
+        setActiveBooking(b as Booking);
+        setRidePhase("requesting");
+      }
+    });
+
+    /* Booking cancelled while driver had it active */
+    const unsubCancelled = on(SOCKET_EVENTS.BOOKING_CANCELLED, (data) => {
+      const d = data as { bookingId: string };
+      setActiveBooking(prev => {
+        if (prev?.id === d.bookingId) {
+          setRidePhase("searching");
+          startPolling(fetchNextPending);
+          return null;
+        }
+        return prev;
+      });
+    });
+
+    return () => { unsubCreated(); unsubCancelled(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, ridePhase]);
+
   /* One-time listener so a restored session gets audio unlocked on first tap */
   useEffect(() => {
     const handler = () => {
@@ -190,10 +233,11 @@ export default function DriverHomePage() {
         if (now - lastPushRef.current < 5000) return; // throttle: max 1 push per 5 s
         lastPushRef.current = now;
         const { latitude: lat, longitude: lng, heading, speed } = pos.coords;
-        fetch("/api/trips/location", {
+        /* POST to booking-specific endpoint — persists snapshot AND socket-broadcasts to rider */
+        fetch(`/api/bookings/${bookingId}/driver-location`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId, lat, lng, heading, speed }),
+          body: JSON.stringify({ lat, lng, heading, speed }),
         }).catch(() => {});
       },
       () => {},

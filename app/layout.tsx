@@ -5,6 +5,7 @@ import { ConsentProvider } from "@/context/ConsentContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import ConsentBanner from "@/components/consent/ConsentBanner";
 import ConsentModal  from "@/components/consent/ConsentModal";
+import { SocketProvider } from "@/context/SocketContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -37,13 +38,15 @@ export default function RootLayout({
     >
       <head />
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <ThemeProvider>
-          <ConsentProvider>
-            {children}
-            <ConsentBanner />
-            <ConsentModal />
-          </ConsentProvider>
-        </ThemeProvider>
+        <SocketProvider>
+          <ThemeProvider>
+            <ConsentProvider>
+              {children}
+              <ConsentBanner />
+              <ConsentModal />
+            </ConsentProvider>
+          </ThemeProvider>
+        </SocketProvider>
       </body>
     </html>
   );

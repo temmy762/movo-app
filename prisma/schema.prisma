@@ -89,6 +89,18 @@ enum OnboardingType {
   FLEET
 }
 
+enum BookingType {
+  NORMAL
+  AIRPORT
+  HOURLY
+  CARE
+}
+
+enum AssignmentType {
+  PRIMARY
+  RECOVERY
+}
+
 enum OnboardingAdminStatus {
   PENDING
   UNDER_REVIEW
@@ -233,6 +245,10 @@ model Booking {
   cancelledAt           DateTime?
   cancelledBy           String?
   refundId              String?
+  bookingType           BookingType   @default(NORMAL)
+  assignmentType        AssignmentType?
+  parentBookingId       String?
+  recoveryDriverId      String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 

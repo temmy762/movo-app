@@ -5,6 +5,7 @@ import { geocodeAddresses } from "@/lib/geocoding";
 import { PaymentStatus } from "@prisma/client";
 import { sendNotification } from "@/lib/notifications";
 import { pushToOnlineDriversByTier } from "@/lib/webpush";
+import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
 
 export async function GET(req: NextRequest) {
   try {
@@ -124,6 +125,14 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
       }
     }
+
+    /* Socket: notify all connected clients instantly */
+    dispatchBookingCreated({
+      id: booking.id, pickup, dropoff,
+      carTier: carTier ?? "", carName,
+      total: Number(total), status: resolvedStatus,
+      createdAt: booking.createdAt.toISOString(),
+    });
 
     /* Push ride-request alert to all matching online drivers */
     pushToOnlineDriversByTier(carTier ?? null, {

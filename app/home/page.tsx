@@ -8,10 +8,10 @@ import BottomNav from "./components/BottomNav";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const services = [
-  { id: 1, title: "By The Hour", desc: "Your next city is just a smooth ride away.", img: "/images/By the hour.png", href: "/home/by-the-hour" },
-  { id: 2, title: "In-City Rides", desc: "Cruise the city in comfort and class.", img: "/images/In-city ride.png", href: "/home/in-city-rides" },
-  { id: 3, title: "Party Bus", desc: "Your party. Our wheels turn every ride into a celebration.", img: "/images/Party bus.png", href: "/home/party-bus" },
-  { id: 4, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.", img: "/images/airport transfer.png", href: "/home/airport-transfer" },
+  { id: 1, title: "In-City Rides",      desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",    href: "/home/in-city-rides" },
+  { id: 2, title: "Airport Transfer",   desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/airport-transfer" },
+  { id: 3, title: "Hourly Chauffeur",   desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",     href: "/home/by-the-hour" },
+  { id: 4, title: "Movo Care Ride",     desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",    href: "/home/care-ride" },
 ];
 
 export default function HomePage() {
@@ -120,7 +120,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
               <div className="absolute bottom-3 left-3 right-2">
                 <p className="text-white text-[13px] font-bold leading-tight">The ease of travel</p>
-                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Seamless City-to-City, by-the-hour & airport transfer.</p>
+                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Hourly chauffeur, airport transfer & Care Ride.</p>
               </div>
             </div>
             {/* Card 3 */}
