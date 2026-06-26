@@ -1,8 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import {
+  SOUND_OPTIONS, AlertSoundId,
+  getPreferredSound, setPreferredSound,
+  previewSound, startAlertLoop,
+} from "@/lib/driver-alert-sounds";
 
 function SectionRow({ label, onClick }: { label: string; onClick?: () => void }) {
   return (
@@ -37,6 +42,50 @@ export default function DriverProfilePage() {
   const { user } = useCurrentUser();
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [totalReviews, setTotalReviews] = useState(0);
+  const [selectedSound, setSelectedSound] = useState<AlertSoundId>("chime");
+  const [soundOpen, setSoundOpen] = useState(false);
+  const [previewingId, setPreviewingId] = useState<AlertSoundId | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const previewStopRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    setSelectedSound(getPreferredSound());
+  }, []);
+
+  const unlockCtx = useCallback(() => {
+    if (!audioCtxRef.current) {
+      try { audioCtxRef.current = new AudioContext(); } catch { return null; }
+    }
+    const ctx = audioCtxRef.current;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    return ctx;
+  }, []);
+
+  const handlePreview = useCallback((id: AlertSoundId) => {
+    const ctx = unlockCtx();
+    if (!ctx) return;
+    previewStopRef.current?.();
+    previewStopRef.current = null;
+    setPreviewingId(id);
+    const stop = startAlertLoop(id, ctx);
+    previewStopRef.current = stop;
+    /* auto-stop after one 3s sample */
+    setTimeout(() => {
+      stop();
+      previewStopRef.current = null;
+      setPreviewingId(null);
+    }, 3000);
+  }, [unlockCtx]);
+
+  const handleSelectSound = useCallback((id: AlertSoundId) => {
+    previewStopRef.current?.();
+    previewStopRef.current = null;
+    setPreviewingId(null);
+    setSelectedSound(id);
+    setPreferredSound(id);
+    const ctx = unlockCtx();
+    if (ctx) previewSound(id, ctx); // quick one-shot confirmation
+  }, [unlockCtx]);
 
   useEffect(() => {
     fetch("/api/driver/ratings")
@@ -157,6 +206,67 @@ export default function DriverProfilePage() {
           <SectionGroup title="Payments">
             <SectionRow label="Banking Details" onClick={() => router.push("/driver/home/profile/banking")} />
           </SectionGroup>
+
+          {/* Notification sound picker */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1 px-0">Notifications</p>
+            <div className="bg-white rounded-xl px-4 shadow-sm divide-y divide-gray-100">
+              <button
+                type="button"
+                onClick={() => setSoundOpen(v => !v)}
+                className="no-hover-fx w-full flex items-center justify-between py-3"
+              >
+                <div>
+                  <p className="text-[14px] font-medium text-gray-800 text-left">Ride Request Sound</p>
+                  <p className="text-[11px] text-gray-400 text-left">
+                    {SOUND_OPTIONS.find(s => s.id === selectedSound)?.label ?? "Chime"}
+                  </p>
+                </div>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2.5"
+                  className={`transition-transform ${soundOpen ? "rotate-90" : ""}`}>
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+
+              {soundOpen && (
+                <div className="py-3 flex flex-col gap-2">
+                  {SOUND_OPTIONS.map(opt => (
+                    <div key={opt.id} className="flex items-center justify-between py-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectSound(opt.id)}
+                        className="flex items-center gap-3 flex-1 text-left"
+                      >
+                        {/* Radio */}
+                        <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${selectedSound === opt.id ? "border-[#131936]" : "border-gray-300"}`}>
+                          {selectedSound === opt.id && <span className="w-2 h-2 rounded-full bg-[#131936]" />}
+                        </span>
+                        <span>
+                          <p className="text-[13px] font-semibold text-gray-800">{opt.label}</p>
+                          <p className="text-[11px] text-gray-400">{opt.description}</p>
+                        </span>
+                      </button>
+                      {/* Preview button */}
+                      <button
+                        type="button"
+                        onClick={() => handlePreview(opt.id)}
+                        className="ml-3 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-gray-200"
+                        style={previewingId === opt.id ? { background: "#131936" } : { background: "#f9fafb" }}
+                      >
+                        {previewingId === opt.id ? (
+                          <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="#131936" stroke="none">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           <SectionGroup title="Support">
             <SectionRow label="Help" onClick={() => router.push("/driver/home/profile/help")} />

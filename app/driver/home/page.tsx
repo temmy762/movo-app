@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
+import { startAlertLoop, getPreferredSound } from "@/lib/driver-alert-sounds";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -36,6 +37,8 @@ export default function DriverHomePage() {
   const geoWatchRef     = useRef<number | null>(null);
   const onlineGeoRef    = useRef<number | null>(null);
   const lastPushRef     = useRef<number>(0);
+  const audioCtxRef     = useRef<AudioContext | null>(null);
+  const alertStopRef    = useRef<(() => void) | null>(null);
   const [timeLeft,      setTimeLeft]      = useState<number>(30);
   const [driverPos,     setDriverPos]     = useState<{ lat: number; lng: number } | null>(null);
 
@@ -104,7 +107,48 @@ export default function DriverHomePage() {
       if (countdownRef.current) clearInterval(countdownRef.current);
       if (geoWatchRef.current  !== null) navigator.geolocation.clearWatch(geoWatchRef.current);
       if (onlineGeoRef.current !== null) navigator.geolocation.clearWatch(onlineGeoRef.current);
+      alertStopRef.current?.();
     };
+  }, []);
+
+  /* Unlock AudioContext — called on any user gesture */
+  const unlockAudio = useCallback(() => {
+    if (!audioCtxRef.current) {
+      try { audioCtxRef.current = new AudioContext(); } catch { return; }
+    }
+    if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume().catch(() => {});
+  }, []);
+
+  /* One-time listener so a restored session gets audio unlocked on first tap */
+  useEffect(() => {
+    const handler = () => {
+      unlockAudio();
+      document.removeEventListener("click",      handler);
+      document.removeEventListener("touchstart", handler);
+    };
+    document.addEventListener("click",      handler, { once: true, passive: true });
+    document.addEventListener("touchstart", handler, { once: true, passive: true });
+    return () => {
+      document.removeEventListener("click",      handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [unlockAudio]);
+
+  const playRequestAlert = useCallback(() => {
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    const soundId = getPreferredSound();
+    /* Resume context if the browser suspended it (e.g. tab was backgrounded) */
+    const start = () => { alertStopRef.current = startAlertLoop(soundId, ctx); };
+    if (ctx.state === "suspended") {
+      ctx.resume().then(start).catch(() => {});
+    } else {
+      start();
+    }
+  }, []);
+
+  const stopAlert = useCallback(() => {
+    alertStopRef.current?.();
   }, []);
 
   /* Broadcast driver position while ONLINE (no booking needed) */
@@ -209,15 +253,17 @@ export default function DriverHomePage() {
     pollRef.current = setInterval(poll, 5000);
   }, []);
 
-  /* Start 30s countdown whenever a new request arrives */
+  /* Start 30s countdown + sound alert whenever a new request arrives */
   useEffect(() => {
     if (ridePhase !== "requesting" || !activeBooking) return;
+    playRequestAlert();
     startCountdown(() => {
+      stopAlert();
       setActiveBooking(null);
       setRidePhase("searching");
       startPolling(fetchNextPending);
     });
-    return () => stopCountdown();
+    return () => { stopCountdown(); stopAlert(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBooking?.id]);
 
@@ -230,6 +276,7 @@ export default function DriverHomePage() {
     setIsOnline(next);
     localStorage.setItem("driverOnline", String(next));
     if (next) {
+      unlockAudio(); // must happen inside user gesture to satisfy browser policy
       setRidePhase("searching");
       startPolling(fetchNextPending);
       startOnlineLocationBroadcast();
@@ -253,6 +300,7 @@ export default function DriverHomePage() {
     if (!activeBooking) return;
     stopPolling();
     stopCountdown();
+    stopAlert();
     setActionLoading(true);
     const res = await fetch(`/api/bookings/${activeBooking.id}/status`, {
       method: "PATCH",
@@ -272,6 +320,7 @@ export default function DriverHomePage() {
 
   async function handleDecline() {
     stopCountdown();
+    stopAlert();
     setShowDeclineModal(false);
     setActiveBooking(null);
     setRidePhase("searching");
@@ -388,26 +437,47 @@ export default function DriverHomePage() {
             {/* Rider info row — requesting + accepted + arrived */}
             {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "arrived") && (
               <>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[15px] font-bold text-gray-900">Ride Request</p>
-                  <div className="flex items-center gap-2">
-                    {ridePhase === "requesting" && (
+                {/* Incoming request banner */}
+                {ridePhase === "requesting" && (
+                  <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-xl"
+                    style={{ background: "linear-gradient(90deg,#131936,#1e2a5e)" }}>
+                    <div className="flex items-center gap-2">
+                      {/* Pulsing dot */}
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+                      </span>
+                      <p className="text-[13px] font-bold text-white tracking-wide">New Ride Request!</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white">
+                        {activeBooking.carName}
+                      </span>
                       <span
-                        className="text-[12px] font-bold w-7 h-7 rounded-full flex items-center justify-center"
+                        className="text-[13px] font-bold w-8 h-8 rounded-full flex items-center justify-center"
                         style={{
-                          background: timeLeft <= 10 ? "#fee2e2" : "#f3f4f6",
-                          color:      timeLeft <= 10 ? "#ef4444" : "#374151",
+                          background: timeLeft <= 10 ? "#ef4444" : "rgba(255,255,255,0.15)",
+                          color: "white",
                         }}
                       >
                         {timeLeft}
                       </span>
-                    )}
-                    <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
-                      style={{ background: "#fef3c7", color: "#d97706" }}>
-                      {activeBooking.carName}
-                    </span>
+                    </div>
                   </div>
+                )}
+
+                {/* Accepted / arrived header */}
+                {(ridePhase === "accepted" || ridePhase === "arrived") && (
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[15px] font-bold text-gray-900">
+                    {ridePhase === "accepted" ? "Ride Accepted" : "Arrived at Pickup"}
+                  </p>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold"
+                    style={{ background: "#fef3c7", color: "#d97706" }}>
+                    {activeBooking.carName}
+                  </span>
                 </div>
+                )}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
