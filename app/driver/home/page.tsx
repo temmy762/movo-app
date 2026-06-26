@@ -39,6 +39,7 @@ export default function DriverHomePage() {
   const lastPushRef     = useRef<number>(0);
   const audioCtxRef     = useRef<AudioContext | null>(null);
   const alertStopRef    = useRef<(() => void) | null>(null);
+  const [navEta,        setNavEta]        = useState<string | null>(null);
   const [timeLeft,      setTimeLeft]      = useState<number>(30);
   const [driverPos,     setDriverPos]     = useState<{ lat: number; lng: number } | null>(null);
 
@@ -352,7 +353,25 @@ export default function DriverHomePage() {
   return (
     <div className="relative h-full flex flex-col overflow-hidden" style={{ fontFamily: "var(--font-body)" }}>
 
-      <DriverMap position={driverPos} />
+      <DriverMap
+        position={driverPos}
+        pickup={activeBooking?.pickup}
+        dropoff={activeBooking?.dropoff}
+        navPhase={ridePhase}
+        onEta={setNavEta}
+      />
+
+      {/* Nav ETA overlay — shown during active ride phases */}
+      {navEta && (ridePhase === "accepted" || ridePhase === "arrived" || ridePhase === "started") && (
+        <div className="absolute top-16 left-1/2 z-20 -translate-x-1/2 px-4 py-1.5 rounded-full shadow-lg flex items-center gap-2"
+          style={{ background: "linear-gradient(90deg,#131936,#1e2a5e)" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span className="text-white text-[12px] font-bold">{navEta}</span>
+          <span className="text-white/60 text-[11px]">
+            {ridePhase === "started" ? "to destination" : "to pickup"}
+          </span>
+        </div>
+      )}
 
       <div className="relative z-10 flex flex-col h-full">
 
@@ -559,11 +578,18 @@ export default function DriverHomePage() {
             )}
 
             {ridePhase === "accepted" && (
-              <button type="button" onClick={handleArrived}
-                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
-                I&apos;ve Arrived at Pickup
-              </button>
+              <div className="flex gap-3">
+                <button type="button"
+                  onClick={() => router.push(`/driver/home/finish/chat?bookingId=${activeBooking.id}`)}
+                  className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <button type="button" onClick={handleArrived}
+                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
+                  style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+                  I&apos;ve Arrived at Pickup
+                </button>
+              </div>
             )}
 
             {ridePhase === "arrived" && (
@@ -572,23 +598,37 @@ export default function DriverHomePage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   <p className="text-[12px] font-semibold text-green-700">You&apos;re at the pickup location</p>
                 </div>
-                <button type="button" onClick={handleStartRide}
-                  disabled={actionLoading}
-                  className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
-                  {actionLoading ? "Starting…" : "Start Ride"}
-                </button>
+                <div className="flex gap-3">
+                  <button type="button"
+                    onClick={() => router.push(`/driver/home/finish/chat?bookingId=${activeBooking.id}`)}
+                    className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </button>
+                  <button type="button" onClick={handleStartRide}
+                    disabled={actionLoading}
+                    className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
+                    style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+                    {actionLoading ? "Starting…" : "Start Ride"}
+                  </button>
+                </div>
               </div>
             )}
 
             {ridePhase === "started" && (
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={handleEndRide}
-                  disabled={actionLoading}
-                  className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
-                  {actionLoading ? "Saving…" : "End Ride"}
-                </button>
+                <div className="flex gap-3">
+                  <button type="button"
+                    onClick={() => router.push(`/driver/home/finish/chat?bookingId=${activeBooking.id}`)}
+                    className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </button>
+                  <button type="button" onClick={handleEndRide}
+                    disabled={actionLoading}
+                    className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
+                    style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+                    {actionLoading ? "Saving…" : "End Ride"}
+                  </button>
+                </div>
                 <button type="button"
                   onClick={() => router.push(`/driver/home/report-incident${activeBooking ? `?bookingId=${activeBooking.id}` : ""}`)}
                   className="no-hover-fx w-full py-2 rounded-xl text-[13px] font-semibold border border-red-200 text-red-600 bg-red-50">

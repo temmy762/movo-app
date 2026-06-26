@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { GoogleMap, Marker, DirectionsRenderer, useJsApiLoader } from "@react-google-maps/api";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -52,43 +52,64 @@ export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsF
     libraries: LIBRARIES,
   });
 
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [pickupPos, setPickupPos] = useState<google.maps.LatLngLiteral>(DEFAULT_PICKUP);
-  const [destPos, setDestPos] = useState<google.maps.LatLngLiteral>(DEFAULT_DEST);
+  const [directions,  setDirections]  = useState<google.maps.DirectionsResult | null>(null);
+  const [pickupPos,   setPickupPos]   = useState<google.maps.LatLngLiteral>(DEFAULT_PICKUP);
+  const [destPos,     setDestPos]     = useState<google.maps.LatLngLiteral>(DEFAULT_DEST);
+  const mapRef        = useRef<google.maps.Map | null>(null);
+  const etaTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastEtaRef    = useRef<string>("");
 
+  /* Resolve and cache pickup/dropoff coords on first load */
   useEffect(() => {
     if (!isLoaded) return;
     const svc = new google.maps.DirectionsService();
-    const origin = pickup || DEFAULT_PICKUP;
-    const destination = dropoff || DEFAULT_DEST;
-
     svc.route(
-      {
-        origin,
-        destination,
-        travelMode: google.maps.TravelMode.DRIVING,
-      },
+      { origin: pickup || DEFAULT_PICKUP, destination: dropoff || DEFAULT_DEST, travelMode: google.maps.TravelMode.DRIVING },
+      (result, status) => {
+        if (status === "OK" && result) {
+          const leg = result.routes[0]?.legs[0];
+          if (leg?.start_location) setPickupPos({ lat: leg.start_location.lat(), lng: leg.start_location.lng() });
+          if (leg?.end_location)   setDestPos({ lat: leg.end_location.lat(), lng: leg.end_location.lng() });
+        }
+      }
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, pickup, dropoff]);
+
+  /* Re-route from driver position every time it updates (throttled 10s) */
+  const recalcRoute = useCallback(() => {
+    if (!isLoaded || !driverPosition) return;
+    if (etaTimerRef.current) return; // already scheduled
+    const svc = new google.maps.DirectionsService();
+    svc.route(
+      { origin: driverPosition, destination: pickup || DEFAULT_PICKUP, travelMode: google.maps.TravelMode.DRIVING },
       (result, status) => {
         if (status === "OK" && result) {
           setDirections(result);
           const leg = result.routes[0]?.legs[0];
-          if (leg?.start_location) {
-            setPickupPos({ lat: leg.start_location.lat(), lng: leg.start_location.lng() });
-          }
-          if (leg?.end_location) {
-            setDestPos({ lat: leg.end_location.lat(), lng: leg.end_location.lng() });
-          }
-          if (leg?.duration && onDirectionsFetched) {
-            onDirectionsFetched(leg.duration.text, leg.duration.value);
+          if (leg?.duration) {
+            const etaLabel = leg.duration.text;
+            if (etaLabel !== lastEtaRef.current) {
+              lastEtaRef.current = etaLabel;
+              onDirectionsFetched?.(etaLabel, leg.duration.value);
+            }
           }
         }
       }
     );
-  }, [isLoaded, pickup, dropoff]);
+    /* throttle recalc to once per 10s */
+    etaTimerRef.current = setTimeout(() => { etaTimerRef.current = null; }, 10000);
+  }, [isLoaded, driverPosition, pickup, onDirectionsFetched]);
 
-  const mapCenter = directions
-    ? pickupPos
-    : DEFAULT_PICKUP;
+  useEffect(() => { recalcRoute(); }, [recalcRoute]);
+
+  /* Auto-pan map to keep driver in view */
+  useEffect(() => {
+    if (!mapRef.current || !driverPosition) return;
+    mapRef.current.panTo(driverPosition);
+  }, [driverPosition]);
+
+  const mapCenter = driverPosition ?? pickupPos;
 
   if (!isLoaded) {
     return (
@@ -102,7 +123,8 @@ export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsF
     <GoogleMap
       mapContainerStyle={{ width: "100%", height: "100%" }}
       center={mapCenter}
-      zoom={13}
+      zoom={driverPosition ? 15 : 13}
+      onLoad={map => { mapRef.current = map; }}
       options={{
         disableDefaultUI: true,
         zoomControl: false,

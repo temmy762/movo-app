@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             lastName: true,
             phone: true,
             vehicle: {
-              select: { photoUrl: true, tier: true, make: true, model: true, year: true },
+              select: { photoUrl: true, tier: true, make: true, model: true, year: true, plate: true },
             },
             bookings: {
               where: { rating: { not: null } },

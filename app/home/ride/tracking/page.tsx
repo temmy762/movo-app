@@ -43,11 +43,20 @@ function RideTrackingContent() {
   const [driverName,     setDriverName]     = useState("Driver");
   const [driverRating,   setDriverRating]   = useState<number | null>(null);
   const [driverPhone,    setDriverPhone]    = useState<string | null>(null);
-  const [vehicleSeats,   setVehicleSeats]   = useState<number>(4);
-  const [vehicleImg,     setVehicleImg]     = useState<string>("");
-  const [driverPosition, setDriverPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const locationPollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const statusPollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [vehicleSeats,     setVehicleSeats]     = useState<number>(4);
+  const [vehicleImg,       setVehicleImg]       = useState<string>("");
+  const [vehiclePlate,     setVehiclePlate]     = useState<string | null>(null);
+  const [vehicleMakeModel, setVehicleMakeModel] = useState<string>("");
+  const [rideStatus,       setRideStatus]       = useState<string>("CONFIRMED");
+  const [driverPosition,   setDriverPosition]   = useState<{ lat: number; lng: number } | null>(null);
+  const [chatOpen,    setChatOpen]    = useState(false);
+  const [chatInput,   setChatInput]   = useState("");
+  const [chatSending, setChatSending] = useState(false);
+  const [chatMsgs,    setChatMsgs]    = useState<{id:string;sender:string;text:string;createdAt:string}[]>([]);
+  const chatBottomRef   = useRef<HTMLDivElement>(null);
+  const chatPollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const statusPollRef   = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* ── Modal states ── */
   const [showMessage,  setShowMessage]  = useState(false);
@@ -114,6 +123,11 @@ function RideTrackingContent() {
         if (data.driver.phone)              setDriverPhone(data.driver.phone);
         if (data.driver.avgRating != null)  setDriverRating(data.driver.avgRating);
         if (data.driver.vehicle?.photoUrl)  setVehicleImg(data.driver.vehicle.photoUrl);
+        if (data.driver.vehicle?.plate)     setVehiclePlate(data.driver.vehicle.plate);
+        if (data.driver.vehicle) {
+          const mm = [data.driver.vehicle.year, data.driver.vehicle.make, data.driver.vehicle.model].filter(Boolean).join(" ");
+          if (mm) setVehicleMakeModel(mm);
+        }
       })
       .catch(() => {});
   }, [bookingId]);
@@ -149,10 +163,12 @@ function RideTrackingContent() {
       fetch(`/api/bookings/${bookingId}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
-          if (data?.status === "COMPLETED") {
+          if (!data) return;
+          if (data.status) setRideStatus(data.status);
+          if (data.status === "COMPLETED") {
             if (statusPollRef.current) clearInterval(statusPollRef.current);
             router.replace(`/home/ride/completed?bookingId=${bookingId}`);
-          } else if (data?.status === "CANCELLED") {
+          } else if (data.status === "CANCELLED") {
             if (statusPollRef.current) clearInterval(statusPollRef.current);
             router.replace("/home");
           }
@@ -166,6 +182,23 @@ function RideTrackingContent() {
       if (statusPollRef.current) clearInterval(statusPollRef.current);
     };
   }, [bookingId, router]);
+
+  /* ── Chat polling ── */
+  useEffect(() => {
+    if (!bookingId || !chatOpen) return;
+    const load = () =>
+      fetch(`/api/bookings/${bookingId}/messages`)
+        .then(r => r.ok ? r.json() : [])
+        .then(d => { if (Array.isArray(d)) setChatMsgs(d); })
+        .catch(() => {});
+    load();
+    chatPollRef.current = setInterval(load, 3000);
+    return () => { if (chatPollRef.current) clearInterval(chatPollRef.current); };
+  }, [bookingId, chatOpen]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMsgs]);
 
   /* ── Directions callback from RideMap ── */
   const handleDirectionsFetched = useCallback(
@@ -202,14 +235,21 @@ function RideTrackingContent() {
     router.push("/home");
   };
 
-  const handleSendMessage = () => {
-    if (!messageText.trim()) return;
-    setMessageSent(true);
-    setTimeout(() => {
-      setShowMessage(false);
-      setMessageSent(false);
-      setMessageText("");
-    }, 1800);
+  const handleSendChatMsg = async () => {
+    const text = chatInput.trim();
+    if (!text || !bookingId || chatSending) return;
+    setChatSending(true);
+    setChatInput("");
+    await fetch(`/api/bookings/${bookingId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    }).catch(() => {});
+    setChatSending(false);
+    fetch(`/api/bookings/${bookingId}/messages`)
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { if (Array.isArray(d)) setChatMsgs(d); })
+      .catch(() => {});
   };
 
   return (
@@ -227,10 +267,32 @@ function RideTrackingContent() {
       <div className="relative flex-1 overflow-y-auto bg-white rounded-t-3xl z-10" style={{ boxShadow: "0 -8px 24px rgba(0,0,0,0.18)" }}>
         <div className="w-full max-w-lg md:max-w-2xl mx-auto px-5 pt-8 pb-28">
 
-          {/* ETA */}
+          {/* ETA + Status stages */}
           <div className="mb-3">
             <p className="text-[30px] md:text-[34px] font-extrabold text-gray-900 leading-none">{etaText}</p>
-            <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">Driver is on the way</p>
+            <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
+              {rideStatus === "CONFIRMED"  ? "Driver is on the way to you" :
+               rideStatus === "COMPLETED"  ? "Ride completed" :
+               "Ride in progress"}
+            </p>
+          </div>
+
+          {/* Status progress bar */}
+          <div className="flex items-center gap-1.5 mb-4">
+            {[
+              { key: "CONFIRMED", label: "On the Way" },
+              { key: "STARTED",   label: "Ride Started" },
+              { key: "COMPLETED", label: "Completed" },
+            ].map((stage, i) => {
+              const order = ["CONFIRMED","STARTED","COMPLETED"];
+              const active = order.indexOf(rideStatus) >= i;
+              return (
+                <div key={stage.key} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full h-1.5 rounded-full" style={{ background: active ? "linear-gradient(90deg,#131936,#C6BFB2)" : "#e5e7eb" }} />
+                  <p className="text-[9px] font-semibold" style={{ color: active ? "#131936" : "#9ca3af" }}>{stage.label}</p>
+                </div>
+              );
+            })}
           </div>
 
           <div className="h-[2px] w-full rounded-full mb-4" style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }} />
@@ -252,21 +314,29 @@ function RideTrackingContent() {
               <div className="w-[120px] h-[68px] rounded-xl bg-gray-50 overflow-hidden border border-gray-100 relative">
                 <Image src={carImg} alt={car} fill className="object-contain p-1" unoptimized />
               </div>
-              {tierLabel && (
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}>
-                  {tierLabel}
+              {vehiclePlate && (
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-gray-900 text-white tracking-widest font-mono">
+                  {vehiclePlate}
                 </span>
               )}
-              <p className="text-[12px] md:text-[13px] font-semibold text-gray-700">{car}</p>
+              {(vehicleMakeModel || tierLabel) && (
+                <p className="text-[11px] text-gray-500">{vehicleMakeModel || tierLabel}</p>
+              )}
               <p className="text-[11px] text-gray-400">{vehicleSeats} Seats</p>
             </div>
           </div>
 
           {/* Message / Call */}
           <div className="flex gap-3 mb-4">
-            <button type="button" onClick={() => setShowMessage(true)} className="no-hover-fx flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full border border-gray-200 text-gray-700">
+            <button type="button" onClick={() => setChatOpen(true)}
+              className="no-hover-fx flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full border border-gray-200 text-gray-700 relative">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               <span className="text-[13px] font-medium">Message</span>
+              {chatMsgs.filter(m => m.sender === "driver").length > 0 && !chatOpen && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center font-bold">
+                  {chatMsgs.filter(m => m.sender === "driver").length}
+                </span>
+              )}
             </button>
             <button type="button" onClick={handleCall} className="no-hover-fx flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full border border-gray-200 text-gray-700">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.6 19.79 19.79 0 0 1 1.61 5.06 2 2 0 0 1 3.58 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.91a16 16 0 0 0 6.1 6.1l1.08-1.08a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
@@ -362,27 +432,56 @@ function RideTrackingContent() {
         </div>
       </div>
 
-      {/* ── Message Modal ── */}
-      {showMessage && (
-        <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50">
-          <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg">
-            <h3 className="text-[15px] font-bold text-gray-900 mb-3">Message {driverName}</h3>
-            {messageSent ? (
-              <div className="text-center py-6">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-                </div>
-                <p className="text-[13px] text-gray-600">Message sent to {driverName}</p>
-              </div>
-            ) : (
-              <>
-                <textarea value={messageText} onChange={(e) => setMessageText(e.target.value)} placeholder="Type your message…" rows={3} className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 resize-none focus:outline-none focus:border-[#131936]" />
-                <div className="flex gap-2 mt-3">
-                  <button onClick={() => { setShowMessage(false); setMessageText(""); }} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600">Cancel</button>
-                  <button onClick={handleSendMessage} disabled={!messageText.trim()} className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-40" style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}>Send</button>
-                </div>
-              </>
+      {/* ── Live Chat Panel ── */}
+      {chatOpen && (
+        <div className="fixed inset-0 z-[2000] flex flex-col bg-white">
+          <header className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 shrink-0">
+            <button className="no-hover-fx" onClick={() => setChatOpen(false)}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" fill="#f3f4f6"/>
+                <polyline points="14 8 10 12 14 16" stroke="#374151" strokeWidth="2.5" fill="none"/>
+              </svg>
+            </button>
+            <div>
+              <p className="text-[15px] font-bold text-gray-900">Chat with {driverName}</p>
+              <p className="text-[11px] text-gray-400">Messages are delivered instantly</p>
+            </div>
+          </header>
+          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+            {chatMsgs.length === 0 && (
+              <p className="text-center text-[13px] text-gray-400 mt-8">No messages yet. Say hello!</p>
             )}
+            {chatMsgs.map(msg => {
+              const isMe = msg.sender === "rider";
+              return (
+                <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"} gap-1`}>
+                  {!isMe && (
+                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[11px] font-bold text-gray-600 shrink-0">{driverInitial}</div>
+                  )}
+                  <div className="max-w-[75%] px-4 py-2.5 rounded-2xl text-[14px] leading-snug"
+                    style={isMe
+                      ? { background: "linear-gradient(135deg,#131936,#C6BFB2)", color: "white", borderBottomRightRadius: "4px" }
+                      : { background: "#f3f4f6", color: "#1f2937", borderBottomLeftRadius: "4px" }}>
+                    {msg.text}
+                  </div>
+                  <p className="text-[10px] text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</p>
+                </div>
+              );
+            })}
+            <div ref={chatBottomRef} />
+          </div>
+          <div className="shrink-0 px-4 py-3 border-t border-gray-100">
+            <div className="flex items-center gap-2 rounded-2xl px-4 py-3" style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
+              <input type="text" className="flex-1 bg-transparent text-white placeholder-white/50 text-[14px] focus:outline-none"
+                placeholder="Write a message…" value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSendChatMsg()} />
+              <button className="no-hover-fx shrink-0 disabled:opacity-50" onClick={handleSendChatMsg} disabled={chatSending || !chatInput.trim()}>
+                {chatSending
+                  ? <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="white" stroke="none"/></svg>}
+              </button>
+            </div>
           </div>
         </div>
       )}
