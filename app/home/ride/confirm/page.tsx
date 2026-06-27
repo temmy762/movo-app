@@ -143,7 +143,7 @@ function ConfirmPayContent() {
   const [estimating, setEstimating] = useState(true);
   const [stops, setStops] = useState(0);
   const [airportPickup, setAirportPickup] = useState(false);
-  const { user } = useCurrentUser();
+  const { user, loading: userLoading } = useCurrentUser();
   const clientName = user ? `${user.firstName} ${user.lastName}`.trim() : "Guest";
   const resolvedTier = tier || carTierMap[carName] || "classic";
 
@@ -156,8 +156,6 @@ function ConfirmPayContent() {
   useEffect(() => {
     if (!pickup || !dropoff) { setEstimating(false); return; }
     setEstimating(true);
-    setClientSecret(null);
-    setIntentId(null);
     const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${airportPickup}`;
     fetch(url)
       .then((r) => r.json())
@@ -169,11 +167,12 @@ function ConfirmPayContent() {
 
   /* Step 2 — Once estimate + user ready, create ONLY the payment intent */
   useEffect(() => {
-    if (!clientName || clientName === "Guest" || !estimate) return;
+    if (userLoading || !clientName || clientName === "Guest" || !estimate) return;
 
     const { total } = estimate;
     const idempotencyKey = `pi-${clientName}-${resolvedTier}-${stops}-${airportPickup ? 1 : 0}-${Math.round(total * 100)}-${pickup.slice(0, 20)}`.replace(/\s+/g, "_");
 
+    setIntentError(null);
     fetch("/api/stripe/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -190,7 +189,7 @@ function ConfirmPayContent() {
       })
       .catch(() => setIntentError("Could not initialise payment. Please try again."));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientName, estimate]);
+  }, [clientName, estimate, userLoading]);
 
   return (
     <div
@@ -259,7 +258,7 @@ function ConfirmPayContent() {
             {!clientSecret && !intentError && (
               <div className="flex items-center gap-2 text-[13px] text-gray-400 py-4">
                 <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
-                Loading payment…
+                {userLoading ? "Loading profile…" : "Loading payment…"}
               </div>
             )}
             {clientSecret && estimate && intentId && (
@@ -270,6 +269,12 @@ function ConfirmPayContent() {
                   clientName={clientName} intentId={intentId} estimate={estimate}
                 />
               </Elements>
+            )}
+            {clientSecret && estimating && (
+              <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1.5">
+                <span className="w-3 h-3 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
+                Updating price…
+              </p>
             )}
           </div>
 
