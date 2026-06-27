@@ -41,6 +41,7 @@ export default function DriverHomePage() {
   const lastPushRef     = useRef<number>(0);
   const audioCtxRef     = useRef<AudioContext | null>(null);
   const alertStopRef    = useRef<(() => void) | null>(null);
+  const declinedIdsRef  = useRef<Set<string>>(new Set());
   const [navEta,        setNavEta]        = useState<string | null>(null);
   usePushSubscription();
   const { join, on } = useSocket();
@@ -141,6 +142,8 @@ export default function DriverHomePage() {
     const unsubCreated = on(SOCKET_EVENTS.BOOKING_CREATED, (data) => {
       if (ridePhase !== "searching") return;
       const b = data as { id: string; pickup: string; dropoff: string; carTier: string; carName: string; total: number; status: string };
+      /* Skip bookings this driver already declined */
+      if (declinedIdsRef.current.has(b.id)) return;
       if (b.status === "PENDING" || b.status === "CONFIRMED") {
         setActiveBooking(b as Booking);
         setRidePhase("requesting");
@@ -283,7 +286,8 @@ export default function DriverHomePage() {
       const res = await fetch("/api/bookings?status=PENDING");
       const data = await res.json();
       const bookings: Booking[] = Array.isArray(data) ? data : [];
-      const next = bookings[0] ?? null;
+      /* Skip bookings this driver already declined */
+      const next = bookings.find(b => !declinedIdsRef.current.has(b.id)) ?? null;
       if (next) {
         setActiveBooking(next);
         setRidePhase("requesting");
@@ -333,6 +337,7 @@ export default function DriverHomePage() {
       setRidePhase("idle");
       setActiveBooking(null);
       setShowDeclineModal(false);
+      declinedIdsRef.current.clear();
       /* Mark driver offline in DB */
       fetch("/api/driver/status", {
         method: "PATCH",
@@ -362,11 +367,15 @@ export default function DriverHomePage() {
       return;
     }
     setRidePhase("accepted");
+    declinedIdsRef.current.clear();
   }
 
   async function handleDecline() {
     stopCountdown();
     stopAlert();
+    if (activeBooking) {
+      declinedIdsRef.current.add(activeBooking.id);
+    }
     setShowDeclineModal(false);
     setActiveBooking(null);
     setRidePhase("searching");
