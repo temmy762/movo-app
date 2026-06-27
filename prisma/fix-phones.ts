@@ -47,12 +47,21 @@ async function fixTable(
       skipped++;
       continue;
     }
-    await (prisma[model] as any).update({
-      where: { id: r.id },
-      data: { [phoneField]: normalized },
-    });
-    fixed++;
-    console.log(`  [${model}] ${r.id}: ${raw} → ${normalized}`);
+    try {
+      await (prisma[model] as any).update({
+        where: { id: r.id },
+        data: { [phoneField]: normalized },
+      });
+      fixed++;
+      console.log(`  [${model}] ${r.id}: ${raw} → ${normalized}`);
+    } catch (e: any) {
+      if (e?.code === "P2002") {
+        console.warn(`  [${model}] ${r.id}: ${raw} → ${normalized} SKIPPED — duplicate of another record`);
+        skipped++;
+      } else {
+        throw e;
+      }
+    }
   }
 
   return { total: records.length, fixed, skipped };
@@ -79,12 +88,20 @@ async function main() {
     if (!ob.firstChauffeurPhone) continue;
     const normalized = toE164(ob.firstChauffeurPhone);
     if (normalized === ob.firstChauffeurPhone) continue;
-    await prisma.driverOnboarding.update({
-      where: { id: ob.id },
-      data: { firstChauffeurPhone: normalized },
-    });
-    obFixed++;
-    console.log(`  [onboarding] ${ob.id}: ${ob.firstChauffeurPhone} → ${normalized}`);
+    try {
+      await prisma.driverOnboarding.update({
+        where: { id: ob.id },
+        data: { firstChauffeurPhone: normalized },
+      });
+      obFixed++;
+      console.log(`  [onboarding] ${ob.id}: ${ob.firstChauffeurPhone} → ${normalized}`);
+    } catch (e: any) {
+      if (e?.code === "P2002") {
+        console.warn(`  [onboarding] ${ob.id}: ${ob.firstChauffeurPhone} → ${normalized} SKIPPED — duplicate`);
+      } else {
+        throw e;
+      }
+    }
   }
   console.log(`  Total: ${onboardings.length}, Fixed: ${obFixed}\n`);
 
