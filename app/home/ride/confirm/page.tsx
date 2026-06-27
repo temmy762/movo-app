@@ -6,7 +6,8 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const STRIPE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
+const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : Promise.resolve(null);
 
 const carTierMap: Record<string, string> = {
   "Movo Classic": "classic",
@@ -140,7 +141,9 @@ function ConfirmPayContent() {
   const [intentId, setIntentId] = useState<string | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
   const [estimate, setEstimate] = useState<FareEstimate | null>(null);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
   const [estimating, setEstimating] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
   const [stops, setStops] = useState(0);
   const [airportPickup, setAirportPickup] = useState(false);
   const { user, loading: userLoading } = useCurrentUser();
@@ -156,14 +159,18 @@ function ConfirmPayContent() {
   useEffect(() => {
     if (!pickup || !dropoff) { setEstimating(false); return; }
     setEstimating(true);
+    setEstimateError(null);
     const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${airportPickup}`;
     fetch(url)
       .then((r) => r.json())
-      .then((d) => { if (d.fare != null) setEstimate(d); })
-      .catch(() => {})
+      .then((d) => {
+        if (d.fare != null) setEstimate(d);
+        else if (d.error) setEstimateError(d.error);
+      })
+      .catch(() => setEstimateError("Failed to calculate fare. Please try again."))
       .finally(() => setEstimating(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, dropoff, resolvedTier, stops, airportPickup]);
+  }, [pickup, dropoff, resolvedTier, stops, airportPickup, retryKey]);
 
   /* Step 2 — Once estimate + user ready, create ONLY the payment intent */
   useEffect(() => {
@@ -184,10 +191,14 @@ function ConfirmPayContent() {
           setClientSecret(data.clientSecret);
           setIntentId(data.id);
         } else {
-          setIntentError("Could not initialise payment. Please try again.");
+          console.error("[confirm] payment intent error:", data);
+          setIntentError(data.error || "Could not initialise payment. Please try again.");
         }
       })
-      .catch(() => setIntentError("Could not initialise payment. Please try again."));
+      .catch((e) => {
+        console.error("[confirm] payment intent fetch failed:", e);
+        setIntentError("Could not initialise payment. Please try again.");
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientName, estimate, userLoading]);
 
@@ -252,15 +263,54 @@ function ConfirmPayContent() {
           {/* Payment Method */}
           <div>
             <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">Payment Method</p>
-            {intentError && (
-              <p className="text-[12px] text-red-500 mb-3">{intentError}</p>
-            )}
-            {!clientSecret && !intentError && (
-              <div className="flex items-center gap-2 text-[13px] text-gray-400 py-4">
-                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
-                {userLoading ? "Loading profile…" : "Loading payment…"}
+
+            {/* User not logged in */}
+            {!userLoading && !user && (
+              <div className="text-[13px] text-red-500 py-3">
+                Please log in to complete your booking.
               </div>
             )}
+
+            {/* Stripe key missing */}
+            {!STRIPE_KEY && (
+              <div className="text-[12px] text-red-500 py-3">
+                Payment system not configured. Please contact support.
+              </div>
+            )}
+
+            {/* Estimate error */}
+            {estimateError && (
+              <div className="text-[12px] text-red-500 py-3 flex items-center justify-between">
+                <span>{estimateError}</span>
+                <button type="button" onClick={() => { setEstimateError(null); setRetryKey(k => k + 1); }}
+                  className="ml-2 px-3 py-1 rounded-full text-[11px] font-bold text-white"
+                  style={{ background: "#131936" }}>
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Payment intent error */}
+            {intentError && (
+              <div className="text-[12px] text-red-500 py-3 flex items-center justify-between">
+                <span>{intentError}</span>
+                <button type="button" onClick={() => { setIntentError(null); setClientSecret(null); setIntentId(null); setRetryKey(k => k + 1); }}
+                  className="ml-2 px-3 py-1 rounded-full text-[11px] font-bold text-white"
+                  style={{ background: "#131936" }}>
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Loading state */}
+            {!clientSecret && !intentError && !estimateError && STRIPE_KEY && user && (
+              <div className="flex items-center gap-2 text-[13px] text-gray-400 py-4">
+                <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
+                {userLoading ? "Loading profile…" : estimating ? "Calculating fare…" : "Loading payment…"}
+              </div>
+            )}
+
+            {/* Stripe form */}
             {clientSecret && estimate && intentId && (
               <Elements stripe={stripePromise} options={{ clientSecret }}>
                 <CheckoutForm
