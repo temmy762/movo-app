@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { toE164 } from "@/lib/sms";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -14,7 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updateData.lastName  = parts.slice(1).join(" ") || "";
     }
     if (email !== undefined)   updateData.email   = email   || null;
-    if (phone !== undefined)   updateData.phone   = phone   || null;
+    if (phone !== undefined)   updateData.phone   = phone ? toE164(phone.trim()) : null;
     if (street !== undefined)  updateData.street  = street  || null;
     if (city !== undefined)    updateData.city    = city    || null;
     if (country !== undefined) updateData.country = country || null;

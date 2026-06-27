@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { toE164 } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -48,7 +49,7 @@ export async function PATCH(req: NextRequest) {
     if (firstName !== undefined) data.firstName = firstName;
     if (lastName !== undefined) data.lastName = lastName;
     if (email !== undefined) data.email = email || null;
-    if (phone !== undefined) data.phone = phone?.trim() || null;
+    if (phone !== undefined) data.phone = phone ? toE164(phone.trim()) : null;
     if (title !== undefined) data.title = title || null;
     if (company !== undefined) data.company = company || null;
     if (street !== undefined) data.street = street || null;

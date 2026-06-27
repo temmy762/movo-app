@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { toE164 } from "@/lib/sms";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -20,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updateData.lastName  = parts.slice(1).join(" ") || "";
     }
     if (email)   updateData.email   = email;
-    if (phone)   updateData.phone   = phone;
+    if (phone)   updateData.phone   = toE164(phone.trim());
     if (city)    updateData.city    = city;
     if (country) updateData.country = country;
     if (status)  updateData.status  = statusMap[status] ?? "PENDING";

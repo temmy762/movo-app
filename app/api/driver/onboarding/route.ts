@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
+import { toE164 } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     if (firstChauffeurFirstName !== undefined) data.firstChauffeurFirstName = firstChauffeurFirstName;
     if (firstChauffeurLastName !== undefined) data.firstChauffeurLastName = firstChauffeurLastName;
     if (firstChauffeurEmail !== undefined) data.firstChauffeurEmail = firstChauffeurEmail;
-    if (firstChauffeurPhone !== undefined) data.firstChauffeurPhone = firstChauffeurPhone;
+    if (firstChauffeurPhone !== undefined) data.firstChauffeurPhone = firstChauffeurPhone ? toE164(firstChauffeurPhone.trim()) : null;
     if (bankAccountName !== undefined) data.bankAccountName = bankAccountName;
     if (bankInstitution !== undefined) data.bankInstitution = bankInstitution;
     if (bankAccountNumber !== undefined) data.bankAccountNumber = bankAccountNumber;

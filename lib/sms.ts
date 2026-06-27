@@ -15,10 +15,23 @@ function getClient() {
 
 /** Normalise any phone string to E.164. Defaults to country code 1 (Canada/US). */
 export function toE164(phone: string, defaultCountryCode = "1"): string {
-  const digits = phone.replace(/\D/g, "");
+  let digits = phone.replace(/\D/g, "");
+
+  // Already has explicit country code via "+"
   if (phone.startsWith("+")) return `+${digits}`;
+
+  // Strip leading trunk prefix "0" (e.g. 0906315XXXX → 906315XXXX)
+  if (digits.length > 10 && digits.startsWith("0")) {
+    digits = digits.replace(/^0+/, "");
+  }
+
+  // 11 digits starting with the default country code → already correct
   if (digits.length === 11 && digits.startsWith(defaultCountryCode)) return `+${digits}`;
+
+  // 10 digits → prepend default country code
   if (digits.length === 10) return `+${defaultCountryCode}${digits}`;
+
+  // Anything else: assume it already has a country code
   return `+${digits}`;
 }
 

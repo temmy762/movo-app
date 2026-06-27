@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { Resend } from "resend";
 import { notifyAdmins } from "@/lib/notifications";
+import { toE164 } from "@/lib/sms";
 
 export async function POST(req: NextRequest) {
   try {
@@ -108,6 +109,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Normalize phone to E.164 before saving
+    const normalizedChauffeurPhone = firstChauffeurPhone ? toE164(firstChauffeurPhone.trim()) : firstChauffeurPhone;
+
     // Update or create onboarding record
     const onboarding = await prisma.driverOnboarding.upsert({
       where: { driverId: session.driverId },
@@ -141,7 +145,7 @@ export async function POST(req: NextRequest) {
         firstChauffeurFirstName,
         firstChauffeurLastName,
         firstChauffeurEmail,
-        firstChauffeurPhone,
+        firstChauffeurPhone: normalizedChauffeurPhone,
         
         submittedAt: new Date(),
         adminStatus: "PENDING",
@@ -175,7 +179,7 @@ export async function POST(req: NextRequest) {
         firstChauffeurFirstName,
         firstChauffeurLastName,
         firstChauffeurEmail,
-        firstChauffeurPhone,
+        firstChauffeurPhone: normalizedChauffeurPhone,
         
         submittedAt: new Date(),
         adminStatus: "PENDING",

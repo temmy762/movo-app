@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createSession, buildSetCookieHeader } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
+import { toE164 } from "@/lib/sms";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
         firstName,
         lastName,
         email,
-        phone: phone?.trim() || null,
+        phone: phone ? toE164(phone.trim()) : null,
         password: hashed,
       },
     });
