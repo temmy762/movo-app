@@ -47,8 +47,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const join = useCallback(
-    (opts: { role: string; id?: string; bookingId?: string }) => {
-      socketRef.current?.emit("join", opts);
+    (opts: { role: string; id?: string; bookingId?: string; tier?: string }) => {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("join", opts);
+      } else {
+        // Socket not connected yet — queue the join for when it connects
+        const wait = setInterval(() => {
+          if (socketRef.current?.connected) {
+            clearInterval(wait);
+            socketRef.current.emit("join", opts);
+          }
+        }, 500);
+        // Give up after 10 seconds
+        setTimeout(() => clearInterval(wait), 10000);
+      }
     },
     []
   );
@@ -59,8 +71,23 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   const on = useCallback(
     (event: SocketEventName, cb: (data: unknown) => void) => {
-      socketRef.current?.on(event, cb);
-      return () => { socketRef.current?.off(event, cb); };
+      // Register listener immediately — socket.io-client buffers events
+      // so even if socketRef.current is briefly null, reconnection will re-sync
+      if (socketRef.current) {
+        socketRef.current.on(event, cb);
+        return () => { socketRef.current?.off(event, cb); };
+      }
+      // Fallback: wait for socket to be available
+      let cleanup: (() => void) | null = null;
+      const wait = setInterval(() => {
+        if (socketRef.current) {
+          clearInterval(wait);
+          socketRef.current.on(event, cb);
+          cleanup = () => { socketRef.current?.off(event, cb); };
+        }
+      }, 500);
+      setTimeout(() => clearInterval(wait), 10000);
+      return () => { cleanup?.(); clearInterval(wait); };
     },
     []
   );
