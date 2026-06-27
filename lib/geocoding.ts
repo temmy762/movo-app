@@ -1,4 +1,5 @@
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+// Use server-side key for geocoding (NEXT_PUBLIC_ key may have browser referrer restrictions)
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_SERVER_KEY || process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export interface GeocodeResult {
   lat: number;
@@ -19,7 +20,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
 
     const data = await response.json();
 
-    if (data.results && data.results.length > 0) {
+    if (data.status === "OK" && data.results && data.results.length > 0) {
       const location = data.results[0].geometry.location;
       return {
         lat: location.lat,
@@ -28,7 +29,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
       };
     }
 
-    console.warn(`No geocoding results for address: ${address}`);
+    console.warn(`Geocoding failed for "${address}": status=${data.status} ${data.error_message ?? ""}`);
     return null;
   } catch (error) {
     console.error("Geocoding error:", error);
