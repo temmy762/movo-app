@@ -14,10 +14,16 @@ import { SOCKET_EVENTS } from "./events";
 function emit(room: string, event: string, data: unknown) {
   try {
     const io = getIO();
-    if (!io) return;
-    process.nextTick(() => io.to(room).emit(event, data));
-  } catch {
-    /* never let socket failures bubble up */
+    if (!io) {
+      console.warn("[socket] emit skipped — io is null");
+      return;
+    }
+    process.nextTick(() => {
+      io.to(room).emit(event, data);
+      console.log(`[socket] emit → ${room} :: ${event}`);
+    });
+  } catch (e) {
+    console.error("[socket] emit error:", e);
   }
 }
 

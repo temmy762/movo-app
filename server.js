@@ -29,6 +29,7 @@ app.prepare().then(() => {
   global.io = io;
 
   io.on("connection", (socket) => {
+    console.log(`[socket] client connected: ${socket.id}`);
     /* Client tells us who they are so we add them to the right rooms */
     socket.on("join", ({ role, id, bookingId, tier }) => {
       if (role === "driver" && id)  socket.join(`driver:${id}`);
@@ -36,10 +37,15 @@ app.prepare().then(() => {
       if (role === "admin")         socket.join("admin");
       if (bookingId)                socket.join(`booking:${bookingId}`);
       if (tier)                     socket.join(`tier:${tier}`);
+      console.log(`[socket] join: ${socket.id} → role=${role} id=${id ?? "-"} tier=${tier ?? "-"} booking=${bookingId ?? "-"}`);
     });
 
     socket.on("leave_booking", ({ bookingId }) => {
       if (bookingId) socket.leave(`booking:${bookingId}`);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`[socket] disconnected: ${socket.id} (${reason})`);
     });
   });
 
