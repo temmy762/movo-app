@@ -30,11 +30,12 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     /* Client tells us who they are so we add them to the right rooms */
-    socket.on("join", ({ role, id, bookingId }) => {
+    socket.on("join", ({ role, id, bookingId, tier }) => {
       if (role === "driver" && id)  socket.join(`driver:${id}`);
       if (role === "user"   && id)  socket.join(`user:${id}`);
       if (role === "admin")         socket.join("admin");
       if (bookingId)                socket.join(`booking:${bookingId}`);
+      if (tier)                     socket.join(`tier:${tier}`);
     });
 
     socket.on("leave_booking", ({ bookingId }) => {

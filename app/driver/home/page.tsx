@@ -132,8 +132,7 @@ export default function DriverHomePage() {
       .then(r => r.json())
       .then(d => {
         if (d.driverId) {
-          join({ role: "driver", id: d.driverId });
-          if (d.tier) join({ role: "driver", id: d.tier }); /* tier room */
+          join({ role: "driver", id: d.driverId, tier: d.tier ?? undefined });
         }
       })
       .catch(() => {});

@@ -14,7 +14,7 @@ import { SOCKET_EVENTS, type SocketEventName } from "@/lib/socket/events";
 interface SocketContextValue {
   socket:    Socket | null;
   connected: boolean;
-  join:      (opts: { role: string; id?: string; bookingId?: string }) => void;
+  join:      (opts: { role: string; id?: string; bookingId?: string; tier?: string }) => void;
   leaveBooking: (bookingId: string) => void;
   on:        (event: SocketEventName, cb: (data: unknown) => void) => () => void;
 }

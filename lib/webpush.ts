@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
+import { DriverStatus } from "@prisma/client";
 
 const VAPID_PUBLIC  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY  ?? "";
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? "";
@@ -50,7 +51,7 @@ export async function pushToOnlineDriversByTier(tier: string | null, payload: Pu
   const drivers = await prisma.driver.findMany({
     where: {
       isOnline: true,
-      status: "APPROVED",
+      status: DriverStatus.APPROVED,
       ...(tier ? { vehicle: { is: { tier } } } : {}),
     },
     select: { id: true },
