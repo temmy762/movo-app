@@ -4,7 +4,7 @@ import { getSessionFromCookieHeader } from "@/lib/session";
 
 export default async function RootPage() {
   // Check for existing session on the server
-  const cookieHeader = cookies().toString();
+  const cookieHeader = (await cookies()).toString();
   const session = await getSessionFromCookieHeader(cookieHeader);
 
   if (session) {
