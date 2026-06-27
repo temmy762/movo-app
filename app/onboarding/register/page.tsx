@@ -49,7 +49,13 @@ function RegisterContent() {
 
   async function handleRegister() {
     setError("");
-    if (password !== confirm) { setError("Passwords do not match"); return; }
+    if (!firstName || !lastName || !email || !password) {
+      setError("Please fill in all required fields."); return;
+    }
+    if (password !== confirm) { setError("Passwords do not match."); return; }
+    if (password.length < 8) { setError("Password must be at least 8 characters long."); return; }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) { setError("Please enter a valid email address."); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -58,10 +64,21 @@ function RegisterContent() {
         body: JSON.stringify({ firstName, lastName, email, phone: phone || undefined, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error ?? "Registration failed"); return; }
+      if (!res.ok) {
+        if (res.status === 409) {
+          setError(data.error || "An account with this email already exists. Try logging in instead.");
+        } else if (res.status === 400) {
+          setError(data.error || "Please check your information and try again.");
+        } else if (res.status === 500) {
+          setError(data.error || "Server error. Please try again in a few moments.");
+        } else {
+          setError(data.error || "Registration failed. Please try again.");
+        }
+        return;
+      }
       router.push("/home");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Network error. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }

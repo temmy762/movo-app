@@ -10,16 +10,29 @@ export async function POST(req: NextRequest) {
   try {
     const { firstName, lastName, email, phone, password } = await req.json();
 
-    if (!firstName || !lastName || !email || !password) {
+    const missing: string[] = [];
+    if (!firstName) missing.push("First name");
+    if (!lastName)  missing.push("Last name");
+    if (!email)     missing.push("Email");
+    if (!password)  missing.push("Password");
+    if (missing.length > 0) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: `Please fill in: ${missing.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address" },
         { status: 400 }
       );
     }
 
     if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters" },
+        { error: "Password must be at least 8 characters long" },
         { status: 400 }
       );
     }
@@ -27,7 +40,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
-        { error: "Email already in use" },
+        { error: "An account with this email already exists. Try logging in instead." },
         { status: 409 }
       );
     }
@@ -63,14 +76,16 @@ export async function POST(req: NextRequest) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       const fields = (err.meta?.target as string[]) ?? [];
       if (fields.includes("email")) {
-        return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+        return NextResponse.json({ error: "An account with this email already exists. Try logging in instead." }, { status: 409 });
       }
       if (fields.includes("phone")) {
-        return NextResponse.json({ error: "Phone number already in use" }, { status: 409 });
+        return NextResponse.json({ error: "This phone number is already linked to another account." }, { status: 409 });
       }
+      return NextResponse.json({ error: `This ${fields.join(", ")} is already in use.` }, { status: 409 });
     }
+    console.error("[register] error:", err);
     return NextResponse.json(
-      { error: "Registration failed" },
+      { error: "We couldn't create your account right now. Please try again in a moment." },
       { status: 500 }
     );
   }
