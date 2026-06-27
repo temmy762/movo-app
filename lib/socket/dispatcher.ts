@@ -104,6 +104,18 @@ export function dispatchTripStarted(payload: {
   emitMany(rooms, SOCKET_EVENTS.TRIP_STARTED, payload);
 }
 
+export function dispatchDriverArrived(payload: {
+  bookingId: string; userId?: string | null; driverId?: string | null;
+}) {
+  const rooms = [
+    "admin",
+    `booking:${payload.bookingId}`,
+    ...(payload.userId   ? [`user:${payload.userId}`]     : []),
+    ...(payload.driverId ? [`driver:${payload.driverId}`] : []),
+  ];
+  emitMany(rooms, SOCKET_EVENTS.DRIVER_ARRIVED, payload);
+}
+
 /* ── Driver location (high-frequency) ────────────────────────────────────── */
 
 export function dispatchDriverLocation(payload: {

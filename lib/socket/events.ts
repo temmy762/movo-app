@@ -9,7 +9,8 @@ export const SOCKET_EVENTS = {
   BOOKING_STATUS:    "booking.status",
 
   /* ── Trip ── */
-  TRIP_STARTED: "trip.started",
+  TRIP_STARTED:   "trip.started",
+  DRIVER_ARRIVED:  "driver.arrived",
 
   /* ── Driver ── */
   DRIVER_ONLINE:    "driver.online",

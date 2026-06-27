@@ -373,8 +373,20 @@ export default function DriverHomePage() {
     startPolling(fetchNextPending);
   }
 
-  function handleArrived() {
+  async function handleArrived() {
     setRidePhase("arrived");
+    if (!activeBooking) return;
+    /* Notify rider in real-time that driver has arrived */
+    try {
+      const res = await fetch(`/api/bookings/${activeBooking.id}`);
+      const data = await res.json();
+      const { dispatchDriverArrived } = await import("@/lib/socket/dispatcher");
+      dispatchDriverArrived({
+        bookingId: activeBooking.id,
+        userId: data.userId ?? null,
+        driverId: data.driverId ?? null,
+      });
+    } catch {}
   }
 
   async function handleStartRide() {

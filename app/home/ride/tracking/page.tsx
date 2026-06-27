@@ -49,7 +49,8 @@ function RideTrackingContent() {
   const [vehicleImg,       setVehicleImg]       = useState<string>("");
   const [vehiclePlate,     setVehiclePlate]     = useState<string | null>(null);
   const [vehicleMakeModel, setVehicleMakeModel] = useState<string>("");
-  const [rideStatus,       setRideStatus]       = useState<string>("CONFIRMED");
+  const [rideStatus,       setRideStatus]       = useState<string>("PENDING");
+  const [driverArrived,    setDriverArrived]    = useState(false);
   const [driverPosition,   setDriverPosition]   = useState<{ lat: number; lng: number } | null>(null);
   const [chatOpen,    setChatOpen]    = useState(false);
   const [chatInput,   setChatInput]   = useState("");
@@ -147,10 +148,23 @@ function RideTrackingContent() {
       if (d.bookingId === bookingId) setDriverPosition({ lat: d.lat, lng: d.lng });
     });
 
-    /* Trip started */
+    /* Trip started → switch to "Ride Started" tab */
     const unsubStarted = on(SOCKET_EVENTS.TRIP_STARTED, (data) => {
       const d = data as { bookingId: string };
-      if (d.bookingId === bookingId) setRideStatus("CONFIRMED");
+      if (d.bookingId === bookingId) setRideStatus("STARTED");
+    });
+
+    /* Generic status change (e.g. PENDING → CONFIRMED when driver accepts) */
+    const unsubStatus = on(SOCKET_EVENTS.BOOKING_STATUS, (data) => {
+      const d = data as { bookingId: string; status: string };
+      if (d.bookingId !== bookingId) return;
+      if (d.status === "CONFIRMED") setRideStatus("CONFIRMED");
+      else if (d.status === "COMPLETED") setRideStatus("COMPLETED");
+      else if (d.status === "CANCELLED") {
+        if (statusPollRef.current) clearInterval(statusPollRef.current);
+        leaveBooking(bookingId);
+        router.replace("/home");
+      }
     });
 
     /* Booking completed → redirect to completed page */
@@ -177,8 +191,14 @@ function RideTrackingContent() {
       if (d.bookingId === bookingId) setRideStatus("CONFIRMED");
     });
 
+    /* Driver arrived at pickup → show arrival banner */
+    const unsubArrived = on(SOCKET_EVENTS.DRIVER_ARRIVED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId === bookingId) setDriverArrived(true);
+    });
+
     return () => {
-      unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted();
+      unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted(); unsubStatus(); unsubArrived();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
@@ -209,13 +229,19 @@ function RideTrackingContent() {
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (!data) return;
-          if (data.status) setRideStatus(data.status);
+          /* Derive effective ride status from booking status + startedAt */
           if (data.status === "COMPLETED") {
+            setRideStatus("COMPLETED");
             if (statusPollRef.current) clearInterval(statusPollRef.current);
             router.replace(`/home/ride/completed?bookingId=${bookingId}`);
           } else if (data.status === "CANCELLED") {
             if (statusPollRef.current) clearInterval(statusPollRef.current);
             router.replace("/home");
+          } else if (data.startedAt) {
+            /* Trip has started even though booking status is still CONFIRMED */
+            setRideStatus("STARTED");
+          } else if (data.status) {
+            setRideStatus(data.status);
           }
         })
         .catch(() => {});
@@ -318,9 +344,13 @@ function RideTrackingContent() {
 
           {/* ETA + Status stages */}
           <div className="mb-3">
-            <p className="text-[30px] md:text-[34px] font-extrabold text-gray-900 leading-none">{etaText}</p>
+            <p className="text-[30px] md:text-[34px] font-extrabold text-gray-900 leading-none">
+              {rideStatus === "PENDING" ? "Searching" : etaText}
+            </p>
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
-              {rideStatus === "CONFIRMED"  ? "Driver is on the way to you" :
+              {rideStatus === "PENDING"    ? "Waiting for a driver to accept your ride…" :
+               rideStatus === "CONFIRMED"  ? "Driver is on the way to you" :
+               rideStatus === "STARTED"    ? "Ride in progress" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
                "Ride in progress"}
             </p>
@@ -333,8 +363,8 @@ function RideTrackingContent() {
               { key: "STARTED",   label: "Ride Started" },
               { key: "COMPLETED", label: "Completed" },
             ].map((stage, i) => {
-              const order = ["CONFIRMED","STARTED","COMPLETED"];
-              const active = order.indexOf(rideStatus) >= i;
+              const order = ["PENDING","CONFIRMED","STARTED","COMPLETED"];
+              const active = order.indexOf(rideStatus) >= i + 1; /* +1 because PENDING is index 0 */
               return (
                 <div key={stage.key} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full h-1.5 rounded-full" style={{ background: active ? "linear-gradient(90deg,#131936,#C6BFB2)" : "#e5e7eb" }} />
@@ -345,6 +375,22 @@ function RideTrackingContent() {
           </div>
 
           <div className="h-[2px] w-full rounded-full mb-4" style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }} />
+
+          {/* Driver arrived banner */}
+          {driverArrived && rideStatus === "CONFIRMED" && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-50 border border-green-200 mb-4">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <p className="text-[13px] font-semibold text-green-700">Your driver has arrived at the pickup location</p>
+            </div>
+          )}
+
+          {/* Waiting for driver banner */}
+          {rideStatus === "PENDING" && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 mb-4">
+              <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
+              <p className="text-[13px] font-semibold text-amber-700">Waiting for a driver to accept your ride…</p>
+            </div>
+          )}
 
           {/* Driver + Car */}
           <div className="flex items-start justify-between mb-4">
