@@ -9,26 +9,38 @@ const TIER_SEEDS = [
 
 export async function GET() {
   try {
-    /* Ensure tier rows exist */
-    for (const seed of TIER_SEEDS) {
-      await prisma.vehicleTierConfig.upsert({
-        where: { tier: seed.tier },
-        update: {},
-        create: { ...seed, price: 0 },
-      });
-    }
-
+    /* Read first — only seed if rows are missing (avoids 3 sequential writes on every load) */
     const [tiers, global] = await Promise.all([
       prisma.vehicleTierConfig.findMany({ orderBy: { tier: "asc" } }),
       prisma.pricingConfig.findFirst(),
     ]);
 
-    /* Ensure global pricing row exists */
+    /* Seed missing tier rows in parallel only when needed */
+    let resolvedTiers = tiers;
+    if (tiers.length < TIER_SEEDS.length) {
+      const existingTierNames = new Set(tiers.map(t => t.tier));
+      const missing = TIER_SEEDS.filter(s => !existingTierNames.has(s.tier));
+      await Promise.all(
+        missing.map(seed =>
+          prisma.vehicleTierConfig.upsert({
+            where: { tier: seed.tier },
+            update: {},
+            create: { ...seed, price: 0 },
+          })
+        )
+      );
+      resolvedTiers = await prisma.vehicleTierConfig.findMany({ orderBy: { tier: "asc" } });
+    }
+
+    /* Seed global pricing row only when missing */
     const globalConfig = global ?? await prisma.pricingConfig.create({
       data: { gstRate: 0.05, serviceFeeRate: 0.12, additionalStopFee: 5.00, airportPickupFee: 10.00, freeWaitingMinutes: 5, waitingRatePerMin: 0.75 },
     });
 
-    return NextResponse.json({ tiers, global: globalConfig });
+    return NextResponse.json(
+      { tiers: resolvedTiers, global: globalConfig },
+      { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }
+    );
   } catch (e) {
     console.error("[admin/pricing GET]", e);
     return NextResponse.json({ error: "Failed to load pricing" }, { status: 500 });

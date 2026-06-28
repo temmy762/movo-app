@@ -31,5 +31,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(drivers);
+  return NextResponse.json(drivers, {
+    headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60" },
+  });
 }

@@ -175,14 +175,14 @@ function AvailableCarsContent() {
     const driversPromise = fetch("/api/drivers/nearby").then(r => r.ok ? r.json() : []).catch(() => []);
     const pricingPromise = fetch("/api/admin/pricing").then(r => r.ok ? r.json() : null).catch(() => null);
 
-    /* Geolocation with a short 4s timeout — runs in parallel */
+    /* Geolocation with a short 1.5s timeout — runs in parallel, don't block UI */
     const geoPromise = new Promise<{ lat: number; lng: number } | null>(resolve => {
       if (!navigator.geolocation) { resolve(null); return; }
-      const timer = setTimeout(() => resolve(null), 4000);
+      const timer = setTimeout(() => resolve(null), 1500);
       navigator.geolocation.getCurrentPosition(
         pos => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
         ()   => { clearTimeout(timer); resolve(null); },
-        { timeout: 4000, maximumAge: 60000 }
+        { timeout: 1500, maximumAge: 60000, enableHighAccuracy: false }
       );
     });
 
