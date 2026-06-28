@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const session = await getSession(req);
 
-    /* ── Driver requesting PENDING bookings → tier-match + unassigned only ── */
+    /* ── Driver requesting available bookings → tier-match + unassigned only ── */
     if (session?.driverId && status === "PENDING") {
       const driver = await prisma.driver.findUnique({
         where: { id: session.driverId },
@@ -23,17 +23,18 @@ export async function GET(req: NextRequest) {
 
       const bookings = await prisma.booking.findMany({
         where: {
-          status: "PENDING",
           OR: [
-            // Pool bookings: paid, unassigned, tier-matched
+            // Pool bookings: paid, unassigned, tier-matched (PENDING or CONFIRMED-without-driver)
             {
               driverId: null,
               paymentStatus: "PAID",
+              status: { in: ["PENDING", "CONFIRMED"] },
               ...(tier ? { carTier: tier } : {}),
             },
             // Direct bookings: rider picked this specific driver (any payment status)
             {
               driverId: session.driverId,
+              status: { in: ["PENDING", "CONFIRMED"] },
             },
           ],
         },

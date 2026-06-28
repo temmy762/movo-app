@@ -28,15 +28,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
     }
 
-    /* ── Atomic claim: only succeeds if booking is still PENDING + unclaimed ── */
+    /* ── Atomic claim: only succeeds if booking is unclaimed + still available ── */
     if (status === "CONFIRMED" && session?.driverId) {
       const result = await prisma.booking.updateMany({
         where: {
           id,
-          status: "PENDING",
           OR: [
-            { driverId: null },
-            { driverId: session.driverId },
+            /* PENDING bookings — standard pool */
+            { status: "PENDING", OR: [{ driverId: null }, { driverId: session.driverId }] },
+            /* CONFIRMED but unassigned — paid bookings auto-confirm on creation */
+            { status: "CONFIRMED", driverId: null },
           ],
         },
         data:  { status: "CONFIRMED", driverId: session.driverId },
