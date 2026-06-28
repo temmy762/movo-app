@@ -42,9 +42,13 @@ export default function DriverHomePage() {
   const audioCtxRef     = useRef<AudioContext | null>(null);
   const alertStopRef    = useRef<(() => void) | null>(null);
   const declinedIdsRef  = useRef<Set<string>>(new Set());
+  const ridePhaseRef    = useRef<RidePhase>("idle");
   const [navEta,        setNavEta]        = useState<string | null>(null);
   usePushSubscription();
   const { join, on } = useSocket();
+  /* Keep ridePhaseRef in sync so async callbacks can read current phase without stale closure */
+  useEffect(() => { ridePhaseRef.current = ridePhase; }, [ridePhase]);
+
   const [timeLeft,      setTimeLeft]      = useState<number>(30);
   const [driverPos,     setDriverPos]     = useState<{ lat: number; lng: number } | null>(null);
 
@@ -288,7 +292,9 @@ export default function DriverHomePage() {
       const bookings: Booking[] = Array.isArray(data) ? data : [];
       /* Skip bookings this driver already declined */
       const next = bookings.find(b => !declinedIdsRef.current.has(b.id)) ?? null;
-      if (next) {
+      /* Guard: only update state if still actively searching — prevents in-flight
+         poll from overriding a just-accepted ride (race condition) */
+      if (next && ridePhaseRef.current === "searching") {
         setActiveBooking(next);
         setRidePhase("requesting");
       }

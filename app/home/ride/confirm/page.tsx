@@ -160,6 +160,9 @@ function ConfirmPayContent() {
     if (!pickup || !dropoff) { setEstimating(false); return; }
     setEstimating(true);
     setEstimateError(null);
+    /* Reset payment intent so a fresh one is created for the new fare */
+    setClientSecret(null);
+    setIntentId(null);
     const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${airportPickup}`;
     fetch(url)
       .then((r) => r.json())
@@ -177,13 +180,14 @@ function ConfirmPayContent() {
     if (userLoading || !clientName || clientName === "Guest" || !estimate) return;
 
     const { total } = estimate;
-    const idempotencyKey = `pi-${clientName}-${resolvedTier}-${stops}-${airportPickup ? 1 : 0}-${Math.round(total * 100)}-${pickup.slice(0, 20)}`.replace(/\s+/g, "_");
 
     setIntentError(null);
+    /* No idempotency key — always create a fresh intent so we never get a
+       stale/already-confirmed secret back from Stripe on repeat visits */
     fetch("/api/stripe/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: total, idempotencyKey }),
+      body: JSON.stringify({ amount: total }),
     })
       .then(r => r.json())
       .then(data => {
@@ -360,7 +364,7 @@ function ConfirmPayContent() {
               <button type="button" onClick={() => setAirportPickup(v => !v)}
                 className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${airportPickup ? "" : "bg-gray-200"}`}
                 style={airportPickup ? { background: "#131936" } : {}}>
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${airportPickup ? "translate-x-5" : "translate-x-0.5"}`} />
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${airportPickup ? "translate-x-5" : "translate-x-0"}`} />
               </button>
             </div>
 

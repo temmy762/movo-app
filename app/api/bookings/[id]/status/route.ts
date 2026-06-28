@@ -38,6 +38,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             { status: "PENDING", OR: [{ driverId: null }, { driverId: session.driverId }] },
             /* CONFIRMED but unassigned — paid bookings auto-confirm on creation */
             { status: "CONFIRMED", driverId: null },
+            /* CONFIRMED and pre-assigned to this driver — rider picked specific driver */
+            { status: "CONFIRMED", driverId: session.driverId },
           ],
         },
         data:  { status: "CONFIRMED", driverId: session.driverId },
