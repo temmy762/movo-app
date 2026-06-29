@@ -1,250 +1,378 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight, Play, Crown } from "lucide-react";
+import { useEffect, useState } from "react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { useInView } from "react-intersection-observer";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-const GOLD = "#C8A878";
-const OFF_WHITE = "#F6F4EF";
-const WARM_BEIGE = "#E7D8C4";
+/* ── Design tokens ─────────────────────────────────────────── */
+const C = {
+  bg:        "#080808",
+  surface:   "#0E0E0E",
+  text:      "#F0EAE0",
+  muted:     "rgba(240,234,224,0.42)",
+  dim:       "rgba(240,234,224,0.15)",
+  gold:      "#B09060",
+  goldFaint: "rgba(176,144,96,0.08)",
+  rule:      "rgba(240,234,224,0.07)",
+  serif:     "var(--font-cormorant), 'Cormorant Garamond', Georgia, serif",
+  sans:      "var(--font-dm-sans), var(--font-inter), -apple-system, sans-serif",
+};
 
-function HeroBadge() {
+/* ── Animated stat counter ───────────────────────────────── */
+function StatCounter({ target, suffix = "", decimals = 0 }: { target: number; suffix?: string; decimals?: number }) {
+  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.4 });
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, v =>
+    decimals > 0 ? v.toFixed(decimals) : Math.round(v).toString()
+  );
+
+  useEffect(() => {
+    if (inView) animate(count, target, { duration: 2, ease: "easeOut" });
+  }, [inView, count, target]);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
+    <span ref={ref} style={{ fontVariantNumeric: "tabular-nums" }}>
+      <motion.span>{rounded}</motion.span>{suffix}
+    </span>
+  );
+}
+
+/* ── Line-reveal animation wrapper ─────────────────────── */
+function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  return (
+    <div style={{ overflow: "hidden" }}>
       <motion.div
-        animate={{ y: [0, -4, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: "8px",
-          padding: "7px 16px", borderRadius: "100px",
-          background: "rgba(200,168,120,0.08)",
-          border: "1px solid rgba(200,168,120,0.28)",
-          backdropFilter: "blur(12px)",
-          boxShadow: "0 0 20px rgba(200,168,120,0.08)",
-          marginBottom: "1.75rem",
-        }}
+        initial={{ y: "105%", opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }}
       >
-        <span style={{ color: GOLD, fontSize: "10px" }}>✦</span>
-        <span style={{ color: GOLD, fontSize: "11px", letterSpacing: "0.2em", fontFamily: "sans-serif", fontWeight: 500 }}>
-          PREMIUM CHAUFFEUR SERVICE
-        </span>
+        {children}
       </motion.div>
-    </motion.div>
-  );
-}
-
-function PrimaryButton() {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Link href="/home/pickup">
-      <button
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          background: hovered ? `linear-gradient(135deg, ${WARM_BEIGE}, #d4c4a8)` : `linear-gradient(135deg, ${WARM_BEIGE}, #cbb99a)`,
-          color: "#0A0A0A",
-          padding: "14px 30px", borderRadius: "100px",
-          border: "none", cursor: "pointer",
-          fontFamily: "sans-serif", fontSize: "14px", fontWeight: 600, letterSpacing: "0.04em",
-          display: "flex", alignItems: "center", gap: "10px",
-          transition: "all 0.3s ease",
-          transform: hovered ? "translateY(-2px) scale(1.03)" : "translateY(0) scale(1)",
-          boxShadow: hovered ? "0 16px 40px rgba(200,168,120,0.3)" : "0 4px 20px rgba(200,168,120,0.15)",
-        }}
-      >
-        Book a Ride
-        <ArrowRight size={15} style={{ transform: hovered ? "translateX(4px)" : "translateX(0)", transition: "transform 0.3s" }} />
-      </button>
-    </Link>
-  );
-}
-
-function SecondaryButton() {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: "transparent",
-        color: hovered ? OFF_WHITE : "rgba(246,244,239,0.7)",
-        padding: "14px 20px", borderRadius: "100px",
-        border: "1px solid rgba(246,244,239,0.15)",
-        cursor: "pointer", fontFamily: "sans-serif", fontSize: "14px", fontWeight: 400, letterSpacing: "0.04em",
-        display: "flex", alignItems: "center", gap: "10px",
-        transition: "all 0.3s ease",
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
-      }}
-    >
-      <span style={{
-        width: "30px", height: "30px", borderRadius: "50%",
-        border: `1px solid rgba(246,244,239,${hovered ? 0.35 : 0.2})`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        transition: "border-color 0.3s",
-      }}>
-        <Play size={10} fill={hovered ? OFF_WHITE : "rgba(246,244,239,0.7)"} color="transparent" style={{ marginLeft: "2px" }} />
-      </span>
-      Discover Movo
-    </button>
-  );
-}
-
-function VehicleScene() {
-  return (
-    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
-      {/* Base atmospheric gradient */}
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #1a1208 0%, #231a0e 30%, #2c2216 55%, #1e1812 80%, #131010 100%)" }} />
-
-      {/* Ceiling light rays */}
-      {[35, 50, 65].map((left, i) => (
-        <div key={i} style={{
-          position: "absolute", top: 0, left: `${left}%`, width: "2px", height: "65%",
-          background: `linear-gradient(180deg, rgba(200,168,120,${0.18 - i * 0.04}) 0%, transparent 100%)`,
-          transform: "translateX(-50%)",
-        }} />
-      ))}
-
-      {/* Ceiling glow */}
-      <div style={{ position: "absolute", top: "-80px", left: "20%", right: "10%", height: "280px", background: "radial-gradient(ellipse at 50% 0%, rgba(200,168,120,0.12) 0%, transparent 70%)" }} />
-
-      {/* Architectural vertical lines */}
-      {[20, 38, 62, 80].map((left, i) => (
-        <div key={i} style={{
-          position: "absolute", top: 0, bottom: 0, left: `${left}%`, width: "1px",
-          background: `linear-gradient(180deg, rgba(200,168,120,0.05) 0%, rgba(200,168,120,0.12) 40%, rgba(200,168,120,0.04) 100%)`,
-        }} />
-      ))}
-
-      {/* Ambient glow */}
-      <div style={{ position: "absolute", top: "15%", left: "20%", width: "60%", height: "55%", background: "radial-gradient(ellipse at 45% 60%, rgba(200,168,120,0.1) 0%, rgba(180,140,90,0.04) 40%, transparent 70%)" }} />
-
-      {/* MOVO PRIVÉ branding */}
-      <div style={{ position: "absolute", top: "22%", right: "8%", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", opacity: 0.45 }}>
-        <Crown size={22} color={GOLD} strokeWidth={1} />
-        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", color: OFF_WHITE, fontSize: "16px", fontWeight: 700, letterSpacing: "0.14em", lineHeight: 1 }}>MOVO</div>
-        <div style={{ color: GOLD, fontSize: "8px", letterSpacing: "0.3em", fontFamily: "sans-serif" }}>─ PRIVÉ ─</div>
-      </div>
-
-      {/* Thin divider */}
-      <div style={{ position: "absolute", top: "8%", left: "10%", right: "10%", height: "1px", background: "linear-gradient(90deg, transparent, rgba(200,168,120,0.1), rgba(200,168,120,0.18), rgba(200,168,120,0.1), transparent)" }} />
-
-      {/* Car silhouette panel */}
-      <div style={{
-        position: "absolute", bottom: "18%", left: "5%", width: "70%", height: "52%",
-        background: "linear-gradient(135deg, rgba(30,22,12,0.9) 0%, rgba(20,16,10,0.6) 100%)",
-        borderRadius: "4px", border: "1px solid rgba(200,168,120,0.06)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <svg viewBox="0 0 320 140" width="88%" height="auto" opacity={0.35}>
-          <defs>
-            <linearGradient id="carGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#C8A878" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#8a7050" stopOpacity="0.3" />
-            </linearGradient>
-          </defs>
-          <path d="M30 100 L40 68 L70 48 L140 38 L200 40 L250 52 L285 70 L292 100 Z" fill="none" stroke="url(#carGrad)" strokeWidth="1.5" />
-          <path d="M80 68 L100 44 L220 42 L250 68" fill="none" stroke="url(#carGrad)" strokeWidth="1.5" />
-          <path d="M98 66 L112 48 L165 46 L165 66 Z" fill="rgba(200,168,120,0.1)" stroke="url(#carGrad)" strokeWidth="1" />
-          <path d="M168 66 L168 46 L215 47 L240 66 Z" fill="rgba(200,168,120,0.1)" stroke="url(#carGrad)" strokeWidth="1" />
-          <circle cx="82" cy="100" r="20" fill="none" stroke="url(#carGrad)" strokeWidth="1.5" />
-          <circle cx="82" cy="100" r="10" fill="none" stroke="url(#carGrad)" strokeWidth="1" />
-          <circle cx="240" cy="100" r="20" fill="none" stroke="url(#carGrad)" strokeWidth="1.5" />
-          <circle cx="240" cy="100" r="10" fill="none" stroke="url(#carGrad)" strokeWidth="1" />
-          <path d="M32 80 L42 74 L52 76 L44 82 Z" fill="rgba(200,168,120,0.3)" stroke="url(#carGrad)" strokeWidth="1" />
-          <ellipse cx="36" cy="78" rx="18" ry="8" fill="rgba(200,168,120,0.04)" />
-          <line x1="30" y1="122" x2="292" y2="122" stroke="rgba(200,168,120,0.2)" strokeWidth="0.8" />
-        </svg>
-      </div>
-
-      {/* Chauffeur silhouette */}
-      <div style={{ position: "absolute", bottom: "18%", right: "5%", width: "12%", height: "52%", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-        <svg viewBox="0 0 60 160" width="100%" height="85%" opacity={0.3}>
-          <defs>
-            <linearGradient id="personGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#C8A878" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#8a7050" stopOpacity="0.2" />
-            </linearGradient>
-          </defs>
-          <circle cx="30" cy="18" r="11" fill="none" stroke="url(#personGrad)" strokeWidth="1.2" />
-          <path d="M12 44 L6 80 L10 80 L14 55 L30 58 L46 55 L50 80 L54 80 L48 44 Q30 36 12 44Z" fill="rgba(200,168,120,0.06)" stroke="url(#personGrad)" strokeWidth="1.2" />
-          <rect x="14" y="78" width="32" height="50" rx="2" fill="rgba(200,168,120,0.05)" stroke="url(#personGrad)" strokeWidth="1.1" />
-          <rect x="14" y="126" width="13" height="34" rx="2" fill="none" stroke="url(#personGrad)" strokeWidth="1.1" />
-          <rect x="33" y="126" width="13" height="34" rx="2" fill="none" stroke="url(#personGrad)" strokeWidth="1.1" />
-          <path d="M28 44 L30 58 L32 44" fill="rgba(200,168,120,0.15)" stroke="url(#personGrad)" strokeWidth="0.8" />
-        </svg>
-      </div>
-
-      {/* Blend overlays */}
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(10,10,10,0.85) 0%, rgba(10,10,10,0.3) 30%, transparent 60%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "30%", background: "linear-gradient(180deg, rgba(10,10,10,0.6) 0%, transparent 100%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "25%", background: "linear-gradient(0deg, rgba(10,10,10,0.8) 0%, transparent 100%)", pointerEvents: "none" }} />
     </div>
   );
 }
 
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.35 } },
-};
-const itemVariants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] as number[] } },
-};
-
-export default function HeroMain() {
+/* ── Vehicle SVG scene ──────────────────────────────────── */
+function VehicleScene() {
   return (
-    <section style={{ minHeight: "100vh", background: "#0A0A0A", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-      {/* Ambient glow */}
-      <div style={{ position: "absolute", top: "20%", left: "-5%", width: "45%", height: "60%", background: "radial-gradient(ellipse, rgba(200,168,120,0.04) 0%, transparent 70%)", pointerEvents: "none" }} />
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+      <svg
+        viewBox="0 0 900 700"
+        preserveAspectRatio="xMidYMid slice"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      >
+        <defs>
+          <radialGradient id="atmos" cx="50%" cy="62%" r="52%">
+            <stop offset="0%"   stopColor="#2e1f08" stopOpacity="1" />
+            <stop offset="55%"  stopColor="#160f03" stopOpacity="1" />
+            <stop offset="100%" stopColor="#080808" stopOpacity="1" />
+          </radialGradient>
+          <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#B09060" stopOpacity="0.55" />
+            <stop offset="45%"  stopColor="#1a1308" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#080808" stopOpacity="1" />
+          </linearGradient>
+          <linearGradient id="winGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%"   stopColor="#B09060" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#B09060" stopOpacity="0.06" />
+          </linearGradient>
+          <linearGradient id="groundRefl" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#B09060" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="#080808" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="beamL" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%"   stopColor="#B09060" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#B09060" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="beamR" x1="1" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#B09060" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="#B09060" stopOpacity="0" />
+          </linearGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="18" />
+          </filter>
+          <clipPath id="sceneClip">
+            <rect x="0" y="0" width="900" height="700" />
+          </clipPath>
+        </defs>
 
-      <div className="grid lg:grid-cols-[45fr_55fr] flex-col" style={{ flex: 1, minHeight: "100vh" }}>
-        {/* LEFT */}
-        <div style={{
-          display: "flex", flexDirection: "column", justifyContent: "center",
-          padding: "clamp(6rem, 10vw, 9rem) clamp(2rem, 6vw, 5rem) clamp(3rem, 5vw, 4rem)",
-          position: "relative", zIndex: 2,
-          background: "linear-gradient(90deg, #0A0A0A 80%, transparent 100%)",
-        }}>
-          <motion.div variants={containerVariants} initial="hidden" animate="visible">
-            <motion.div variants={itemVariants}><HeroBadge /></motion.div>
+        <g clipPath="url(#sceneClip)">
+          {/* Background atmosphere */}
+          <rect width="900" height="700" fill="url(#atmos)" />
 
-            <motion.h1 style={{ margin: "0 0 1.5rem", padding: 0, lineHeight: 1.08 }}>
-              <motion.span variants={itemVariants} style={{ display: "block", fontFamily: "'Playfair Display', Georgia, serif", color: OFF_WHITE, fontSize: "clamp(48px, 5.5vw, 78px)", fontWeight: 700, letterSpacing: "-0.01em" }}>
-                Travel First Class.
-              </motion.span>
-              <motion.span variants={itemVariants} style={{ display: "block", fontFamily: "'Playfair Display', Georgia, serif", color: WARM_BEIGE, fontSize: "clamp(48px, 5.5vw, 78px)", fontWeight: 700, letterSpacing: "-0.01em", fontStyle: "italic" }}>
-                Every Mile.
-              </motion.span>
-            </motion.h1>
+          {/* Atmospheric halo behind car */}
+          <ellipse cx="450" cy="460" rx="340" ry="200" fill="#2a1a06" opacity="0.35" filter="url(#softGlow)" />
 
-            <motion.p variants={itemVariants} style={{ color: "rgba(246,244,239,0.6)", fontSize: "clamp(14px, 1.5vw, 16px)", fontFamily: "sans-serif", fontWeight: 300, lineHeight: 1.75, maxWidth: "440px", margin: "0 0 2.5rem", letterSpacing: "0.01em" }}>
-              Experience luxury, comfort and punctuality<br />
-              with Movo. We don&apos;t just drive,<br />
-              we deliver an experience.
-            </motion.p>
+          {/* Light beams from top corners */}
+          <polygon points="0,0 220,0 480,470" fill="url(#beamL)" opacity="0.5" />
+          <polygon points="900,0 680,0 420,470" fill="url(#beamR)" opacity="0.4" />
 
-            <motion.div variants={itemVariants} style={{ display: "flex", alignItems: "center", gap: "1.25rem", flexWrap: "wrap" }}>
-              <PrimaryButton />
-              <SecondaryButton />
-            </motion.div>
-          </motion.div>
+          {/* Architectural grid lines — very faint */}
+          <line x1="0" y1="240" x2="900" y2="240" stroke="#B09060" strokeWidth="0.4" opacity="0.05" />
+          <line x1="0" y1="380" x2="900" y2="380" stroke="#B09060" strokeWidth="0.4" opacity="0.04" />
+          <line x1="140" y1="0" x2="140" y2="700" stroke="#B09060" strokeWidth="0.4" opacity="0.045" />
+          <line x1="760" y1="0" x2="760" y2="700" stroke="#B09060" strokeWidth="0.4" opacity="0.04" />
 
-          {/* Gold accent line */}
-          <motion.div
-            initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ duration: 1, delay: 1.2, ease: [0.22, 1, 0.36, 1] }}
-            style={{ position: "absolute", bottom: "12%", left: "clamp(2rem, 6vw, 5rem)", width: "60px", height: "1px", background: "linear-gradient(90deg, #C8A878, transparent)", transformOrigin: "left" }}
+          {/* Ground plane line */}
+          <line x1="60" y1="508" x2="840" y2="508" stroke="#B09060" strokeWidth="0.6" opacity="0.28" />
+
+          {/* Ground reflection glow */}
+          <rect x="120" y="508" width="660" height="120" fill="url(#groundRefl)" />
+
+          {/* ── Car body — S-Class sedan profile ── */}
+          {/* Outer body */}
+          <path
+            d="M 120 508 L 132 456 L 162 388 L 198 340 L 255 298 L 330 278 L 530 274 L 610 285 L 672 318 L 720 368 L 740 430 L 752 508 Z"
+            fill="#0D0A06" stroke="#B09060" strokeWidth="1.4" strokeOpacity="0.55"
           />
-        </div>
 
-        {/* RIGHT */}
+          {/* Roofline */}
+          <path
+            d="M 220 385 L 248 300 L 310 280 L 525 276 L 600 290 L 648 330 L 670 385"
+            fill="none" stroke="#B09060" strokeWidth="1.1" strokeOpacity="0.38"
+          />
+
+          {/* Front windshield */}
+          <path d="M 222 383 L 252 302 L 318 283 L 318 383 Z" fill="url(#winGrad)" opacity="0.75" />
+
+          {/* Front door window */}
+          <path d="M 324 380 L 324 281 L 432 278 L 432 380 Z" fill="url(#winGrad)" opacity="0.65" />
+
+          {/* Rear door window */}
+          <path d="M 438 379 L 438 277 L 528 275 L 528 379 Z" fill="url(#winGrad)" opacity="0.6" />
+
+          {/* Rear windshield */}
+          <path d="M 534 378 L 534 277 L 602 290 L 648 330 L 648 378 Z" fill="url(#winGrad)" opacity="0.55" />
+
+          {/* Door seam lines */}
+          <line x1="322" y1="286" x2="322" y2="490" stroke="#B09060" strokeWidth="0.5" opacity="0.2" />
+          <line x1="436" y1="280" x2="436" y2="488" stroke="#B09060" strokeWidth="0.5" opacity="0.2" />
+          <line x1="532" y1="277" x2="532" y2="486" stroke="#B09060" strokeWidth="0.5" opacity="0.2" />
+
+          {/* Character line (body crease) */}
+          <path
+            d="M 140 430 Q 300 418 450 414 Q 600 418 740 432"
+            fill="none" stroke="#B09060" strokeWidth="0.8" opacity="0.22"
+          />
+
+          {/* Front wheel arch */}
+          <path d="M 162 508 Q 236 400 306 508" fill="none" stroke="#B09060" strokeWidth="1.3" opacity="0.5" />
+
+          {/* Front wheel */}
+          <circle cx="236" cy="508" r="62" fill="#060504" stroke="#B09060" strokeWidth="1.3" strokeOpacity="0.62" />
+          <circle cx="236" cy="508" r="44" fill="none" stroke="#B09060" strokeWidth="0.8" strokeOpacity="0.35" />
+          <circle cx="236" cy="508" r="22" fill="none" stroke="#B09060" strokeWidth="1.2" strokeOpacity="0.45" />
+          {/* 5-spoke rim */}
+          {[0,72,144,216,288].map(angle => {
+            const r = Math.PI * angle / 180;
+            const x1 = 236 + 22 * Math.cos(r); const y1 = 508 + 22 * Math.sin(r);
+            const x2 = 236 + 44 * Math.cos(r); const y2 = 508 + 44 * Math.sin(r);
+            return <line key={angle} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#B09060" strokeWidth="1" opacity="0.3" />;
+          })}
+
+          {/* Rear wheel arch */}
+          <path d="M 610 508 Q 682 400 754 508" fill="none" stroke="#B09060" strokeWidth="1.3" opacity="0.5" />
+
+          {/* Rear wheel */}
+          <circle cx="682" cy="508" r="62" fill="#060504" stroke="#B09060" strokeWidth="1.3" strokeOpacity="0.62" />
+          <circle cx="682" cy="508" r="44" fill="none" stroke="#B09060" strokeWidth="0.8" strokeOpacity="0.35" />
+          <circle cx="682" cy="508" r="22" fill="none" stroke="#B09060" strokeWidth="1.2" strokeOpacity="0.45" />
+          {[0,72,144,216,288].map(angle => {
+            const r = Math.PI * angle / 180;
+            const x1 = 682 + 22 * Math.cos(r); const y1 = 508 + 22 * Math.sin(r);
+            const x2 = 682 + 44 * Math.cos(r); const y2 = 508 + 44 * Math.sin(r);
+            return <line key={angle} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#B09060" strokeWidth="1" opacity="0.3" />;
+          })}
+
+          {/* Front headlight cluster */}
+          <path d="M 124 430 L 148 400 L 178 405 L 165 440 Z" fill="#B09060" opacity="0.08" />
+          <ellipse cx="146" cy="418" rx="14" ry="10" fill="#B09060" opacity="0.5" filter="url(#glow)" />
+          <ellipse cx="164" cy="415" rx="8"  ry="6"  fill="#F5E0B0" opacity="0.65" filter="url(#glow)" />
+          {/* Headlight beam */}
+          <path d="M 120 420 L 60 405 L 50 430 L 118 438 Z" fill="#B09060" opacity="0.04" />
+
+          {/* Tail light */}
+          <rect x="748" y="390" width="6" height="42" rx="2" fill="#B09060" opacity="0.6" filter="url(#glow)" />
+          <rect x="750" y="395" width="2" height="30" rx="1" fill="#FFE0A0" opacity="0.55" filter="url(#glow)" />
+
+          {/* Front grille hint */}
+          <path d="M 126 452 L 142 432 L 162 438 L 148 460 Z" fill="none" stroke="#B09060" strokeWidth="0.7" opacity="0.28" />
+
+          {/* Car top shadow / depth */}
+          <ellipse cx="436" cy="285" rx="220" ry="18" fill="#080808" opacity="0.4" filter="url(#softGlow)" />
+
+          {/* Under-car shadow */}
+          <ellipse cx="436" cy="530" rx="300" ry="28" fill="#000" opacity="0.55" filter="url(#softGlow)" />
+
+          {/* Ground reflection of car (inverted, faded) */}
+          <path
+            d="M 120 508 L 132 556 L 180 590 L 320 608 L 560 606 L 700 592 L 752 555 L 752 508 Z"
+            fill="#0D0A06" opacity="0.18"
+          />
+
+          {/* Top edge vignette */}
+          <rect x="0" y="0" width="900" height="120" fill="url(#atmos)" opacity="0.5" />
+          {/* Bottom vignette */}
+          <rect x="0" y="580" width="900" height="120" fill="#080808" opacity="0.9" />
+        </g>
+      </svg>
+
+      {/* Left-side content blend */}
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, #080808 0%, rgba(8,8,8,0.55) 35%, transparent 65%)", pointerEvents: "none" }} />
+    </div>
+  );
+}
+
+/* ── Stat card ──────────────────────────────────────────── */
+function Stat({ value, suffix, label, decimals, delay }: {
+  value: number; suffix?: string; label: string; decimals?: number; delay: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
+      style={{ display: "flex", flexDirection: "column", gap: "3px" }}
+    >
+      <div style={{ fontFamily: C.serif, fontSize: "clamp(28px,2.8vw,42px)", fontWeight: 600, color: C.text, lineHeight: 1, letterSpacing: "-0.01em" }}>
+        <StatCounter target={value} suffix={suffix} decimals={decimals} />
+      </div>
+      <div style={{ fontFamily: C.sans, fontSize: "10px", letterSpacing: "0.18em", color: C.muted, textTransform: "uppercase" as const, fontWeight: 500 }}>{label}</div>
+    </motion.div>
+  );
+}
+
+/* ── Main hero export ───────────────────────────────────── */
+export default function HeroMain() {
+  const [btnHovered, setBtnHovered] = useState(false);
+
+  return (
+    <section style={{ position: "relative", minHeight: "100svh", background: C.bg, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+
+      {/* ── Vehicle scene (full-section background on right) ── */}
+      <div className="hidden lg:block" style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "52%", zIndex: 0 }}>
         <motion.div
-          initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 1.1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          style={{ position: "relative", minHeight: "60vh" }}
+          initial={{ opacity: 0, scale: 1.04 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: "absolute", inset: 0 }}
         >
           <VehicleScene />
+        </motion.div>
+      </div>
+
+      {/* ── Noise texture overlay ── */}
+      <div aria-hidden style={{
+        position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
+        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+        opacity: 0.032,
+      }} />
+
+      {/* ── Left content panel ── */}
+      <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", flex: 1, justifyContent: "center",
+        padding: "clamp(7rem, 11vw, 10rem) clamp(2rem, 7vw, 6rem) clamp(4rem, 6vw, 5rem)",
+        maxWidth: "clamp(520px, 52vw, 760px)",
+        background: "linear-gradient(90deg, #080808 55%, rgba(8,8,8,0.6) 78%, transparent 100%)",
+      }}>
+
+        {/* Eyebrow label */}
+        <Reveal delay={0.25}>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "2.4rem" }}>
+            <div style={{ width: "28px", height: "1px", background: C.gold, opacity: 0.7 }} />
+            <span style={{ fontFamily: C.sans, fontSize: "10.5px", letterSpacing: "0.22em", color: C.gold, fontWeight: 600, textTransform: "uppercase" as const }}>
+              Movo Privé — Est. 2024
+            </span>
+          </div>
+        </Reveal>
+
+        {/* Headline */}
+        <div style={{ marginBottom: "2rem" }}>
+          <Reveal delay={0.38}>
+            <h1 style={{ margin: 0, padding: 0, fontFamily: C.serif, fontSize: "clamp(56px, 6.2vw, 92px)", fontWeight: 400, lineHeight: 1.0, color: C.text, letterSpacing: "-0.015em" }}>
+              First Class.
+            </h1>
+          </Reveal>
+          <Reveal delay={0.5}>
+            <h1 style={{ margin: 0, padding: 0, fontFamily: C.serif, fontSize: "clamp(56px, 6.2vw, 92px)", fontWeight: 400, lineHeight: 1.05, letterSpacing: "-0.015em", fontStyle: "italic", color: C.gold }}>
+              Every Time.
+            </h1>
+          </Reveal>
+        </div>
+
+        {/* Thin rule */}
+        <motion.div
+          initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+          transition={{ duration: 0.9, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          style={{ width: "56px", height: "1px", background: C.rule, transformOrigin: "left", marginBottom: "2rem" }}
+        />
+
+        {/* Body copy */}
+        <Reveal delay={0.65}>
+          <p style={{ fontFamily: C.sans, fontSize: "clamp(13px, 1.4vw, 15px)", fontWeight: 300, color: C.muted, lineHeight: 1.85, maxWidth: "380px", margin: "0 0 2.75rem", letterSpacing: "0.01em" }}>
+            We don&apos;t just drive — we deliver an experience.<br />
+            Punctual, discreet, impeccably presented.<br />
+            The standard you deserve.
+          </p>
+        </Reveal>
+
+        {/* CTAs */}
+        <Reveal delay={0.78}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", flexWrap: "wrap" }}>
+            <Link href="/home/pickup">
+              <motion.button
+                onHoverStart={() => setBtnHovered(true)}
+                onHoverEnd={() => setBtnHovered(false)}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  background: C.text, color: C.bg,
+                  padding: "14px 28px", border: "none", cursor: "pointer",
+                  fontFamily: C.sans, fontSize: "13px", fontWeight: 600, letterSpacing: "0.06em",
+                  textTransform: "uppercase" as const,
+                  display: "flex", alignItems: "center", gap: "10px",
+                  boxShadow: btnHovered ? "0 14px 40px rgba(176,144,96,0.2)" : "none",
+                  transition: "box-shadow 0.3s",
+                }}
+              >
+                Book a Ride
+                <ArrowRight size={14} />
+              </motion.button>
+            </Link>
+
+            <motion.a
+              href="#fleet"
+              whileHover={{ x: 4 }}
+              style={{
+                fontFamily: C.sans, fontSize: "13px", color: C.muted,
+                letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                textDecoration: "none", fontWeight: 500,
+                display: "flex", alignItems: "center", gap: "8px",
+                borderBottom: `1px solid ${C.dim}`, paddingBottom: "2px",
+                transition: "color 0.25s, border-color 0.25s",
+              }}
+            >
+              View Fleet
+            </motion.a>
+          </div>
+        </Reveal>
+
+        {/* Stats row */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 1.1 }}
+          style={{ display: "flex", gap: "clamp(1.5rem, 3vw, 3rem)", marginTop: "clamp(3rem, 5vw, 4.5rem)", flexWrap: "wrap" }}
+        >
+          <Stat value={98}   suffix="%" label="On-Time"    delay={1.15} />
+          <div style={{ width: "1px", background: C.rule, alignSelf: "stretch" }} />
+          <Stat value={4.9}  suffix="★" label="Rating"     delay={1.25} decimals={1} />
+          <div style={{ width: "1px", background: C.rule, alignSelf: "stretch" }} />
+          <Stat value={500}  suffix="+" label="Vehicles"   delay={1.35} />
+          <div style={{ width: "1px", background: C.rule, alignSelf: "stretch" }} />
+          <Stat value={24}   suffix="/7" label="Support"   delay={1.45} />
         </motion.div>
       </div>
     </section>

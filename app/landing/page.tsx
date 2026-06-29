@@ -7,6 +7,7 @@ import Navbar from "./_components/Navbar";
 import HeroMain from "./_components/HeroMain";
 import BookingCard from "./_components/BookingCard";
 import FeatureStrip from "./_components/FeatureStrip";
+import MarqueeStrip from "./_components/MarqueeStrip";
 
 /* ── Brand tokens ──────────────────────────────────────────────────────────── */
 const NAVY  = "#131936";
@@ -95,9 +96,8 @@ export default function LandingPage() {
       {/* ── PREMIUM HERO (Navbar + Hero + BookingCard + FeatureStrip) ── */}
       <Navbar />
       <HeroMain />
-      <div style={{ background: "#0A0A0A" }}>
-        <BookingCard />
-      </div>
+      <BookingCard />
+      <MarqueeStrip />
       <FeatureStrip />
 
       {/* ── HOW SAFE RIDE WORKS ── */}
