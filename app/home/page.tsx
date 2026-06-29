@@ -51,7 +51,7 @@ export default function HomePage() {
               <div
                 onClick={() => router.push("/home/pickup")}
                 role="button"
-                className="flex items-center px-5 py-3 rounded-full gap-3 cursor-pointer"
+                className="flex items-center px-5 py-3 rounded-full gap-3 cursor-pointer no-hover-fx"
                 style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
               >
                 <svg className="shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
