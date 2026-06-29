@@ -13,25 +13,29 @@ function getClient() {
   return client;
 }
 
-/** Normalise any phone string to E.164. Defaults to country code 1 (Canada/US). */
-export function toE164(phone: string, defaultCountryCode = "1"): string {
+/** Normalise any phone string to E.164. Defaults to country code 234 (Nigeria). */
+export function toE164(phone: string, defaultCountryCode = "234"): string {
+  const hasPlus = phone.trimStart().startsWith("+");
   let digits = phone.replace(/\D/g, "");
 
-  // Already has explicit country code via "+"
-  if (phone.startsWith("+")) return `+${digits}`;
-
-  // Strip leading trunk prefix "0" (e.g. 0906315XXXX → 906315XXXX)
-  if (digits.length > 10 && digits.startsWith("0")) {
-    digits = digits.replace(/^0+/, "");
+  if (hasPlus) {
+    // Number already carries a country code, but may have a leading trunk 0 in the
+    // national part (e.g. +2340906315XXXX → +234906315XXXX).
+    // Heuristic: if {1-3 digit CC} + "0" + {9-10 digit national} → strip the 0.
+    const m = digits.match(/^(\d{1,3})(0)(\d{9,10})$/);
+    if (m) digits = m[1] + m[3];
+    return `+${digits}`;
   }
 
-  // 11 digits starting with the default country code → already correct
-  if (digits.length === 11 && digits.startsWith(defaultCountryCode)) return `+${digits}`;
+  // Strip leading trunk prefix "0" (e.g. 0906315XXXX → 906315XXXX)
+  if (digits.startsWith("0")) {
+    digits = digits.replace(/^0+/, "");
+  }
 
   // 10 digits → prepend default country code
   if (digits.length === 10) return `+${defaultCountryCode}${digits}`;
 
-  // Anything else: assume it already has a country code
+  // Anything else: assume it already carries a country code
   return `+${digits}`;
 }
 
