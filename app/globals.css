@@ -103,3 +103,18 @@ a:focus-visible,
   box-shadow: none !important;
   transform: none !important;
 }
+
+/* ── Animated gradient border for search bar ── */
+@keyframes searchBorderSpin {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+.search-bar-border {
+  background: linear-gradient(270deg, #C6BFB2, #8A8F9E, #2A3055, #131936, #C6BFB2);
+  background-size: 400% 400%;
+  animation: searchBorderSpin 3s ease infinite;
+  border-radius: 9999px;
+  padding: 2px;
+}

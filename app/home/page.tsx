@@ -46,39 +46,44 @@ export default function HomePage() {
           </div>
           {/* Where to bar */}
           <div className="absolute bottom-3 left-4 right-4">
-            <div
-              onClick={() => router.push("/home/pickup")}
-              role="button"
-              className="flex items-center px-5 py-4 rounded-full gap-3 cursor-pointer border"
-              style={{
-                background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
-                borderColor: "rgba(255,255,255,0.18)",
-                boxShadow: "0 2px 16px rgba(0,0,0,0.28)",
-              }}
-            >
-              <svg className="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                onFocus={() => router.push("/home/pickup")}
-                readOnly
-                placeholder="Where to?"
-                className="flex-1 bg-transparent text-white text-[13px] font-medium placeholder-white/70 focus:outline-none cursor-pointer"
-              />
-              {destination && (
-                <button
-                  type="button"
-                  onClick={() => setDestination("")}
-                  className="text-white/70 hover:text-white shrink-0"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              )}
+            {/* Animated gradient border wrapper */}
+            <div className="search-bar-border" style={{ boxShadow: "0 0 18px rgba(198,191,178,0.35), 0 4px 20px rgba(0,0,0,0.4)" }}>
+              <div
+                onClick={() => router.push("/home/pickup")}
+                role="button"
+                className="flex items-center px-5 py-[18px] rounded-full gap-3 cursor-pointer"
+                style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
+              >
+                <svg className="shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  onFocus={() => router.push("/home/pickup")}
+                  readOnly
+                  placeholder="Where to?"
+                  className="flex-1 bg-transparent text-white text-[15px] font-medium placeholder-white/60 focus:outline-none cursor-pointer"
+                />
+                {destination ? (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setDestination(""); }}
+                    className="text-white/60 hover:text-white shrink-0 no-hover-fx"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
