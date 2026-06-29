@@ -49,8 +49,12 @@ export default function HomePage() {
             <div
               onClick={() => router.push("/home/pickup")}
               role="button"
-              className="flex items-center px-4 py-2.5 rounded-full gap-2 cursor-pointer"
-              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
+              className="flex items-center px-5 py-4 rounded-full gap-3 cursor-pointer border"
+              style={{
+                background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
+                borderColor: "rgba(255,255,255,0.18)",
+                boxShadow: "0 2px 16px rgba(0,0,0,0.28)",
+              }}
             >
               <svg className="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -80,9 +84,31 @@ export default function HomePage() {
         </div>
 
         {/* Our Services */}
-        <div className="px-4 mt-5">
-          <p className="text-[16px] font-bold text-gray-900 mb-3">Our Services</p>
-          <div className="grid grid-cols-2 gap-3">
+        <div className="mt-5">
+          <p className="text-[16px] font-bold text-gray-900 mb-3 px-4">Our Services</p>
+
+          {/* Mobile: horizontal snap-scroll row */}
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 pb-1 md:hidden">
+            {services.map((s) => (
+              <Link
+                key={s.id}
+                href={s.href}
+                className="shrink-0 snap-start w-[150px] rounded-2xl overflow-hidden bg-white shadow-sm flex flex-col cursor-pointer"
+              >
+                <div className="relative w-full h-[100px] bg-gray-50">
+                  <Image src={s.img} alt={s.title} fill className="object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                </div>
+                <div className="px-3 py-2.5">
+                  <p className="text-[13px] font-bold text-gray-900 leading-tight">{s.title}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">{s.desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop: 2-column grid */}
+          <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-3 px-4">
             {services.map((s) => (
               <Link
                 key={s.id}

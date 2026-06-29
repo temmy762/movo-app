@@ -73,6 +73,12 @@ function RideTrackingContent() {
   const [showSupport,       setShowSupport]       = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling,        setCancelling]        = useState(false);
+  const [showChangeDest,    setShowChangeDest]    = useState(false);
+  const [newDestination,    setNewDestination]    = useState("");
+  const [changingDest,      setChangingDest]      = useState(false);
+  const [currentDropoff,    setCurrentDropoff]    = useState(dropoff);
+  const [addingStop,        setAddingStop]        = useState(false);
+  const [stopFeeAmount,     setStopFeeAmount]     = useState<number | null>(null);
 
   const TIER_IMAGES: Record<string, string> = {
     classic:  "/images/movo classic.png",
@@ -482,7 +488,7 @@ function RideTrackingContent() {
                   {
                     label: "Change\nDestination",
                     icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>),
-                    onClick: () => router.push(`/home/pickup?tier=all&pickup=${encodeURIComponent(pickup)}`),
+                    onClick: () => { setNewDestination(currentDropoff); setShowChangeDest(true); },
                   },
                   {
                     label: "Add Stop",
@@ -586,11 +592,104 @@ function RideTrackingContent() {
       {showAddStop && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50">
           <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg">
-            <h3 className="text-[15px] font-bold text-gray-900 mb-3">Add a Stop</h3>
-            <input type="text" value={stopAddress} onChange={(e) => setStopAddress(e.target.value)} placeholder="Enter stop address" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936]" />
+            <h3 className="text-[15px] font-bold text-gray-900 mb-1">Add a Stop</h3>
+            {stopFeeAmount != null && (
+              <p className="text-[12px] text-gray-500 mb-3">An additional stop fee of <strong>${stopFeeAmount.toFixed(2)}</strong> will be added to your total.</p>
+            )}
+            <input
+              type="text"
+              value={stopAddress}
+              onChange={(e) => setStopAddress(e.target.value)}
+              placeholder="Enter stop address"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936] mt-2"
+            />
             <div className="flex gap-2 mt-3">
-              <button onClick={() => { setShowAddStop(false); setStopAddress(""); }} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600">Cancel</button>
-              <button onClick={() => { setShowAddStop(false); setStopAddress(""); }} className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold" style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}>Add Stop</button>
+              <button
+                onClick={() => { setShowAddStop(false); setStopAddress(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!stopAddress.trim() || addingStop}
+                onClick={async () => {
+                  if (!bookingId || !stopAddress.trim()) return;
+                  setAddingStop(true);
+                  try {
+                    const priceRes = await fetch("/api/admin/pricing");
+                    const priceData = await priceRes.json();
+                    const stopFee: number = priceData?.additionalStopFee ?? 5;
+                    const bookingRes = await fetch(`/api/bookings/${bookingId}`);
+                    const bookingData = await bookingRes.json();
+                    const currentStopFee: number = bookingData?.additionalStopFee ?? 0;
+                    const currentTotal: number = bookingData?.total ?? 0;
+                    const newStopFee = currentStopFee + stopFee;
+                    const newTotal = currentTotal + stopFee;
+                    await fetch(`/api/bookings/${bookingId}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ additionalStopFee: newStopFee, total: newTotal }),
+                    });
+                    setStopFeeAmount(stopFee);
+                  } catch { /* ignore */ } finally {
+                    setAddingStop(false);
+                    setShowAddStop(false);
+                    setStopAddress("");
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-50"
+                style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}
+              >
+                {addingStop ? "Adding…" : "Add Stop"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Change Destination Modal ── */}
+      {showChangeDest && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50">
+          <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg">
+            <h3 className="text-[15px] font-bold text-gray-900 mb-1">Change Destination</h3>
+            <p className="text-[12px] text-gray-400 mb-3">Update where you'd like to be dropped off.</p>
+            <input
+              type="text"
+              value={newDestination}
+              onChange={(e) => setNewDestination(e.target.value)}
+              placeholder="New destination address"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936]"
+            />
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => { setShowChangeDest(false); setNewDestination(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!newDestination.trim() || changingDest}
+                onClick={async () => {
+                  if (!bookingId || !newDestination.trim()) return;
+                  setChangingDest(true);
+                  try {
+                    await fetch(`/api/bookings/${bookingId}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ dropoff: newDestination.trim() }),
+                    });
+                    setCurrentDropoff(newDestination.trim());
+                  } catch { /* ignore */ } finally {
+                    setChangingDest(false);
+                    setShowChangeDest(false);
+                    setNewDestination("");
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-50"
+                style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}
+              >
+                {changingDest ? "Updating…" : "Confirm"}
+              </button>
             </div>
           </div>
         </div>

@@ -110,7 +110,9 @@ export default function RidesPage() {
               {rides.map((ride) => (
                 <div
                   key={ride.id}
-                  className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-3 border border-transparent"
+                  role="button"
+                  onClick={() => router.push(`/home/rides/${ride.id}`)}
+                  className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-3 border border-transparent cursor-pointer active:scale-[0.99] transition-transform"
                   style={{
                     background:
                       "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%) border-box",
@@ -126,40 +128,27 @@ export default function RidesPage() {
                         <span className="text-[12px] font-bold text-gray-800">${ride.total.toFixed(2)}</span>
                       </div>
                     </div>
-                    <div className="relative w-24 h-16 md:w-28 md:h-20 shrink-0">
-                      <Image
-                        src={carImages[ride.carTier] ?? "/images/movo classic.png"}
-                        alt={ride.carName}
-                        fill
-                        sizes="(max-width: 768px) 96px, 112px"
-                        className="object-contain"
-                      />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="relative w-24 h-16 md:w-28 md:h-20">
+                        <Image
+                          src={carImages[ride.carTier] ?? "/images/movo classic.png"}
+                          alt={ride.carName}
+                          fill
+                          sizes="(max-width: 768px) 96px, 112px"
+                          className="object-contain"
+                        />
+                      </div>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
                     </div>
                   </div>
 
-                  {/* BOOK NOW button — only shown for upcoming rides */}
-                  {(ride.status === "PENDING" || ride.status === "CONFIRMED") && (
-                    <button
-                      type="button"
-                      onClick={() => router.push("/home/pickup")}
-                      className="w-full py-2.5 rounded-xl border border-transparent text-[13px] font-bold tracking-widest"
-                      style={{
-                        background:
-                          "linear-gradient(#d6d6d6, #d6d6d6) padding-box, linear-gradient(90deg, #131936 0%, #C6BFB2 100%) border-box",
-                      }}
-                    >
-                      <span
-                        style={{
-                          background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)",
-                          WebkitBackgroundClip: "text",
-                          backgroundClip: "text",
-                          color: "transparent",
-                        }}
-                      >
-                        BOOK AGAIN
-                      </span>
-                    </button>
-                  )}
+                  {/* View ticket label */}
+                  <div className="flex items-center gap-1.5">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
+                    <span className="text-[11px] text-gray-400">Tap to view ticket</span>
+                  </div>
                 </div>
               ))}
             </div>

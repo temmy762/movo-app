@@ -57,7 +57,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const body = await req.json();
 
-    const allowedFields = ["stripePaymentIntentId", "paymentStatus", "clientName"];
+    const allowedFields = [
+      "stripePaymentIntentId",
+      "paymentStatus",
+      "clientName",
+      "additionalStopFee",
+      "total",
+      "dropoff",
+    ];
     const data: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (field in body) data[field] = body[field];

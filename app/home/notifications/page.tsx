@@ -1,7 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
+const PREFS_KEY = "movo_notification_prefs";
+
+interface NotifSettings {
+  pushRides: boolean;
+  pushMarketing: boolean;
+  smsRides: boolean;
+}
+
+const DEFAULT_SETTINGS: NotifSettings = {
+  pushRides: true,
+  pushMarketing: true,
+  smsRides: true,
+};
 
 function GradientToggle({
   checked,
@@ -33,14 +47,30 @@ function GradientToggle({
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState({
-    pushRides: true,
-    pushMarketing: true,
-    smsRides: true,
-  });
+  const [settings, setSettings] = useState<NotifSettings>(DEFAULT_SETTINGS);
+  const [saved, setSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const toggle = (key: keyof typeof settings) =>
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  /* Load from localStorage on mount */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PREFS_KEY);
+      if (raw) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(raw) });
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggle = (key: keyof NotifSettings) => {
+    setSettings((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      /* Persist to localStorage */
+      try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+    /* Flash "Saved" indicator */
+    setSaved(true);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaved(false), 1800);
+  };
 
   return (
     <div
@@ -63,6 +93,12 @@ export default function NotificationsPage() {
             </svg>
           </button>
           <h1 className="flex-1 text-center text-[18px] font-bold text-gray-900">Notifications</h1>
+          <span
+            className="absolute right-5 text-[12px] font-semibold transition-opacity duration-300"
+            style={{ color: "#131936", opacity: saved ? 1 : 0 }}
+          >
+            Saved ✓
+          </span>
         </div>
 
         {/* 3-card grid */}

@@ -104,7 +104,7 @@ export function chauffeurBookingAssignedTemplate(
       </Section>
 
       <Button
-        href={`${settings.baseUrl}/driver/bookings/${booking.bookingId}`}
+        href={`${settings.baseUrl}/driver/home`}
         style={{
           backgroundColor: "#2D0A53",
           color: "#ffffff",
@@ -142,7 +142,7 @@ Fare Breakdown:
 Ride fare: $${booking.fare.toFixed(2)}
 Your Earnings: $${(booking.fare * 0.75).toFixed(2)}
 
-View booking details: ${settings.baseUrl}/driver/bookings/${booking.bookingId}
+Open the app to view booking details: ${settings.baseUrl}/driver/home
 
 © ${new Date().getFullYear()} ${settings.appName}. All rights reserved.
 `;

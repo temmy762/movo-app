@@ -32,12 +32,12 @@ export function EmailLayout({ context, preview, children }: EmailLayoutProps) {
           <Section style={logoSection}>
             <Img
               src={settings.logoUrl}
-              width="50"
-              height="50"
+              width="60"
+              height="60"
               alt={settings.appName}
               style={logo}
             />
-            <Text style={logoFallbackText}>{settings.appName}</Text>
+            <Text style={logoText}>{settings.appName}</Text>
           </Section>
 
           {/* Content */}
@@ -52,16 +52,12 @@ export function EmailLayout({ context, preview, children }: EmailLayoutProps) {
               © {new Date().getFullYear()} {settings.appName}. All rights reserved.
             </Text>
             <Text style={footerLinks}>
-              <Link href={`${settings.baseUrl}/support`} style={link}>
+              <Link href={`mailto:${settings.supportEmail}`} style={link}>
                 Support
               </Link>
               {" | "}
-              <Link href={`${settings.baseUrl}/privacy`} style={link}>
-                Privacy Policy
-              </Link>
-              {" | "}
-              <Link href={`${settings.baseUrl}/terms`} style={link}>
-                Terms of Service
+              <Link href={settings.baseUrl} style={link}>
+                movoprive.com
               </Link>
             </Text>
             <Text style={supportText}>
@@ -104,14 +100,14 @@ const logo = {
   textDecoration: "none",
 };
 
-const logoFallbackText = {
+const logoText = {
   textAlign: "center" as const,
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  fontSize: "22px",
+  fontSize: "18px",
   fontWeight: "700" as const,
   color: "#131936",
-  letterSpacing: "2px",
-  margin: "4px 0 0",
+  letterSpacing: "3px",
+  margin: "6px 0 0",
 };
 
 const contentSection = {

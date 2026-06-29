@@ -64,7 +64,7 @@ export function riderRideCompletedTemplate(
       </Text>
 
       <Button
-        href={`${settings.baseUrl}/home/rides/${ride.bookingId}/review`}
+        href={`${settings.baseUrl}/home/rides/${ride.bookingId}`}
         style={{
           backgroundColor: "#2D0A53",
           color: "#ffffff",
@@ -95,7 +95,7 @@ To: ${ride.dropoff}
 Total Paid: $${ride.total.toFixed(2)}
 
 How was your ride? Your feedback helps us improve.
-Rate your ride: ${settings.baseUrl}/home/rides/${ride.bookingId}/review
+Rate your ride: ${settings.baseUrl}/home/rides/${ride.bookingId}
 
 © ${new Date().getFullYear()} ${settings.appName}. All rights reserved.
 `;
