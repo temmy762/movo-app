@@ -39,19 +39,19 @@ export default function HomePage() {
             style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%)" }}
           />
           {/* Greeting */}
-          <div className="absolute bottom-14 left-4">
+          <div className="absolute bottom-[68px] left-4">
             <p className="text-white text-[22px] font-bold drop-shadow">
               {user ? `Hi ${user.firstName}` : "Hi there"}
             </p>
           </div>
           {/* Where to bar */}
-          <div className="absolute bottom-3 left-4 right-4">
+          <div className="absolute bottom-4 left-4 right-4">
             {/* Animated gradient border wrapper */}
             <div className="search-bar-border" style={{ boxShadow: "0 0 18px rgba(198,191,178,0.35), 0 4px 20px rgba(0,0,0,0.4)" }}>
               <div
                 onClick={() => router.push("/home/pickup")}
                 role="button"
-                className="flex items-center px-5 py-[18px] rounded-full gap-3 cursor-pointer"
+                className="flex items-center px-5 py-3 rounded-full gap-3 cursor-pointer"
                 style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
               >
                 <svg className="shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">

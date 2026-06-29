@@ -77,12 +77,14 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ user });
   } catch (err: unknown) {
-    const prismaErr = err as { code?: string; meta?: { target?: string[] } };
+    console.error("[PATCH /api/user/profile] error:", err);
+    const prismaErr = err as { code?: string; meta?: { target?: string[] }; message?: string };
     if (prismaErr?.code === "P2002") {
       const fields = prismaErr.meta?.target ?? [];
       if (fields.includes("email")) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
       if (fields.includes("phone")) return NextResponse.json({ error: "Phone number already in use" }, { status: 409 });
     }
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    const detail = prismaErr?.message ?? "Failed to update profile";
+    return NextResponse.json({ error: detail }, { status: 500 });
   }
 }
