@@ -49,13 +49,24 @@ export async function PATCH(req: NextRequest) {
     if (firstName !== undefined) data.firstName = firstName;
     if (lastName !== undefined) data.lastName = lastName;
     if (email !== undefined) data.email = email || null;
-    if (phone !== undefined) data.phone = phone ? toE164(phone.trim()) : null;
     if (title !== undefined) data.title = title || null;
     if (company !== undefined) data.company = company || null;
     if (street !== undefined) data.street = street || null;
     if (postCode !== undefined) data.postCode = postCode || null;
     if (city !== undefined) data.city = city || null;
     if (country !== undefined) data.country = country || null;
+
+    /* Normalise phone and skip update if unchanged (avoids false uniqueness errors) */
+    if (phone !== undefined) {
+      const normalised = phone ? toE164(phone.trim()) : null;
+      const current = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { phone: true },
+      });
+      if (normalised !== current?.phone) {
+        data.phone = normalised;
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id: session.userId },
@@ -78,13 +89,19 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ user });
   } catch (err: unknown) {
     console.error("[PATCH /api/user/profile] error:", err);
-    const prismaErr = err as { code?: string; meta?: { target?: string[] }; message?: string };
+    const prismaErr = err as { code?: string; meta?: Record<string, unknown>; message?: string };
     if (prismaErr?.code === "P2002") {
-      const fields = prismaErr.meta?.target ?? [];
-      if (fields.includes("email")) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
-      if (fields.includes("phone")) return NextResponse.json({ error: "Phone number already in use" }, { status: 409 });
+      /* Prisma 7.x driver adapter doesn't always populate meta.target — fall back to message string */
+      const target = (prismaErr.meta?.target as string[] | undefined) ?? [];
+      const msg = (prismaErr.message ?? "").toLowerCase();
+      if (target.includes("email") || msg.includes("email")) {
+        return NextResponse.json({ error: "Email already in use by another account" }, { status: 409 });
+      }
+      if (target.includes("phone") || msg.includes("phone")) {
+        return NextResponse.json({ error: "Phone number already linked to another account" }, { status: 409 });
+      }
+      return NextResponse.json({ error: "These details are already linked to another account" }, { status: 409 });
     }
-    const detail = prismaErr?.message ?? "Failed to update profile";
-    return NextResponse.json({ error: detail }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
   }
 }
