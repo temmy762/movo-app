@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, DM_Sans, Cormorant_Garamond } from "next/font/google";
+import { Inter, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { ConsentProvider } from "@/context/ConsentContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -19,13 +19,6 @@ const dmSans = DM_Sans({
   weight: ["300", "400", "500"],
 });
 
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  style: ["normal", "italic"],
-});
-
 const poppins = { variable: "--font-poppins" };
 
 export const metadata: Metadata = {
@@ -41,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${dmSans.variable} ${cormorant.variable} ${poppins.variable} h-full antialiased`}
+      className={`${inter.variable} ${dmSans.variable} ${poppins.variable} h-full antialiased`}
     >
       <head />
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
