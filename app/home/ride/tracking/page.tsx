@@ -152,9 +152,10 @@ function RideTrackingContent() {
     fetch(`/api/care/${bookingId}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (!data?.booking) return;
+        /* API returns the booking object directly with careAssignments embedded */
+        if (!data?.id || data.bookingType !== "CARE") return;
         setIsCareRide(true);
-        const rows: CareAssignmentRow[] = (data.assignments ?? []).map((a: {
+        const rows: CareAssignmentRow[] = (data.careAssignments ?? []).map((a: {
           id: string; role: string; status: string;
           driver?: { firstName?: string; lastName?: string };
         }) => ({
@@ -261,9 +262,18 @@ function RideTrackingContent() {
       });
     });
 
+    /* Care: booking fully closed (both drivers completed) → redirect immediately */
+    const unsubCareClosed = on(SOCKET_EVENTS.CARE_BOOKING_CLOSED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId !== bookingId) return;
+      if (statusPollRef.current) clearInterval(statusPollRef.current);
+      leaveBooking(bookingId);
+      router.replace(`/home/ride/completed?bookingId=${bookingId}`);
+    });
+
     return () => {
       unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted(); unsubStatus(); unsubArrived();
-      unsubCarePrimary(); unsubCareSupport(); unsubCareStatus();
+      unsubCarePrimary(); unsubCareSupport(); unsubCareStatus(); unsubCareClosed();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);

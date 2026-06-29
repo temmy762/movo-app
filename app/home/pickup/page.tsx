@@ -13,7 +13,8 @@ const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 function PickupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tier = searchParams.get("tier") ?? "all";
+  const tier    = searchParams.get("tier")    ?? "all";
+  const service = searchParams.get("service") ?? "";
 
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
@@ -85,6 +86,7 @@ function PickupContent() {
 
   const handleConfirm = () => {
     const params = new URLSearchParams({ tier, pickup, dropoff });
+    if (service)       params.set("service",   service);
     if (selectedPoint) {
       params.set("pickupLat", String(selectedPoint.lat));
       params.set("pickupLng", String(selectedPoint.lng));

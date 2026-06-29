@@ -30,9 +30,10 @@ type CheckoutFormProps = {
   tier: string; carImg: string; driverId: string;
   clientName: string; intentId: string;
   estimate: FareEstimate;
+  isCare?: boolean;
 };
 
-function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, clientName, intentId, estimate }: CheckoutFormProps) {
+function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, clientName, intentId, estimate, isCare }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -72,7 +73,26 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
       return;
     }
 
-    /* Payment succeeded inline — create booking as PAID */
+    if (isCare) {
+      /* ── Movo Care Ride ── POST /api/bookings/care */
+      const careRes = await fetch("/api/bookings/care", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName, pickup, dropoff,
+          fare, serviceFee, gst, total,
+          paymentStatus: "PAID",
+          stripePaymentIntentId: intentId,
+        }),
+      }).then(r => r.json()).catch(() => null);
+
+      const cp: Record<string, string> = { pickup, dropoff, car: "Movo Care Ride", tier: "black", paid: "1", service: "care" };
+      if (careRes?.bookingId) cp.bookingId = careRes.bookingId;
+      router.push(`/home/ride/tracking?${new URLSearchParams(cp).toString()}`);
+      return;
+    }
+
+    /* ── Standard booking ── POST /api/bookings */
     const bookingRes = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -136,6 +156,7 @@ function ConfirmPayContent() {
   const tier      = searchParams.get("tier")     || "";
   const carImg    = searchParams.get("carImg")   || "";
   const driverId  = searchParams.get("driverId") || "";
+  const isCare    = searchParams.get("service")  === "care";
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
@@ -148,7 +169,7 @@ function ConfirmPayContent() {
   const [airportPickup, setAirportPickup] = useState(false);
   const { user, loading: userLoading } = useCurrentUser();
   const clientName = user ? `${user.firstName} ${user.lastName}`.trim() : "Guest";
-  const resolvedTier = tier || carTierMap[carName] || "classic";
+  const resolvedTier = isCare ? "black" : (tier || carTierMap[carName] || "classic");
 
   /* Auto-detect airport on mount */
   useEffect(() => {
@@ -228,10 +249,25 @@ function ConfirmPayContent() {
 
           {/* Title */}
           <h1 className="text-center text-[22px] md:text-[28px] font-bold text-gray-900">Confirm &amp; Pay</h1>
+          {isCare && (
+            <p className="text-center text-[12px] text-gray-400 mt-1">Movo Care Ride · Two chauffeurs included</p>
+          )}
+
+          {/* Care info banner */}
+          {isCare && (
+            <div className="mt-4 rounded-xl p-3 flex items-start gap-2"
+              style={{ background: "linear-gradient(135deg,#0A0A0F,#131936)", border: "1px solid rgba(198,191,178,0.2)" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2" className="shrink-0 mt-0.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <div>
+                <p className="text-[12px] font-bold text-white mb-0.5">Movo Care Ride</p>
+                <p className="text-[11px] text-white/60 leading-snug">A primary chauffeur will drive you home in your vehicle. A support chauffeur follows separately and is dispatched once the primary accepts.</p>
+              </div>
+            </div>
+          )}
 
           {/* Ride Summary */}
           <div className="mt-6">
-            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">{carName}</p>
+            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">{isCare ? "Your Vehicle" : carName}</p>
 
             <div className="relative flex flex-col gap-3">
               {/* Vertical connector */}
@@ -321,6 +357,7 @@ function ConfirmPayContent() {
                   pickup={pickup} dropoff={dropoff} carName={carName}
                   tier={tier} carImg={carImg} driverId={driverId}
                   clientName={clientName} intentId={intentId} estimate={estimate}
+                  isCare={isCare}
                 />
               </Elements>
             )}

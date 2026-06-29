@@ -90,6 +90,8 @@ function AvailableCarsContent() {
   const tierParam = (searchParams.get("tier") ?? "all").toLowerCase();
   const pickup    = searchParams.get("pickup")  ?? "";
   const dropoff   = searchParams.get("dropoff") ?? "";
+  const service   = searchParams.get("service") ?? "";
+  const isCare    = service === "care";
 
   const [tierInfos,    setTierInfos]    = useState<Record<string, TierInfo>>({});
   const [carsByTier,   setCarsByTier]   = useState<Record<string, CarCard[]>>({});
@@ -207,6 +209,16 @@ function AvailableCarsContent() {
       car:      `${car.make} ${car.model}`,
       carImg:   car.img,
       driverId: car.driverId,
+    });
+    router.push(`/home/ride/confirm?${params.toString()}`);
+  };
+
+  const handleBookCare = () => {
+    const params = new URLSearchParams({
+      pickup, dropoff,
+      service: "care",
+      tier:    "black",
+      car:     "Movo Care Ride",
     });
     router.push(`/home/ride/confirm?${params.toString()}`);
   };
@@ -358,6 +370,41 @@ function AvailableCarsContent() {
       {/* Tier cards */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
         <div className="max-w-lg mx-auto space-y-3">
+          {/* ── Movo Care Ride card (always shown, not tier-gated) ── */}
+          {!isCare && (
+            <div
+              className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border-2 cursor-pointer active:scale-[0.99] transition-transform"
+              style={{ borderColor: "#131936", background: "linear-gradient(135deg,#0A0A0F 0%,#131936 60%,#2A3055 100%)" }}
+              onClick={handleBookCare}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-[16px] font-bold text-white">Movo Care Ride</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">Premium</span>
+                  </div>
+                  <p className="text-[12px] text-white/70 leading-snug mb-2">We drive you home in your own car — two vetted chauffeurs, one seamless booking.</p>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      <span className="text-[11px] text-white/70 font-medium">2 chauffeurs included</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                      <span className="text-[11px] text-white/70 font-medium">From ${minFares["black"]}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
+                </div>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             [1, 2, 3].map(i => (
               <div key={i} className="bg-gray-50 border border-gray-200 rounded-2xl px-4 pt-4 pb-4 animate-pulse">
