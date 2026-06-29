@@ -80,6 +80,16 @@ const countryCodes = [
   { label: "CA +1", value: "ca" },
 ];
 
+const codeToPrefix: Record<string, string> = { us: "+1", ca: "+1", uk: "+44", ng: "+234" };
+
+/** Detect country code from a stored E.164 phone and return { code, local } */
+function parseStoredPhone(phone: string): { code: string; local: string } {
+  if (phone.startsWith("+234")) return { code: "ng", local: phone.slice(4) };
+  if (phone.startsWith("+44"))  return { code: "uk", local: phone.slice(3) };
+  if (phone.startsWith("+1"))   return { code: "us", local: phone.slice(2) };
+  return { code: "us", local: phone.replace(/^\+/, "") };
+}
+
 const countries = [
   { label: "USA", value: "usa" },
   { label: "United Kingdom", value: "uk" },
@@ -114,7 +124,11 @@ export default function EditPersonalInfoPage() {
         if (u.firstName) setFirstName(u.firstName);
         if (u.lastName) setLastName(u.lastName);
         if (u.email) setEmail(u.email);
-        if (u.phone) setMobile(u.phone);
+        if (u.phone) {
+          const { code, local } = parseStoredPhone(u.phone);
+          setCountryCode(code);
+          setMobile(local);
+        }
         if (u.company) setCompany(u.company);
         if (u.street) setStreet(u.street);
         if (u.postCode) setPostCode(u.postCode);
@@ -128,10 +142,13 @@ export default function EditPersonalInfoPage() {
     setError("");
     setSaving(true);
     try {
+      const fullPhone = mobile.trim()
+        ? mobile.trim().startsWith("+") ? mobile.trim() : `${codeToPrefix[countryCode] ?? "+1"}${mobile.trim()}`
+        : "";
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, firstName, lastName, email, phone: mobile, company, street, postCode, city, country }),
+        body: JSON.stringify({ title, firstName, lastName, email, phone: fullPhone, company, street, postCode, city, country }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to save"); return; }
