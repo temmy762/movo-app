@@ -161,3 +161,70 @@ export function dispatchNotification(payload: {
 }) {
   emit(payload.targetRoom, SOCKET_EVENTS.NOTIFICATION, payload);
 }
+
+/* ── Care Ride ───────────────────────────────────────────────────────────── */
+
+export function dispatchCarePrimaryDispatched(payload: {
+  bookingId: string; assignmentId: string; driverId: string; userId?: string | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, `driver:${payload.driverId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
+    SOCKET_EVENTS.CARE_PRIMARY_DISPATCHED,
+    payload,
+  );
+}
+
+export function dispatchCarePrimaryAccepted(payload: {
+  bookingId: string; assignmentId: string; driverId: string; driverName: string; userId?: string | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
+    SOCKET_EVENTS.CARE_PRIMARY_ACCEPTED,
+    payload,
+  );
+}
+
+export function dispatchCareSupportDispatched(payload: {
+  bookingId: string; driverIds: string[]; userId?: string | null;
+}) {
+  const rooms = [
+    "admin",
+    `booking:${payload.bookingId}`,
+    ...(payload.userId ? [`user:${payload.userId}`] : []),
+    ...payload.driverIds.map((d) => `driver:${d}`),
+  ];
+  emitMany(rooms, SOCKET_EVENTS.CARE_SUPPORT_DISPATCHED, payload);
+}
+
+export function dispatchCareSupportAccepted(payload: {
+  bookingId: string; assignmentId: string; driverId: string; driverName: string; userId?: string | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
+    SOCKET_EVENTS.CARE_SUPPORT_ACCEPTED,
+    payload,
+  );
+}
+
+export function dispatchCareAssignmentStatus(payload: {
+  bookingId: string; assignmentId: string; role: string; status: string;
+  driverId?: string | null; userId?: string | null;
+}) {
+  const rooms = [
+    "admin",
+    `booking:${payload.bookingId}`,
+    ...(payload.userId   ? [`user:${payload.userId}`]     : []),
+    ...(payload.driverId ? [`driver:${payload.driverId}`] : []),
+  ];
+  emitMany(rooms, SOCKET_EVENTS.CARE_ASSIGNMENT_STATUS, payload);
+}
+
+export function dispatchCareBookingClosed(payload: {
+  bookingId: string; userId?: string | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
+    SOCKET_EVENTS.CARE_BOOKING_CLOSED,
+    payload,
+  );
+}

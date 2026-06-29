@@ -33,7 +33,13 @@ export const SOCKET_EVENTS = {
   NOTIFICATION: "notification",
 
   /* ── Care Ride ── */
-  CARE_DRIVER_ASSIGNED: "care.driver_assigned",
+  CARE_DRIVER_ASSIGNED:    "care.driver_assigned",
+  CARE_PRIMARY_DISPATCHED: "care.primary.dispatched",
+  CARE_PRIMARY_ACCEPTED:   "care.primary.accepted",
+  CARE_SUPPORT_DISPATCHED: "care.support.dispatched",
+  CARE_SUPPORT_ACCEPTED:   "care.support.accepted",
+  CARE_ASSIGNMENT_STATUS:  "care.assignment.status",
+  CARE_BOOKING_CLOSED:     "care.booking.closed",
 } as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

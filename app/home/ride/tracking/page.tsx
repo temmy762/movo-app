@@ -52,6 +52,9 @@ function RideTrackingContent() {
   const [rideStatus,       setRideStatus]       = useState<string>("PENDING");
   const [driverArrived,    setDriverArrived]    = useState(false);
   const [driverPosition,   setDriverPosition]   = useState<{ lat: number; lng: number } | null>(null);
+  type CareAssignmentRow = { id: string; role: "PRIMARY" | "SUPPORT"; status: string; driverName: string };
+  const [isCareRide,       setIsCareRide]       = useState(false);
+  const [careAssignments,  setCareAssignments]  = useState<CareAssignmentRow[]>([]);
   const [chatOpen,    setChatOpen]    = useState(false);
   const [chatInput,   setChatInput]   = useState("");
   const [chatSending, setChatSending] = useState(false);
@@ -143,6 +146,29 @@ function RideTrackingContent() {
       .catch(() => {});
   }, [bookingId]);
 
+  /* ── Detect Care Ride + fetch assignments ── */
+  useEffect(() => {
+    if (!bookingId) return;
+    fetch(`/api/care/${bookingId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.booking) return;
+        setIsCareRide(true);
+        const rows: CareAssignmentRow[] = (data.assignments ?? []).map((a: {
+          id: string; role: string; status: string;
+          driver?: { firstName?: string; lastName?: string };
+        }) => ({
+          id:         a.id,
+          role:       a.role as "PRIMARY" | "SUPPORT",
+          status:     a.status,
+          driverName: a.driver ? `${a.driver.firstName ?? ""} ${a.driver.lastName ?? ""}`.trim() : "Searching…",
+        }));
+        setCareAssignments(rows);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId]);
+
   /* ── Socket room join + realtime events ── */
   useEffect(() => {
     if (!bookingId) return;
@@ -203,8 +229,41 @@ function RideTrackingContent() {
       if (d.bookingId === bookingId) setDriverArrived(true);
     });
 
+    /* Care: primary driver accepted */
+    const unsubCarePrimary = on(SOCKET_EVENTS.CARE_PRIMARY_ACCEPTED, (data) => {
+      const d = data as { bookingId: string; assignmentId: string; driverName: string };
+      if (d.bookingId !== bookingId) return;
+      setCareAssignments(prev => prev.map(a =>
+        a.id === d.assignmentId ? { ...a, status: "ACCEPTED", driverName: d.driverName } : a
+      ));
+    });
+
+    /* Care: support driver accepted */
+    const unsubCareSupport = on(SOCKET_EVENTS.CARE_SUPPORT_ACCEPTED, (data) => {
+      const d = data as { bookingId: string; assignmentId: string; driverName: string };
+      if (d.bookingId !== bookingId) return;
+      setCareAssignments(prev => prev.map(a =>
+        a.id === d.assignmentId ? { ...a, status: "ACCEPTED", driverName: d.driverName } : a
+      ));
+    });
+
+    /* Care: any assignment status change */
+    const unsubCareStatus = on(SOCKET_EVENTS.CARE_ASSIGNMENT_STATUS, (data) => {
+      const d = data as { bookingId: string; assignmentId: string; status: string; role: string };
+      if (d.bookingId !== bookingId) return;
+      setCareAssignments(prev => {
+        const exists = prev.some(a => a.id === d.assignmentId);
+        if (exists) {
+          return prev.map(a => a.id === d.assignmentId ? { ...a, status: d.status } : a);
+        }
+        /* New assignment dispatched mid-ride (re-dispatch) — add placeholder */
+        return [...prev, { id: d.assignmentId, role: d.role as "PRIMARY" | "SUPPORT", status: d.status, driverName: "Searching…" }];
+      });
+    });
+
     return () => {
       unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted(); unsubStatus(); unsubArrived();
+      unsubCarePrimary(); unsubCareSupport(); unsubCareStatus();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
@@ -381,6 +440,64 @@ function RideTrackingContent() {
           </div>
 
           <div className="h-[2px] w-full rounded-full mb-4" style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }} />
+
+          {/* ── Care Ride: dual-driver status panel ── */}
+          {isCareRide && (
+            <div className="mb-4 rounded-2xl overflow-hidden border border-[#1e2a5e]/20"
+              style={{ background: "linear-gradient(135deg,#0d1128 0%,#131936 60%,#1e2a5e 100%)" }}>
+              <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+                <span className="text-[13px]">🌟</span>
+                <p className="text-[12px] font-bold text-white tracking-wide">Movo Care Ride</p>
+                <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                  Dual Chauffeur
+                </span>
+              </div>
+              <div className="flex flex-col divide-y divide-white/10">
+                {(["PRIMARY", "SUPPORT"] as const).map((role) => {
+                  const assignment = careAssignments.find(a => a.role === role && a.status !== "CANCELLED");
+                  const statusLabel: Record<string, string> = {
+                    SEARCHING: "Searching…",
+                    PENDING:   "Notified",
+                    ACCEPTED:  "Accepted",
+                    ARRIVED:   "Arrived",
+                    STARTED:   "En route",
+                    COMPLETED: "Done",
+                    CANCELLED: "Cancelled",
+                  };
+                  const statusColor: Record<string, string> = {
+                    SEARCHING: "#94a3b8",
+                    PENDING:   "#fbbf24",
+                    ACCEPTED:  "#34d399",
+                    ARRIVED:   "#34d399",
+                    STARTED:   "#60a5fa",
+                    COMPLETED: "#a3e635",
+                    CANCELLED: "#f87171",
+                  };
+                  const st = assignment?.status ?? "SEARCHING";
+                  const name = assignment?.driverName ?? "Searching…";
+                  return (
+                    <div key={role} className="flex items-center justify-between px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold text-white">
+                          {role === "PRIMARY" ? "A" : "B"}
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider leading-none mb-0.5">
+                            {role === "PRIMARY" ? "Primary" : "Support"} Chauffeur
+                          </p>
+                          <p className="text-[13px] font-semibold text-white leading-none">{name}</p>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: statusColor[st] + "22", color: statusColor[st] }}>
+                        {statusLabel[st] ?? st}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Driver arrived banner */}
           {driverArrived && rideStatus === "CONFIRMED" && (

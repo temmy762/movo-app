@@ -21,6 +21,22 @@ type Booking = {
   status: string;
 };
 
+type CareAssignment = {
+  id: string;
+  role: "PRIMARY" | "SUPPORT";
+  status: string;
+  booking: {
+    id: string;
+    clientName: string;
+    pickup: string;
+    dropoff: string;
+    carName: string;
+    total: number;
+    paymentStatus: string;
+    status: string;
+  };
+};
+
 
 export default function DriverHomePage() {
   const router = useRouter();
@@ -44,6 +60,10 @@ export default function DriverHomePage() {
   const declinedIdsRef  = useRef<Set<string>>(new Set());
   const ridePhaseRef    = useRef<RidePhase>("idle");
   const [navEta,        setNavEta]        = useState<string | null>(null);
+  const [careAssignment,  setCareAssignment]  = useState<CareAssignment | null>(null);
+  type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started";
+  const [carePhase,       setCarePhase]       = useState<CarePhase>("idle");
+  const [careLoading,     setCareLoading]     = useState(false);
   usePushSubscription();
   const { join, on } = useSocket();
   /* Keep ridePhaseRef in sync so async callbacks can read current phase without stale closure */
@@ -167,9 +187,81 @@ export default function DriverHomePage() {
       });
     });
 
-    return () => { unsubCreated(); unsubCancelled(); };
+    /* Care: PRIMARY dispatched to this driver */
+    const unsubCarePrimary = on(SOCKET_EVENTS.CARE_PRIMARY_DISPATCHED, (data) => {
+      const d = data as { assignmentId: string; bookingId: string };
+      if (carePhase !== "idle") return;
+      fetch("/api/care/driver")
+        .then(r => r.json())
+        .then(({ assignment }) => {
+          if (assignment && assignment.id === d.assignmentId) {
+            setCareAssignment(assignment as CareAssignment);
+            setCarePhase("requesting");
+            playRequestAlert();
+            startCountdown(() => {
+              stopAlert();
+              setCareAssignment(null);
+              setCarePhase("idle");
+            });
+          }
+        })
+        .catch(() => {});
+    });
+
+    /* Care: SUPPORT dispatched to this driver */
+    const unsubCareSupport = on(SOCKET_EVENTS.CARE_SUPPORT_DISPATCHED, (data) => {
+      const d = data as { bookingId: string };
+      if (carePhase !== "idle") return;
+      fetch("/api/care/driver")
+        .then(r => r.json())
+        .then(({ assignment }) => {
+          if (assignment?.booking?.id === d.bookingId) {
+            setCareAssignment(assignment as CareAssignment);
+            setCarePhase("requesting");
+            playRequestAlert();
+            startCountdown(() => {
+              stopAlert();
+              setCareAssignment(null);
+              setCarePhase("idle");
+            });
+          }
+        })
+        .catch(() => {});
+    });
+
+    /* Care booking closed — clear state */
+    const unsubCareClosed = on(SOCKET_EVENTS.CARE_BOOKING_CLOSED, (data) => {
+      const d = data as { bookingId: string };
+      setCareAssignment(prev => {
+        if (prev?.booking?.id === d.bookingId) {
+          setCarePhase("idle");
+          return null;
+        }
+        return prev;
+      });
+    });
+
+    return () => { unsubCreated(); unsubCancelled(); unsubCarePrimary(); unsubCareSupport(); unsubCareClosed(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOnline, ridePhase]);
+  }, [isOnline, ridePhase, carePhase]);
+
+  /* Poll for Care assignment on mount so a restored session restores Care state */
+  useEffect(() => {
+    fetch("/api/care/driver")
+      .then(r => r.json())
+      .then(({ assignment }) => {
+        if (assignment) {
+          setCareAssignment(assignment as CareAssignment);
+          const s = assignment.status;
+          if (s === "PENDING")  setCarePhase("requesting");
+          if (s === "ACCEPTED") setCarePhase("accepted");
+          if (s === "ARRIVED")  setCarePhase("arrived");
+          if (s === "STARTED")  setCarePhase("started");
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* One-time listener so a restored session gets audio unlocked on first tap */
   useEffect(() => {
@@ -422,6 +514,80 @@ export default function DriverHomePage() {
     setShowTripComplete(true);
   }
 
+  /* ── Care assignment handlers ─────────────────────────────────────────── */
+
+  async function handleCareAccept() {
+    if (!careAssignment) return;
+    stopCountdown();
+    stopAlert();
+    setCareLoading(true);
+    const res = await fetch(`/api/care/assignments/${careAssignment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "ACCEPTED" }),
+    });
+    setCareLoading(false);
+    if (res.ok) {
+      setCarePhase("accepted");
+      startOnlineLocationBroadcast();
+    }
+  }
+
+  async function handleCareDecline() {
+    if (!careAssignment) return;
+    stopCountdown();
+    stopAlert();
+    setCareLoading(true);
+    await fetch(`/api/care/assignments/${careAssignment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "CANCELLED" }),
+    });
+    setCareLoading(false);
+    setCareAssignment(null);
+    setCarePhase("idle");
+  }
+
+  async function handleCareArrived() {
+    if (!careAssignment) return;
+    setCareLoading(true);
+    await fetch(`/api/care/assignments/${careAssignment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "ARRIVED" }),
+    });
+    setCareLoading(false);
+    setCarePhase("arrived");
+  }
+
+  async function handleCareStart() {
+    if (!careAssignment) return;
+    setCareLoading(true);
+    await fetch(`/api/care/assignments/${careAssignment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "STARTED" }),
+    });
+    setCareLoading(false);
+    startLocationTracking(careAssignment.booking.id);
+    setCarePhase("started");
+  }
+
+  async function handleCareComplete() {
+    if (!careAssignment) return;
+    stopLocationTracking();
+    setCareLoading(true);
+    await fetch(`/api/care/assignments/${careAssignment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "COMPLETED" }),
+    });
+    setCareLoading(false);
+    setCareAssignment(null);
+    setCarePhase("idle");
+    setShowTripComplete(true);
+  }
+
   return (
     <div className="relative h-full flex flex-col overflow-hidden" style={{ fontFamily: "var(--font-body)" }}>
 
@@ -511,8 +677,98 @@ export default function DriverHomePage() {
 
         <div className="flex-1" />
 
+        {/* ── Care Assignment Bottom Sheet ── */}
+        {careAssignment && carePhase !== "idle" && (
+          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6">
+            {/* Header banner */}
+            <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-xl"
+              style={{ background: "linear-gradient(90deg,#131936,#1e2a5e)" }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[14px]">🌟</span>
+                <div>
+                  <p className="text-[12px] font-bold text-white">Movo Care Ride</p>
+                  <p className="text-[10px] text-white/70">
+                    {careAssignment.role === "PRIMARY" ? "Primary Chauffeur" : "Support Chauffeur"}
+                  </p>
+                </div>
+              </div>
+              {carePhase === "requesting" && (
+                <span className="text-[13px] font-bold w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: timeLeft <= 10 ? "#ef4444" : "rgba(255,255,255,0.15)", color: "white" }}>
+                  {timeLeft}
+                </span>
+              )}
+            </div>
+            {/* Route */}
+            <div className="flex flex-col gap-1.5 mb-3 pl-1">
+              {careAssignment.role === "PRIMARY" ? (
+                <>
+                  <div className="flex items-start gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#131936] shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-gray-600 leading-tight">{careAssignment.booking.pickup}</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-3 h-3 rounded-full bg-red-500 shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-gray-600 leading-tight">{careAssignment.booking.dropoff}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-semibold text-gray-500 mb-0.5">Rendezvous at destination</p>
+                  <div className="flex items-start gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#131936] shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-gray-600 leading-tight">{careAssignment.booking.dropoff}</p>
+                  </div>
+                </>
+              )}
+            </div>
+            {/* Client + fare */}
+            <div className="flex items-center justify-between mb-3 bg-gray-50 rounded-xl px-3 py-2">
+              <p className="text-[13px] font-semibold text-gray-800">{careAssignment.booking.clientName}</p>
+              <p className="text-[13px] font-bold" style={{ color: "#C6BFB2" }}>
+                ${careAssignment.booking.total.toFixed(2)}
+              </p>
+            </div>
+            {/* CTA */}
+            {carePhase === "requesting" && (
+              <div className="flex gap-3">
+                <button onClick={handleCareDecline} disabled={careLoading}
+                  className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-700">
+                  Decline
+                </button>
+                <button onClick={handleCareAccept} disabled={careLoading}
+                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
+                  style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                  {careLoading ? "…" : "Accept"}
+                </button>
+              </div>
+            )}
+            {carePhase === "accepted" && (
+              <button onClick={handleCareArrived} disabled={careLoading}
+                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "I've Arrived at Pickup" : "I've Arrived at Rendezvous"}
+              </button>
+            )}
+            {carePhase === "arrived" && (
+              <button onClick={handleCareStart} disabled={careLoading}
+                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "Start Ride" : "Pick Up Driver A"}
+              </button>
+            )}
+            {carePhase === "started" && (
+              <button onClick={handleCareComplete} disabled={careLoading}
+                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                {careLoading ? "Saving…" : "Complete Assignment"}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Searching / waiting */}
-        {ridePhase === "searching" && (
+        {!careAssignment && ridePhase === "searching" && (
           <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-5 pb-6 flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-4 border-gray-200 border-t-[#131936] rounded-full animate-spin" />
             <p className="text-[14px] font-semibold text-gray-700">Looking for ride requests…</p>

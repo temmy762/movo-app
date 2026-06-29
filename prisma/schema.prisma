@@ -101,6 +101,21 @@ enum AssignmentType {
   RECOVERY
 }
 
+enum CareRole {
+  PRIMARY
+  SUPPORT
+}
+
+enum CareAssignmentStatus {
+  SEARCHING
+  PENDING
+  ACCEPTED
+  ARRIVED
+  STARTED
+  COMPLETED
+  CANCELLED
+}
+
 enum OnboardingAdminStatus {
   PENDING
   UNDER_REVIEW
@@ -155,6 +170,7 @@ model User {
   notifications    Notification[] @relation(name: "UserNotifications")
 }
 
+
 model Driver {
   id        String       @id @default(cuid())
   firstName String
@@ -179,13 +195,14 @@ model Driver {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  sessions        Session[]
+  sessions         Session[]
   bookings         Booking[]
   vehicle          Vehicle?
   walletTxs        WalletTransaction[]
   incidentReports  IncidentReport[]
   onboarding       DriverOnboarding?
   notifications    Notification[] @relation(name: "DriverNotifications")
+  careAssignments  CareAssignment[]
 }
 
 model Vehicle {
@@ -262,6 +279,30 @@ model Booking {
   tripLocations   TripLocation[]
   incidentReports IncidentReport[]
   messages        BookingMessage[]
+  careAssignments CareAssignment[]
+}
+
+// ─── Care Ride Assignments ────────────────────────────────────────────────────
+
+model CareAssignment {
+  id          String               @id @default(cuid())
+  bookingId   String
+  booking     Booking              @relation(fields: [bookingId], references: [id])
+  driverId    String?
+  driver      Driver?              @relation(fields: [driverId], references: [id])
+  role        CareRole
+  status      CareAssignmentStatus @default(SEARCHING)
+  dispatchedAt DateTime?
+  acceptedAt   DateTime?
+  arrivedAt    DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([bookingId])
+  @@index([driverId])
 }
 
 // ─── Trip Location (live tracking) ────────────────────────────────────────────

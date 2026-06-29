@@ -613,10 +613,286 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
   );
 }
 
+// ── Care Ride types ────────────────────────────────────────────────────────
+type CareDriverInfo = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  vehicle?: { make: string; model: string; plate: string } | null;
+};
+type CareAssignmentRow = {
+  id: string;
+  role: "PRIMARY" | "SUPPORT";
+  status: string;
+  driverId: string | null;
+  driver: CareDriverInfo | null;
+  dispatchedAt: string | null;
+  acceptedAt: string | null;
+  completedAt: string | null;
+};
+type CareBooking = {
+  id: string;
+  clientName: string;
+  pickup: string;
+  dropoff: string;
+  total: number;
+  paymentStatus: string;
+  status: BookingStatus;
+  createdAt: string;
+  careAssignments: CareAssignmentRow[];
+  user?: { firstName: string; lastName: string; email: string; phone: string | null } | null;
+};
+
+const careStatusColor: Record<string, string> = {
+  SEARCHING:  "#d97706",
+  PENDING:    "#2563eb",
+  ACCEPTED:   "#0284c7",
+  ARRIVED:    "#7c3aed",
+  STARTED:    "#059669",
+  COMPLETED:  "#1e2d45",
+  CANCELLED:  "#dc2626",
+};
+
+function CareBookingsTable() {
+  const [rows, setRows]       = useState<CareBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage]       = useState(1);
+  const [total, setTotal]     = useState(0);
+  const [actioning, setActioning] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ bookingId: string; action: "force_complete" | "cancel" } | null>(null);
+  const LIMIT = 10;
+
+  const load = useCallback((p = page) => {
+    setLoading(true);
+    fetch(`/api/admin/care?page=${p}&limit=${LIMIT}`)
+      .then(r => r.json())
+      .then(d => {
+        setRows(Array.isArray(d.bookings) ? d.bookings : []);
+        setTotal(d.total ?? 0);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [page]);
+
+  useEffect(() => { load(page); }, [page, load]);
+
+  const doAction = async (bookingId: string, action: "force_complete" | "cancel") => {
+    setActioning(bookingId);
+    await fetch("/api/admin/care", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId, action }),
+    });
+    setConfirmModal(null);
+    setActioning(null);
+    load(page);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+
+  const driverCell = (a: CareAssignmentRow | undefined, label: string) => {
+    if (!a) return <span className="text-[11px] text-gray-300 italic">{label}: —</span>;
+    const statusDot = careStatusColor[a.status] ?? "#9ca3af";
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-semibold text-gray-400">{label}</span>
+        {a.driver
+          ? <span className="text-[12px] font-medium text-gray-800">{a.driver.firstName} {a.driver.lastName}</span>
+          : <span className="text-[12px] italic text-gray-400">Searching…</span>}
+        <span className="inline-flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0 inline-block" style={{ background: statusDot }} />
+          <span className="text-[10px] text-gray-500">{a.status}</span>
+        </span>
+        {a.driver?.vehicle && (
+          <span className="text-[10px] text-gray-400">{a.driver.vehicle.make} {a.driver.vehicle.model} · {a.driver.vehicle.plate}</span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="text-[15px] font-bold text-gray-900">Movo Care Ride Bookings</span>
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white" style={{ background: "#1e2d45" }}>{total}</span>
+        </div>
+        <button onClick={() => load(page)} className="no-hover-fx px-4 py-2 rounded-xl text-white text-[12px] font-semibold" style={{ background: "#ef4444" }}>
+          Refresh
+        </button>
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50/50">
+              {["ID","Date","Customer","Primary Chauffeur","Support Chauffeur","Pickup","Dropoff","Payment","Status","Actions"].map(h => (
+                <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-gray-500 whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading && <tr><td colSpan={10} className="px-4 py-8 text-center text-[13px] text-gray-400">Loading…</td></tr>}
+            {!loading && rows.length === 0 && <tr><td colSpan={10} className="px-4 py-8 text-center text-[13px] text-gray-400">No Care Ride bookings yet.</td></tr>}
+            {!loading && rows.map(b => {
+              const sc  = statusConfig[b.status];
+              const pA  = b.careAssignments.find(a => a.role === "PRIMARY");
+              const sA  = b.careAssignments.find(a => a.role === "SUPPORT");
+              const date = new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+              return (
+                <tr key={b.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors align-top">
+                  <td className="px-4 py-3 font-mono text-[10px] text-gray-500 whitespace-nowrap">{b.id.slice(0, 10)}…</td>
+                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{date}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-800 whitespace-nowrap">{b.clientName}</p>
+                    {b.user?.email && <p className="text-[10px] text-gray-400">{b.user.email}</p>}
+                  </td>
+                  <td className="px-4 py-3">{driverCell(pA, "Driver A")}</td>
+                  <td className="px-4 py-3">{driverCell(sA, "Driver B")}</td>
+                  <td className="px-4 py-3 text-gray-500 max-w-[130px] truncate">{b.pickup}</td>
+                  <td className="px-4 py-3 text-gray-500 max-w-[130px] truncate">{b.dropoff}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="font-bold text-gray-800">${b.total.toFixed(2)}</span>
+                    <span className="ml-1.5 text-[11px]" style={{ color: b.paymentStatus === "PAID" ? "#16a34a" : "#d97706" }}>
+                      {b.paymentStatus}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
+                      style={{ background: sc.bg, color: sc.color }}>
+                      {sc.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
+                        <>
+                          <button
+                            disabled={actioning === b.id}
+                            onClick={() => setConfirmModal({ bookingId: b.id, action: "force_complete" })}
+                            className="no-hover-fx px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold"
+                            style={{ background: actioning === b.id ? "#9ca3af" : "#1e2d45" }}>
+                            Force Done
+                          </button>
+                          <button
+                            disabled={actioning === b.id}
+                            onClick={() => setConfirmModal({ bookingId: b.id, action: "cancel" })}
+                            className="no-hover-fx px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold"
+                            style={{ background: actioning === b.id ? "#9ca3af" : "#ef4444" }}>
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile card list */}
+      <div className="lg:hidden">
+        {loading && <p className="px-4 py-8 text-center text-[13px] text-gray-400">Loading…</p>}
+        {!loading && rows.length === 0 && <p className="px-4 py-8 text-center text-[13px] text-gray-400">No Care Ride bookings yet.</p>}
+        {!loading && rows.map(b => {
+          const sc = statusConfig[b.status];
+          const pA = b.careAssignments.find(a => a.role === "PRIMARY");
+          const sA = b.careAssignments.find(a => a.role === "SUPPORT");
+          const date = new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+          return (
+            <div key={b.id} className="border-b border-gray-100 px-4 py-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] text-gray-400">{b.id.slice(0, 12)}…</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                  style={{ background: sc.bg, color: sc.color }}>{sc.label}</span>
+              </div>
+              <p className="text-[13px] font-semibold text-gray-900">{b.clientName} · {date}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {driverCell(pA, "Driver A")}
+                {driverCell(sA, "Driver B")}
+              </div>
+              <div className="flex flex-col gap-0.5 pl-1">
+                <p className="text-[11px] text-gray-500 truncate">↑ {b.pickup}</p>
+                <p className="text-[11px] text-gray-500 truncate">↓ {b.dropoff}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-bold text-gray-900">${b.total.toFixed(2)}
+                  <span className="ml-1.5 text-[11px] font-normal" style={{ color: b.paymentStatus === "PAID" ? "#16a34a" : "#d97706" }}>{b.paymentStatus}</span>
+                </span>
+                {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
+                  <div className="flex gap-2">
+                    <button onClick={() => setConfirmModal({ bookingId: b.id, action: "force_complete" })}
+                      className="no-hover-fx px-2.5 py-1.5 rounded-lg text-white text-[11px] font-semibold"
+                      style={{ background: "#1e2d45" }}>Done</button>
+                    <button onClick={() => setConfirmModal({ bookingId: b.id, action: "cancel" })}
+                      className="no-hover-fx px-2.5 py-1.5 rounded-lg text-white text-[11px] font-semibold"
+                      style={{ background: "#ef4444" }}>Cancel</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Confirm action modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-[15px] font-bold text-gray-900 mb-2">
+              {confirmModal.action === "force_complete" ? "Force Complete Booking" : "Cancel Booking"}
+            </h3>
+            <p className="text-[13px] text-gray-500 mb-5">
+              {confirmModal.action === "force_complete"
+                ? "This will mark all assignments and the booking as COMPLETED."
+                : "This will cancel all active assignments and the booking."}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700">
+                Back
+              </button>
+              <button
+                disabled={actioning === confirmModal.bookingId}
+                onClick={() => doAction(confirmModal.bookingId, confirmModal.action)}
+                className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-bold"
+                style={{ background: confirmModal.action === "cancel" ? "#ef4444" : "#1e2d45" }}>
+                {actioning === confirmModal.bookingId ? "Processing…" : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
+        <span className="text-[11px] text-gray-400">{total} total</span>
+        <div className="flex items-center gap-1">
+          <button className="no-hover-fx w-7 h-7 rounded flex items-center justify-center text-gray-400 disabled:opacity-30"
+            disabled={page === 1} onClick={() => setPage(p => p - 1)}>‹</button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+            <button key={n}
+              className="no-hover-fx w-7 h-7 rounded text-[11px] font-medium"
+              style={{ background: n === page ? "linear-gradient(90deg,#131936,#C6BFB2)" : "transparent", color: n === page ? "white" : "#6b7280" }}
+              onClick={() => setPage(n)}>{n}</button>
+          ))}
+          <button className="no-hover-fx w-7 h-7 rounded flex items-center justify-center text-gray-400 disabled:opacity-30"
+            disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>›</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────
 export default function BookingsPage() {
   const [counts,   setCounts]   = useState({ pending: 0, confirmed: 0, completed: 0, cancelled: 0 });
   const [chartData, setChartData] = useState<OverviewItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"all" | "care">("all");
 
   useEffect(() => {
     fetch("/api/admin/stats")
@@ -647,8 +923,29 @@ export default function BookingsPage() {
           <BookingsBarChart data={chartData} />
         </div>
 
-        {/* Full bookings table */}
-        <FullBookingsTable onCountsChange={setCounts} />
+        {/* Tab bar */}
+        <div className="flex items-center gap-2 border-b border-gray-200 pb-0">
+          {(["all", "care"] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="no-hover-fx px-4 py-2.5 text-[13px] font-semibold rounded-t-lg transition-colors"
+              style={{
+                background:   activeTab === tab ? "white"      : "transparent",
+                color:        activeTab === tab ? "#131936"     : "#9ca3af",
+                borderBottom: activeTab === tab ? "2px solid #131936" : "2px solid transparent",
+              }}>
+              {tab === "all" ? "All Bookings" : "🌟 Care Ride"}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        {activeTab === "all" ? (
+          <FullBookingsTable onCountsChange={setCounts} />
+        ) : (
+          <CareBookingsTable />
+        )}
       </div>
     </div>
   );

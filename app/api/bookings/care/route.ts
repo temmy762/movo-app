@@ -1,10 +1,9 @@
 /**
  * POST /api/bookings/care
  *
- * Creates a Movo Care Ride booking: one parent booking visible to the customer
- * plus two linked child assignments (PRIMARY driver, RECOVERY driver).
- *
- * The customer always sees one booking. Internally two drivers are dispatched.
+ * Creates a single Movo Care Ride booking visible to the customer, then
+ * immediately triggers PRIMARY chauffeur dispatch via CareAssignment records.
+ * SUPPORT dispatch fires automatically when PRIMARY accepts.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,7 +12,7 @@ import { getSession } from "@/lib/session";
 import { geocodeAddresses } from "@/lib/geocoding";
 import { sendNotification } from "@/lib/notifications";
 import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
-import { pushToOnlineDriversByTier } from "@/lib/webpush";
+import { dispatchPrimary } from "@/lib/care/dispatch";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,7 +24,7 @@ export async function POST(req: NextRequest) {
       clientName, pickup, dropoff,
       fare, serviceFee, gst, total,
       paymentStatus, stripePaymentIntentId,
-      customerVehicle,            // e.g. "Toyota Camry - ABC 123"
+      customerVehicle,
     } = body;
 
     if (!clientName || !pickup || !dropoff) {
@@ -37,11 +36,12 @@ export async function POST(req: NextRequest) {
     const resolvedPaymentStatus = paymentStatus === "PAID" ? "PAID" : "UNPAID";
     const resolvedStatus        = resolvedPaymentStatus === "PAID" ? "CONFIRMED" : "PENDING";
 
-    /* ── 1. Parent booking (what the customer sees) ── */
-    const parent = await prisma.booking.create({
+    /* ── Single booking — what the customer sees ── */
+    const booking = await prisma.booking.create({
       data: {
         clientName,
-        pickup, dropoff,
+        pickup,
+        dropoff,
         pickupLat:  coordinates?.pickupLat  ?? null,
         pickupLng:  coordinates?.pickupLng  ?? null,
         dropoffLat: coordinates?.dropoffLat ?? null,
@@ -60,46 +60,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    /* ── 2. PRIMARY assignment — driver takes customer home in their car ── */
-    const primary = await prisma.booking.create({
-      data: {
-        clientName,
-        pickup, dropoff,
-        pickupLat:  coordinates?.pickupLat  ?? null,
-        pickupLng:  coordinates?.pickupLng  ?? null,
-        dropoffLat: coordinates?.dropoffLat ?? null,
-        dropoffLng: coordinates?.dropoffLng ?? null,
-        carTier:    "black",
-        carName:    customerVehicle ?? "Customer vehicle",
-        fare:       Number(fare) * 0.7,  /* 70% of fare to primary driver */
-        serviceFee: 0,
-        total:      Number(fare) * 0.7,
-        paymentStatus: "PAID",
-        status:     resolvedStatus as never,
-        bookingType: "CARE",
-        assignmentType: "PRIMARY",
-        parentBookingId: parent.id,
-        ...(userId ? { userId } : {}),
-      },
-    });
-
-    /* ── 3. RECOVERY assignment — driver B picks up driver A after completion ── */
-    const recovery = await prisma.booking.create({
-      data: {
-        clientName: `[Recovery] ${clientName}`,
-        pickup:     dropoff,  /* Recovery driver starts at the dropoff point */
-        dropoff:    pickup,   /* Returns to origin after pickup */
-        carTier:    "black",
-        carName:    "Recovery vehicle",
-        fare:       Number(fare) * 0.3,  /* 30% of fare to recovery driver */
-        serviceFee: 0,
-        total:      Number(fare) * 0.3,
-        paymentStatus: "PAID",
-        status:     resolvedStatus as never,
-        bookingType:    "CARE",
-        assignmentType: "RECOVERY",
-        parentBookingId: parent.id,
-      },
+    /* ── Socket: notify admin dashboard ── */
+    dispatchBookingCreated({
+      id: booking.id, pickup, dropoff, carTier: "black",
+      carName: "Movo Care Ride",
+      total: Number(total), status: resolvedStatus,
+      createdAt: booking.createdAt.toISOString(),
     });
 
     /* ── Notify rider confirmation ── */
@@ -111,37 +77,24 @@ export async function POST(req: NextRequest) {
       if (user?.email) {
         sendNotification({
           eventType: "RIDER_BOOKING_CONFIRMED",
-          recipient: { type: "user", id: userId, email: user.email, firstName: user.firstName, phone: user.phone ?? undefined },
-          data: { bookingId: parent.id, pickup, dropoff, carTier: "black", fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total) },
+          recipient: {
+            type: "user", id: userId,
+            email: user.email, firstName: user.firstName,
+            phone: user.phone ?? undefined,
+          },
+          data: { bookingId: booking.id, pickup, dropoff, carTier: "black", fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total) },
         }).catch(() => {});
       }
     }
 
-    /* ── Socket: notify admin + all Black-tier drivers ── */
-    dispatchBookingCreated({
-      id: parent.id, pickup, dropoff, carTier: "black", carName: "Movo Care Ride",
-      total: Number(total), status: resolvedStatus, createdAt: parent.createdAt.toISOString(),
-    });
+    /* ── Trigger PRIMARY dispatch (fire-and-forget) ── */
+    if (resolvedStatus === "CONFIRMED" && coordinates?.pickupLat && coordinates?.pickupLng) {
+      dispatchPrimary(booking.id, coordinates.pickupLat, coordinates.pickupLng, userId).catch((e) =>
+        console.error("[care dispatch primary]", e),
+      );
+    }
 
-    /* ── Push notifications to Black-tier online drivers ── */
-    pushToOnlineDriversByTier("black", {
-      title: "🌟 Movo Care Ride Request",
-      body:  `Pickup: ${pickup} — Two-chauffeur job`,
-      tag:   `care-${parent.id}`,
-      data:  { type: "new_booking", bookingId: primary.id, requireInteraction: "true" },
-    }).catch(() => {});
-
-    pushToOnlineDriversByTier("black", {
-      title: "🔄 Care Ride Recovery Assignment",
-      body:  `Recovery from: ${dropoff}`,
-      tag:   `care-recovery-${parent.id}`,
-      data:  { type: "new_booking", bookingId: recovery.id, requireInteraction: "true" },
-    }).catch(() => {});
-
-    return NextResponse.json(
-      { parentBookingId: parent.id, primaryBookingId: primary.id, recoveryBookingId: recovery.id },
-      { status: 201 }
-    );
+    return NextResponse.json({ bookingId: booking.id }, { status: 201 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[care booking]", msg);
