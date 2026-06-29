@@ -3,7 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Navbar from "./_components/Navbar";
+import HeroMain from "./_components/HeroMain";
+import BookingCard from "./_components/BookingCard";
+import FeatureStrip from "./_components/FeatureStrip";
 
 /* ── Brand tokens ──────────────────────────────────────────────────────────── */
 const NAVY  = "#131936";
@@ -84,180 +87,18 @@ function SectionHeading({ children, light }: { children: React.ReactNode; light?
 
 /* ── Main Component ─────────────────────────────────────────────────────────── */
 export default function LandingPage() {
-  const router = useRouter();
-  const [pickup,  setPickup]  = useState("");
-  const [dropoff, setDropoff] = useState("");
-  const [tab,     setTab]     = useState<"oneway" | "hourly" | "airport" | "care">("oneway");
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
-  const [navOpen, setNavOpen] = useState(false);
-
-  const handleGetStarted = () => {
-    if (tab === "care") {
-      const p = new URLSearchParams({ service: "care", tier: "black" });
-      if (pickup)  p.set("pickup",  pickup);
-      if (dropoff) p.set("dropoff", dropoff);
-      router.push(`/home/pickup?${p.toString()}`);
-    } else {
-      const p = new URLSearchParams({ tier: "all" });
-      if (pickup)  p.set("pickup",  pickup);
-      if (dropoff) p.set("dropoff", dropoff);
-      router.push(`/home/pickup?${p.toString()}`);
-    }
-  };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ fontFamily: "var(--font-body, 'DM Sans', sans-serif)", background: "#FAFAF8" }}>
+    <div className="min-h-screen flex flex-col" style={{ fontFamily: "var(--font-body, 'DM Sans', sans-serif)" }}>
 
-      {/* ── NAV ── */}
-      <nav className="sticky top-0 z-[999] border-b border-white/10" style={{ background: DARK }}>
-        <div className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-white font-extrabold text-[20px] tracking-tight">MOVO</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ color: GOLD, border: `1px solid ${GOLD}` }}>Privé</span>
-          </Link>
-
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-8">
-            {["Services", "For Business", "For Chauffeurs", "About Us"].map(l => (
-              <span key={l} className="text-[13px] font-medium text-white/70 hover:text-white cursor-pointer transition-colors">{l}</span>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link href="/auth/select" className="hidden md:block text-[13px] font-medium text-white/70 hover:text-white transition-colors">Sign in</Link>
-            <Link href="/auth/select"
-              className="px-4 py-2 rounded-full text-[13px] font-bold text-white"
-              style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-              Book a Ride
-            </Link>
-            <button className="md:hidden text-white" onClick={() => setNavOpen(v => !v)}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                {navOpen ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></> : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>}
-              </svg>
-            </button>
-          </div>
-        </div>
-        {navOpen && (
-          <div className="md:hidden px-5 pb-4 flex flex-col gap-3 border-t border-white/10" style={{ background: DARK }}>
-            {["Services", "For Business", "For Chauffeurs", "About Us"].map(l => (
-              <span key={l} className="text-[14px] font-medium text-white/70 py-1">{l}</span>
-            ))}
-            <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">Sign in</Link>
-          </div>
-        )}
-      </nav>
-
-      {/* ── HERO ── */}
-      <section className="relative overflow-hidden" style={{ background: DARK, minHeight: "92vh" }}>
-        <div className="absolute inset-0">
-          <Image src="/images/home banner.png" alt="Movo hero" fill className="object-cover object-center opacity-30" priority unoptimized />
-          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg,${DARK} 0%,${NAVY}88 50%,transparent 100%)` }} />
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-5 md:px-10 pt-16 md:pt-24 pb-10 grid md:grid-cols-2 gap-12 items-center min-h-[92vh]">
-          {/* Left copy */}
-          <div>
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: GOLD }} />
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: GOLD }}>Premium Chauffeur Platform</span>
-            </div>
-            <h1 className="text-[40px] md:text-[58px] font-extrabold text-white leading-[1.1] mb-5">
-              Premium<br />chauffeur<br />services,<br /><span style={{ color: GOLD }}>on your terms.</span>
-            </h1>
-            <p className="text-white/60 text-[15px] md:text-[17px] leading-relaxed mb-8 max-w-md">
-              Professional chauffeurs. Reliable service.<br />Every ride, your way.
-            </p>
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2 text-[12px] text-white/60">
-                <span style={{ color: GOLD }}>✓</span> Vetted Chauffeurs
-              </div>
-              <div className="flex items-center gap-2 text-[12px] text-white/60">
-                <span style={{ color: GOLD }}>✓</span> On-Time, Every Time
-              </div>
-              <div className="flex items-center gap-2 text-[12px] text-white/60">
-                <span style={{ color: GOLD }}>✓</span> 24/7 Support
-              </div>
-            </div>
-          </div>
-
-          {/* Booking widget */}
-          <div className="rounded-3xl overflow-hidden shadow-2xl" style={{ background: "#111827", border: "1px solid rgba(198,191,178,0.15)" }}>
-            {/* Tabs */}
-            <div className="flex border-b border-white/10">
-              {([
-                { key: "oneway",  label: "One Way" },
-                { key: "hourly",  label: "Hourly" },
-                { key: "airport", label: "Airport Transfer" },
-                { key: "care",    label: "Safe Ride", badge: "New" },
-              ] as const).map(t => (
-                <button key={t.key} onClick={() => setTab(t.key)}
-                  className="flex-1 py-3 text-[11px] font-semibold transition-colors relative"
-                  style={{ color: tab === t.key ? "white" : "rgba(255,255,255,0.4)", borderBottom: tab === t.key ? `2px solid ${GOLD}` : "2px solid transparent" }}>
-                  {t.label}
-                  {"badge" in t && t.badge && (
-                    <span className="ml-1 text-[8px] font-bold px-1 py-0.5 rounded" style={{ background: GOLD, color: DARK }}>{t.badge}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="p-5 flex flex-col gap-4">
-              {tab === "care" && (
-                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(198,191,178,0.08)", border: `1px solid ${GOLD}40` }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <p className="text-[11px] text-white/60"><span style={{ color: GOLD }} className="font-bold">Movo Safe Ride</span> — We drive you and your vehicle home safely.</p>
-                </div>
-              )}
-
-              {/* Pickup */}
-              <div>
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Pickup location</label>
-                <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-                  <input value={pickup} onChange={e => setPickup(e.target.value)}
-                    placeholder="Enter pickup location"
-                    className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none" />
-                </div>
-              </div>
-
-              {/* Dropoff */}
-              <div>
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Where are we going?</label>
-                <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-                  <input value={dropoff} onChange={e => setDropoff(e.target.value)}
-                    placeholder="Enter destination"
-                    className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none" />
-                </div>
-              </div>
-
-              {/* Date / Passengers row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Date</label>
-                  <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    <span className="text-[12px] text-white/40">Today</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Passengers</label>
-                  <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21c0-4 3.1-7 7-7s7 3 7 7"/></svg>
-                    <span className="text-[12px] text-white/40">1</span>
-                  </div>
-                </div>
-              </div>
-
-              <button onClick={handleGetStarted}
-                className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] tracking-wide mt-1"
-                style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-                Get Started
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── PREMIUM HERO (Navbar + Hero + BookingCard + FeatureStrip) ── */}
+      <Navbar />
+      <HeroMain />
+      <div style={{ background: "#0A0A0A" }}>
+        <BookingCard />
+      </div>
+      <FeatureStrip />
 
       {/* ── HOW SAFE RIDE WORKS ── */}
       <section className="py-20 px-5 md:px-10" style={{ background: "#111827" }}>
