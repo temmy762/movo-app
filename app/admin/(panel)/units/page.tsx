@@ -622,7 +622,12 @@ export default function UnitsPage() {
       </div>
 
       {/* ── Units ── */}
-      {view === "list" ? (
+      {loading ? (
+        <div className="bg-white rounded-2xl py-16 flex flex-col items-center gap-3 shadow-sm">
+          <div className="w-8 h-8 border-4 border-gray-200 border-t-[#131936] rounded-full animate-spin" />
+          <p className="text-[13px] text-gray-400">Loading units…</p>
+        </div>
+      ) : view === "list" ? (
         <div className="flex flex-col gap-3">
           {paged.map(u => (
             <UnitRow key={u.id} unit={u}
