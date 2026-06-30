@@ -31,6 +31,7 @@ interface BookingDetail {
   total: number;
   status: string;
   paymentStatus: string;
+  bookingType?: string;
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
@@ -51,11 +52,25 @@ interface BookingDetail {
   } | null;
 }
 
+interface CareAssignmentRow {
+  id: string;
+  role: "PRIMARY" | "SUPPORT";
+  status: string;
+  driver?: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string | null;
+    avgRating?: number | null;
+    vehicle?: { make: string; model: string; plate: string } | null;
+  } | null;
+}
+
 function BookingDetailContent() {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
   const [booking, setBooking] = useState<BookingDetail | null>(null);
+  const [careAssignments, setCareAssignments] = useState<CareAssignmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +78,25 @@ function BookingDetailContent() {
     if (!id) return;
     fetch(`/api/bookings/${id}`)
       .then(r => (r.ok ? r.json() : Promise.reject("not found")))
-      .then(setBooking)
+      .then((d: BookingDetail) => {
+        setBooking(d);
+        if (d.bookingType === "CARE") {
+          fetch(`/api/care/${id}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(care => {
+              if (care?.careAssignments) {
+                setCareAssignments(
+                  care.careAssignments
+                    .filter((a: CareAssignmentRow) => a.status !== "CANCELLED")
+                    .sort((a: CareAssignmentRow, b: CareAssignmentRow) =>
+                      a.role === "PRIMARY" ? -1 : b.role === "PRIMARY" ? 1 : 0,
+                    ),
+                );
+              }
+            })
+            .catch(() => {});
+        }
+      })
       .catch(() => setError("Booking not found."))
       .finally(() => setLoading(false));
   }, [id]);
@@ -123,7 +156,15 @@ function BookingDetailContent() {
 
               {/* Booking ID + car name */}
               <div className="px-5 pt-4 pb-3 border-b border-gray-100">
-                <p className="text-[18px] font-bold text-gray-900">{booking.carName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[18px] font-bold text-gray-900">{booking.carName}</p>
+                  {booking.bookingType === "CARE" && (
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full tracking-wide"
+                      style={{ background: "linear-gradient(90deg,#131936,#1e2a5e)", color: "#C6BFB2" }}>
+                      CARE
+                    </span>
+                  )}
+                </div>
                 <p className="text-[11px] text-gray-400 mt-0.5 font-mono">#{booking.id.slice(-8).toUpperCase()}</p>
               </div>
 
@@ -214,8 +255,51 @@ function BookingDetailContent() {
                 )}
               </div>
 
-              {/* Driver info (if assigned) */}
-              {booking.driver && (
+              {/* Driver info */}
+              {booking.bookingType === "CARE" && careAssignments.length > 0 ? (
+                <div className="px-5 py-4">
+                  <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3">Chauffeurs</p>
+                  <div className="flex flex-col gap-3">
+                    {careAssignments.map((a) => {
+                      const name = a.driver
+                        ? `${a.driver.firstName ?? ""} ${a.driver.lastName ?? ""}`.trim() || "Chauffeur"
+                        : "Chauffeur";
+                      return (
+                        <div key={a.id} className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#131936] to-[#2A3055] flex items-center justify-center shrink-0">
+                            <span className="text-white text-[14px] font-bold">
+                              {a.role === "PRIMARY" ? "A" : "B"}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-[13px] font-semibold text-gray-900">{name}</p>
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                {a.role === "PRIMARY" ? "Primary" : "Support"}
+                              </span>
+                            </div>
+                            {a.driver?.avgRating != null && (
+                              <p className="text-[12px] font-semibold" style={{ color: "#f59e0b" }}>
+                                ★ {a.driver.avgRating.toFixed(1)}
+                              </p>
+                            )}
+                          </div>
+                          {a.driver?.vehicle && (
+                            <div className="text-right">
+                              <p className="text-[12px] font-semibold text-gray-700">
+                                {a.driver.vehicle.make} {a.driver.vehicle.model}
+                              </p>
+                              <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-gray-900 text-white tracking-widest font-mono mt-0.5">
+                                {a.driver.vehicle.plate}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : booking.driver ? (
                 <div className="px-5 py-4">
                   <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3">Driver</p>
                   <div className="flex items-center gap-3">
@@ -246,7 +330,7 @@ function BookingDetailContent() {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Actions */}

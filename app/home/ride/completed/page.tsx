@@ -8,11 +8,19 @@ type BookingData = {
   total: number;
   fare: number;
   carName: string;
+  bookingType?: string;
   driver: {
     firstName: string;
     lastName: string;
     vehicle?: { photoUrl?: string | null } | null;
   } | null;
+};
+
+type CareAssignmentRow = {
+  id: string;
+  role: "PRIMARY" | "SUPPORT";
+  status: string;
+  driver?: { firstName?: string; lastName?: string; photoUrl?: string | null } | null;
 };
 
 function StarRating({ rating, onRate }: { rating: number; onRate: (n: number) => void }) {
@@ -58,28 +66,70 @@ function RideCompletedContent() {
   const bookingId = searchParams.get("bookingId") || "";
 
   const [booking, setBooking] = useState<BookingData | null>(null);
-  const [rating, setRating] = useState(0);
-  const [review, setReview] = useState("");
+  const [careAssignments, setCareAssignments] = useState<CareAssignmentRow[]>([]);
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [reviews, setReviews] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  /* Legacy single-driver rating for normal rides */
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState("");
 
   useEffect(() => {
     if (!bookingId) return;
     fetch(`/api/bookings/${bookingId}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setBooking(d); })
+      .then((d) => {
+        if (!d) return;
+        setBooking(d);
+        if (d.bookingType === "CARE") {
+          /* Fetch full booking with care assignments */
+          fetch(`/api/care/${bookingId}`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((care) => {
+              if (care?.careAssignments) {
+                setCareAssignments(
+                  care.careAssignments
+                    .filter((a: CareAssignmentRow) => a.status !== "CANCELLED")
+                    .sort((a: CareAssignmentRow, b: CareAssignmentRow) =>
+                      a.role === "PRIMARY" ? -1 : b.role === "PRIMARY" ? 1 : 0,
+                    ),
+                );
+              }
+            })
+            .catch(() => {});
+        }
+      })
       .catch(() => {});
   }, [bookingId]);
 
+  const isCare = booking?.bookingType === "CARE";
+
   const handleSubmitRating = async () => {
-    if (!bookingId || rating === 0 || submitting || submitted) return;
+    if (!bookingId || submitting || submitted) return;
+    if (!isCare && rating === 0) return;
     setSubmitting(true);
     try {
-      await fetch(`/api/bookings/${bookingId}/rating`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, review: review || null }),
-      });
+      if (isCare) {
+        /* Submit rating for each Care assignment */
+        await Promise.all(
+          careAssignments.map((a) => {
+            const r = ratings[a.id] ?? 0;
+            if (r === 0) return Promise.resolve();
+            return fetch(`/api/bookings/${bookingId}/rating`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ rating: r, review: reviews[a.id] ?? null, careAssignmentId: a.id }),
+            });
+          }),
+        );
+      } else {
+        await fetch(`/api/bookings/${bookingId}/rating`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rating, review: review || null }),
+        });
+      }
       setSubmitted(true);
     } catch {
       /* silent — user can still navigate away */
@@ -129,44 +179,84 @@ function RideCompletedContent() {
 
           <div className="w-full border-t border-gray-100 mb-5" />
 
-          {/* Driver section */}
-          <div className="flex flex-col items-center w-full mb-5">
-            <div className="w-16 h-16 rounded-full overflow-hidden mb-2 border-2 border-gray-100">
-              <DriverAvatar photoUrl={driverPhoto} name={driverName} />
+          {/* Chauffeur section */}
+          {submitted ? (
+            <p className="text-[13px] font-semibold text-green-600 mb-5">Rating submitted — thank you!</p>
+          ) : isCare && careAssignments.length > 0 ? (
+            /* Care: dual-chauffeur rating */
+            <div className="w-full mb-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#C6BFB2]">Movo Care Ride</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">Dual Chauffeur</span>
+              </div>
+              {careAssignments.map((a) => {
+                const name = a.driver
+                  ? `${a.driver.firstName ?? ""} ${a.driver.lastName ?? ""}`.trim() || "Chauffeur"
+                  : "Chauffeur";
+                return (
+                  <div key={a.id} className="flex flex-col items-center w-full mb-4 pb-4 border-b border-gray-100 last:border-0 last:mb-0">
+                    <div className="w-14 h-14 rounded-full overflow-hidden mb-1.5 border-2 border-gray-100">
+                      <DriverAvatar photoUrl={a.driver?.photoUrl ?? null} name={name} />
+                    </div>
+                    <p className="text-[13px] font-bold text-gray-900">{name}</p>
+                    <p className="text-[10px] text-gray-400 mb-2">
+                      {a.role === "PRIMARY" ? "Primary Chauffeur" : "Support Chauffeur"}
+                    </p>
+                    <StarRating rating={ratings[a.id] ?? 0} onRate={(n) => setRatings((prev) => ({ ...prev, [a.id]: n }))} />
+                    <textarea
+                      value={reviews[a.id] ?? ""}
+                      onChange={(e) => setReviews((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                      placeholder="Share your experience (optional)…"
+                      rows={2}
+                      className="w-full mt-2 rounded-xl px-3 py-2 text-[12px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none"
+                      style={{ border: "1.5px solid #e5e7eb" }}
+                    />
+                  </div>
+                );
+              })}
+              {Object.values(ratings).some((r) => r > 0) && (
+                <button
+                  type="button"
+                  onClick={handleSubmitRating}
+                  disabled={submitting}
+                  className="w-full py-2.5 rounded-xl text-white font-bold text-[13px]"
+                  style={{ background: submitting ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
+                >
+                  {submitting ? "Submitting…" : "Submit Ratings"}
+                </button>
+              )}
             </div>
-            <p className="text-[14px] font-bold text-gray-900">{driverName}</p>
-            <p className="text-[11px] text-gray-400 mb-4">Your Driver</p>
-
-            {submitted ? (
-              <p className="text-[13px] font-semibold text-green-600">Rating submitted — thank you!</p>
-            ) : (
-              <>
-                <StarRating rating={rating} onRate={setRating} />
-                <p className="text-[11px] text-gray-400 mt-1.5 mb-4">Rate your ride</p>
-
-                <textarea
-                  value={review}
-                  onChange={(e) => setReview(e.target.value)}
-                  placeholder="Share your experience (optional)…"
-                  rows={3}
-                  className="w-full rounded-xl px-4 py-3 text-[13px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none mb-4"
-                  style={{ border: "1.5px solid #c4b5fd" }}
-                />
-
-                {rating > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleSubmitRating}
-                    disabled={submitting}
-                    className="w-full py-2.5 rounded-xl text-white font-bold text-[13px] mb-2"
-                    style={{ background: submitting ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
-                  >
-                    {submitting ? "Submitting…" : "Submit Rating"}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          ) : (
+            /* Normal ride: single-driver rating */
+            <div className="flex flex-col items-center w-full mb-5">
+              <div className="w-16 h-16 rounded-full overflow-hidden mb-2 border-2 border-gray-100">
+                <DriverAvatar photoUrl={driverPhoto} name={driverName} />
+              </div>
+              <p className="text-[14px] font-bold text-gray-900">{driverName}</p>
+              <p className="text-[11px] text-gray-400 mb-4">Your Driver</p>
+              <StarRating rating={rating} onRate={setRating} />
+              <p className="text-[11px] text-gray-400 mt-1.5 mb-4">Rate your ride</p>
+              <textarea
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+                placeholder="Share your experience (optional)…"
+                rows={3}
+                className="w-full rounded-xl px-4 py-3 text-[13px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none mb-4"
+                style={{ border: "1.5px solid #c4b5fd" }}
+              />
+              {rating > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSubmitRating}
+                  disabled={submitting}
+                  className="w-full py-2.5 rounded-xl text-white font-bold text-[13px] mb-2"
+                  style={{ background: submitting ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
+                >
+                  {submitting ? "Submitting…" : "Submit Rating"}
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="w-full border-t border-gray-100 mb-5" />
 

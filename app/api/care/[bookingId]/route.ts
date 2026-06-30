@@ -27,6 +27,7 @@ export async function GET(
                 lastName: true,
                 phone: true,
                 photoUrl: true,
+                avgRating: true,
                 vehicle: { select: { make: true, model: true, year: true, plate: true, tier: true } },
               },
             },

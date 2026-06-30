@@ -97,9 +97,11 @@ function AvailableCarsContent() {
   const [carsByTier,   setCarsByTier]   = useState<Record<string, CarCard[]>>({});
   const [loading,      setLoading]      = useState(true);
   const [minFares,     setMinFares]     = useState<Record<string, number>>(FALLBACK_MIN_FARES);
-  const [selectedTier, setSelectedTier] = useState<string | null>(
+  const [selectedTier,    setSelectedTier]    = useState<string | null>(
     TIERS.includes(tierParam as typeof TIERS[number]) ? tierParam : null
   );
+  const [showCareWarning, setShowCareWarning] = useState(false);
+  const [pendingTier,     setPendingTier]     = useState<string | null>(null);
 
   useEffect(() => {
     const buildData = (drivers: FleetDriver[], userLat: number | null, userLng: number | null) => {
@@ -211,6 +213,16 @@ function AvailableCarsContent() {
       driverId: car.driverId,
     });
     router.push(`/home/ride/confirm?${params.toString()}`);
+  };
+
+  const handleTierClick = (t: string) => {
+    if (isCare) {
+      /* User is in Care flow — warn before letting them exit to a normal ride */
+      setPendingTier(t);
+      setShowCareWarning(true);
+    } else {
+      setSelectedTier(t);
+    }
   };
 
   const handleBookCare = () => {
@@ -370,8 +382,14 @@ function AvailableCarsContent() {
       {/* Tier cards */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
         <div className="max-w-lg mx-auto space-y-3">
-          {/* ── Movo Care Ride card (always shown, not tier-gated) ── */}
-          {!isCare && (
+          {/* ── Movo Care Ride card ── */}
+          {isCare && (
+            <div className="mb-1 flex items-center gap-2 px-1">
+              <span className="w-2 h-2 rounded-full bg-[#C6BFB2] animate-pulse" />
+              <p className="text-[12px] font-semibold text-gray-500">You&apos;re booking a <span className="text-[#131936] font-bold">Movo Care Ride</span></p>
+            </div>
+          )}
+          {isCare && (
             <div
               className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border-2 cursor-pointer active:scale-[0.99] transition-transform"
               style={{ borderColor: "#131936", background: "linear-gradient(135deg,#0A0A0F 0%,#131936 60%,#2A3055 100%)" }}
@@ -405,6 +423,12 @@ function AvailableCarsContent() {
             </div>
           )}
 
+          {isCare && !loading && (
+            <div className="mt-1 mb-2">
+              <p className="text-[11px] text-center text-gray-400">Not looking for a Care Ride? Choose a regular category below.</p>
+            </div>
+          )}
+
           {loading ? (
             [1, 2, 3].map(i => (
               <div key={i} className="bg-gray-50 border border-gray-200 rounded-2xl px-4 pt-4 pb-4 animate-pulse">
@@ -428,7 +452,7 @@ function AvailableCarsContent() {
               return (
                 <div key={t}
                   className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border border-gray-200 bg-gray-50 cursor-pointer active:scale-[0.99] transition-transform"
-                  onClick={() => setSelectedTier(t)}
+                  onClick={() => handleTierClick(t)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
@@ -482,6 +506,41 @@ function AvailableCarsContent() {
           )}
         </div>
       </div>
+
+      {/* Care flow exit warning */}
+      {showCareWarning && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowCareWarning(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
+              style={{ background: "linear-gradient(135deg,#131936,#2A3055)" }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <p className="text-[16px] font-bold text-gray-900 mb-1">Switch to Regular Ride?</p>
+            <p className="text-[12px] text-gray-500 text-center mb-5">
+              You came here for a <strong>Movo Care Ride</strong>. Selecting a regular category will exit the Care booking flow.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button type="button"
+                onClick={() => setShowCareWarning(false)}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl font-semibold text-[13px] border border-gray-300 text-gray-700">
+                Stay on Care
+              </button>
+              <button type="button"
+                onClick={() => { setShowCareWarning(false); setSelectedTier(pendingTier); }}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[13px]"
+                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

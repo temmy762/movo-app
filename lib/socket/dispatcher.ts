@@ -219,12 +219,32 @@ export function dispatchCareAssignmentStatus(payload: {
   emitMany(rooms, SOCKET_EVENTS.CARE_ASSIGNMENT_STATUS, payload);
 }
 
+export function dispatchCareBookingConfirmed(payload: {
+  bookingId: string; userId?: string | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
+    SOCKET_EVENTS.CARE_BOOKING_CONFIRMED,
+    payload,
+  );
+}
+
 export function dispatchCareBookingClosed(payload: {
   bookingId: string; userId?: string | null;
 }) {
   emitMany(
     ["admin", `booking:${payload.bookingId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
     SOCKET_EVENTS.CARE_BOOKING_CLOSED,
+    payload,
+  );
+}
+
+export function dispatchCareDispatchFailed(payload: {
+  bookingId: string; role: "PRIMARY" | "SUPPORT"; userId?: string | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
+    SOCKET_EVENTS.CARE_DISPATCH_FAILED,
     payload,
   );
 }

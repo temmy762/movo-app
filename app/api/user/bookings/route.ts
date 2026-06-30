@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       total: true,
       status: true,
       paymentStatus: true,
+      bookingType: true,
       createdAt: true,
     },
   });

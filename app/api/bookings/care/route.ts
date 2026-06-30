@@ -4,6 +4,12 @@
  * Creates a single Movo Care Ride booking visible to the customer, then
  * immediately triggers PRIMARY chauffeur dispatch via CareAssignment records.
  * SUPPORT dispatch fires automatically when PRIMARY accepts.
+ *
+ * Booking status lifecycle for Care:
+ *   PENDING  → payment captured, dispatching drivers
+ *   CONFIRMED → both PRIMARY and SUPPORT have accepted  (set in assignments route)
+ *   COMPLETED → both drivers completed                   (set in assignments route)
+ *   CANCELLED → cancelled by user, driver, or admin
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -34,7 +40,8 @@ export async function POST(req: NextRequest) {
     const coordinates = await geocodeAddresses(pickup, dropoff).catch(() => null);
 
     const resolvedPaymentStatus = paymentStatus === "PAID" ? "PAID" : "UNPAID";
-    const resolvedStatus        = resolvedPaymentStatus === "PAID" ? "CONFIRMED" : "PENDING";
+    /* Booking stays PENDING until both chauffeurs accept — do NOT confirm at payment time */
+    const resolvedStatus = "PENDING";
 
     /* ── Single booking — what the customer sees ── */
     const booking = await prisma.booking.create({
@@ -68,8 +75,8 @@ export async function POST(req: NextRequest) {
       createdAt: booking.createdAt.toISOString(),
     });
 
-    /* ── Notify rider confirmation ── */
-    if (userId && resolvedStatus === "CONFIRMED") {
+    /* ── Notify rider that booking is received and dispatching ── */
+    if (userId && resolvedPaymentStatus === "PAID") {
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { email: true, firstName: true, phone: true },
@@ -82,13 +89,13 @@ export async function POST(req: NextRequest) {
             email: user.email, firstName: user.firstName,
             phone: user.phone ?? undefined,
           },
-          data: { bookingId: booking.id, pickup, dropoff, carTier: "black", fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total) },
+          data: { bookingId: booking.id, pickup, dropoff, carTier: "black", fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total), message: "Your Movo Care Ride is confirmed. We are now finding your chauffeurs." },
         }).catch(() => {});
       }
     }
 
-    /* ── Trigger PRIMARY dispatch (fire-and-forget) ── */
-    if (resolvedStatus === "CONFIRMED" && coordinates?.pickupLat && coordinates?.pickupLng) {
+    /* ── Trigger PRIMARY dispatch whenever payment is captured (fire-and-forget) ── */
+    if (resolvedPaymentStatus === "PAID" && coordinates?.pickupLat && coordinates?.pickupLng) {
       dispatchPrimary(booking.id, coordinates.pickupLat, coordinates.pickupLng, userId).catch((e) =>
         console.error("[care dispatch primary]", e),
       );

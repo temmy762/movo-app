@@ -76,6 +76,7 @@ function RideTrackingContent() {
   const [showSupport,       setShowSupport]       = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling,        setCancelling]        = useState(false);
+  const [dispatchFailed,    setDispatchFailed]    = useState(false);
   const [showChangeDest,    setShowChangeDest]    = useState(false);
   const [newDestination,    setNewDestination]    = useState("");
   const [changingDest,      setChangingDest]      = useState(false);
@@ -275,6 +276,22 @@ function RideTrackingContent() {
       });
     });
 
+    /* Care: all dispatch retries exhausted — no driver found */
+    const unsubDispatchFailed = on(SOCKET_EVENTS.CARE_DISPATCH_FAILED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId !== bookingId) return;
+      if (statusPollRef.current) clearInterval(statusPollRef.current);
+      setDispatchFailed(true);
+    });
+
+    /* Care: both drivers accepted — booking is now CONFIRMED */
+    const unsubCareConfirmed = on(SOCKET_EVENTS.CARE_BOOKING_CONFIRMED, (data) => {
+      const d = data as { bookingId: string };
+      if (d.bookingId !== bookingId) return;
+      setRideStatus("CONFIRMED");
+      setIsCareRide(true);
+    });
+
     /* Care: booking fully closed (both drivers completed) → redirect immediately */
     const unsubCareClosed = on(SOCKET_EVENTS.CARE_BOOKING_CLOSED, (data) => {
       const d = data as { bookingId: string };
@@ -286,7 +303,7 @@ function RideTrackingContent() {
 
     return () => {
       unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted(); unsubStatus(); unsubArrived();
-      unsubCarePrimary(); unsubCareSupport(); unsubCareStatus(); unsubCareClosed();
+      unsubCarePrimary(); unsubCareSupport(); unsubCareStatus(); unsubCareConfirmed(); unsubCareClosed(); unsubDispatchFailed();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
@@ -878,6 +895,32 @@ function RideTrackingContent() {
                 {cancelling ? "Cancelling…" : "Yes, Cancel"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Care Dispatch Failed overlay ── */}
+      {dispatchFailed && (
+        <div className="fixed inset-0 z-[2100] flex items-end justify-center px-4 pb-10"
+          style={{ background: "rgba(0,0,0,0.75)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl">
+            <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-3">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <p className="text-[16px] font-bold text-gray-900 mb-2">No chauffeurs available</p>
+            <p className="text-[13px] text-gray-500 mb-6 leading-snug">
+              We were unable to find a Care Ride chauffeur in your area at this time. Please try again shortly or contact support.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.replace("/home")}
+              className="w-full py-3.5 rounded-xl text-white font-bold text-[14px]"
+              style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
+              Back to Home
+            </button>
           </div>
         </div>
       )}

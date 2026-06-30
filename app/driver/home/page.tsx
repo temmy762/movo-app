@@ -60,10 +60,11 @@ export default function DriverHomePage() {
   const declinedIdsRef  = useRef<Set<string>>(new Set());
   const ridePhaseRef    = useRef<RidePhase>("idle");
   const [navEta,        setNavEta]        = useState<string | null>(null);
-  const [careAssignment,  setCareAssignment]  = useState<CareAssignment | null>(null);
+  const [careAssignment,   setCareAssignment]   = useState<CareAssignment | null>(null);
   type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started";
-  const [carePhase,       setCarePhase]       = useState<CarePhase>("idle");
-  const [careLoading,     setCareLoading]     = useState(false);
+  const [carePhase,        setCarePhase]        = useState<CarePhase>("idle");
+  const [careLoading,      setCareLoading]      = useState(false);
+  const [showCareComplete, setShowCareComplete] = useState(false);
   usePushSubscription();
   const { join, on } = useSocket();
   /* Keep ridePhaseRef in sync so async callbacks can read current phase without stale closure */
@@ -583,9 +584,8 @@ export default function DriverHomePage() {
       body: JSON.stringify({ status: "COMPLETED" }),
     });
     setCareLoading(false);
-    setCareAssignment(null);
-    setCarePhase("idle");
-    setShowTripComplete(true);
+    /* Keep careAssignment alive so the modal can read booking.id for rating */
+    setShowCareComplete(true);
   }
 
   return (
@@ -744,25 +744,48 @@ export default function DriverHomePage() {
               </div>
             )}
             {carePhase === "accepted" && (
-              <button onClick={handleCareArrived} disabled={careLoading}
-                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "I've Arrived at Pickup" : "I've Arrived at Rendezvous"}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => router.push(`/driver/home/finish/chat?bookingId=${careAssignment.booking.id}`)}
+                  className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <button onClick={handleCareArrived} disabled={careLoading}
+                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
+                  style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                  {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "I've Arrived at Pickup" : "I've Arrived at Rendezvous"}
+                </button>
+              </div>
             )}
             {carePhase === "arrived" && (
-              <button onClick={handleCareStart} disabled={careLoading}
-                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "Start Ride" : "Pick Up Driver A"}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => router.push(`/driver/home/finish/chat?bookingId=${careAssignment.booking.id}`)}
+                  className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <button onClick={handleCareStart} disabled={careLoading}
+                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
+                  style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                  {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "Start Ride" : "Pick Up Driver A"}
+                </button>
+              </div>
             )}
             {carePhase === "started" && (
-              <button onClick={handleCareComplete} disabled={careLoading}
-                className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-                style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                {careLoading ? "Saving…" : "Complete Assignment"}
-              </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => router.push(`/driver/home/finish/chat?bookingId=${careAssignment.booking.id}`)}
+                    className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </button>
+                  <button onClick={handleCareComplete} disabled={careLoading}
+                    className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
+                    style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                    {careLoading ? "Saving…" : "Complete Assignment"}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -1041,7 +1064,7 @@ export default function DriverHomePage() {
         </div>
       )}
 
-      {/* Trip Complete modal */}
+      {/* Trip Complete modal — normal rides only */}
       {showTripComplete && (
         <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
           style={{ background: "rgba(0,0,0,0.45)" }}>
@@ -1053,7 +1076,6 @@ export default function DriverHomePage() {
                   fill="#fef3c7" stroke="#f59e0b" strokeWidth="1.5" />
               </svg>
             </div>
-            {/* Star rating */}
             <div className="flex gap-1 mb-2">
               {[1,2,3,4,5].map((s) => (
                 <button key={s} className="no-hover-fx" onClick={() => setTripRating(s)}>
@@ -1066,7 +1088,7 @@ export default function DriverHomePage() {
               ))}
             </div>
             <p className="text-[12px] text-gray-500 text-center mb-5">
-              Trip completed review your trip now.
+              Trip completed — review your trip now.
             </p>
             <button type="button"
               onClick={async () => {
@@ -1087,6 +1109,58 @@ export default function DriverHomePage() {
               className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
               style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
               Ok
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Care Assignment Complete modal — does NOT take driver offline */}
+      {showCareComplete && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
+            <p className="text-[16px] font-bold text-gray-900 mb-1">Care Assignment Complete</p>
+            <div className="w-16 h-16 mb-3 flex items-center justify-center rounded-full"
+              style={{ background: "linear-gradient(135deg,#0d1128,#131936)" }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <p className="text-[11px] font-semibold text-[#C6BFB2] uppercase tracking-wider mb-3">Movo Care Ride</p>
+            <div className="flex gap-1 mb-2">
+              {[1,2,3,4,5].map((s) => (
+                <button key={s} className="no-hover-fx" onClick={() => setTripRating(s)}>
+                  <svg width="28" height="28" viewBox="0 0 24 24"
+                    fill={s <= tripRating ? "#f59e0b" : "none"}
+                    stroke={s <= tripRating ? "#f59e0b" : "#d1d5db"} strokeWidth="1.5">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+            <p className="text-[12px] text-gray-500 text-center mb-5">
+              Rate your experience for this Care assignment.
+            </p>
+            <button type="button"
+              onClick={async () => {
+                const bookingIdForRating = careAssignment?.booking?.id;
+                if (bookingIdForRating && tripRating > 0) {
+                  await fetch(`/api/bookings/${bookingIdForRating}/rating`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ rating: tripRating }),
+                  }).catch(() => {});
+                }
+                setShowCareComplete(false);
+                setCareAssignment(null);
+                setCarePhase("idle");
+                setTripRating(0);
+                /* Driver stays online — Care assignment ended, not the whole shift */
+                router.push("/driver/home/finish");
+              }}
+              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+              Done
             </button>
           </div>
         </div>

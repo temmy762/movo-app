@@ -26,7 +26,9 @@ import {
   dispatchCarePrimaryAccepted,
   dispatchCareSupportAccepted,
   dispatchCareAssignmentStatus,
+  dispatchCareBookingConfirmed,
   dispatchCareBookingClosed,
+  dispatchDriverArrived,
 } from "@/lib/socket/dispatcher";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -131,6 +133,48 @@ export async function PATCH(
         bookingId: booking.id, assignmentId: id,
         driverId: driver!.id, driverName, userId,
       });
+
+      /* Both drivers are now secured — confirm the booking */
+      const primaryAccepted = await prisma.careAssignment.findFirst({
+        where: {
+          bookingId: booking.id,
+          role:      "PRIMARY",
+          status:    { in: ["ACCEPTED", "ARRIVED", "STARTED"] },
+        },
+      });
+      if (primaryAccepted) {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data:  { status: "CONFIRMED" },
+        });
+        dispatchCareBookingConfirmed({ bookingId: booking.id, userId });
+      }
+    }
+
+    /* Emit DRIVER_ARRIVED for primary Care driver so the customer banner fires */
+    if (newStatus === "ARRIVED" && assignment.role === "PRIMARY") {
+      dispatchDriverArrived({
+        bookingId: booking.id,
+        userId,
+        driverId: driver?.id ?? null,
+      });
+    }
+
+    /* Gate: PRIMARY driver cannot START until a SUPPORT assignment is active */
+    if (newStatus === "STARTED" && assignment.role === "PRIMARY") {
+      const supportActive = await prisma.careAssignment.findFirst({
+        where: {
+          bookingId: booking.id,
+          role:      "SUPPORT",
+          status:    { in: ["ACCEPTED", "ARRIVED", "STARTED"] },
+        },
+      });
+      if (!supportActive) {
+        return NextResponse.json(
+          { error: "Cannot start: Support chauffeur has not yet accepted" },
+          { status: 422 },
+        );
+      }
     }
 
     if (newStatus === "COMPLETED") {
@@ -163,14 +207,19 @@ export async function PATCH(
       });
 
       if (!activeForRole) {
+        /* Collect every driver ever used for this role to exclude from retry */
+        const usedDriverIds = (
+          await prisma.careAssignment.findMany({
+            where: { bookingId: booking.id, role: assignment.role },
+            select: { driverId: true },
+          })
+        ).map((a) => a.driverId).filter(Boolean) as string[];
+
         if (assignment.role === "PRIMARY" && booking.pickupLat && booking.pickupLng) {
           const { dispatchPrimary } = await import("@/lib/care/dispatch");
-          dispatchPrimary(booking.id, booking.pickupLat, booking.pickupLng, userId).catch(() => {});
+          dispatchPrimary(booking.id, booking.pickupLat, booking.pickupLng, userId, usedDriverIds).catch(() => {});
         }
         if (assignment.role === "SUPPORT" && booking.dropoffLat && booking.dropoffLng) {
-          const usedDriverIds = (
-            await prisma.careAssignment.findMany({ where: { bookingId: booking.id, role: "SUPPORT" }, select: { driverId: true } })
-          ).map((a) => a.driverId).filter(Boolean) as string[];
           dispatchSupport(booking.id, booking.dropoffLat, booking.dropoffLng, userId, usedDriverIds).catch(() => {});
         }
       }

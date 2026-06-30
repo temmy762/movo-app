@@ -44,6 +44,7 @@ interface Booking {
   status: string;
   paymentStatus: string;
   createdAt: string;
+  bookingType?: string;
 }
 
 export default function RidesPage() {
@@ -126,6 +127,12 @@ export default function RidesPage() {
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase">{ride.status}</span>
                         <span className="text-[12px] font-bold text-gray-800">${ride.total.toFixed(2)}</span>
+                        {ride.bookingType === "CARE" && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full tracking-wide"
+                            style={{ background: "linear-gradient(90deg,#131936,#1e2a5e)", color: "#C6BFB2" }}>
+                            CARE
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

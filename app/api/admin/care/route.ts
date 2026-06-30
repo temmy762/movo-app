@@ -1,13 +1,14 @@
 /**
  * GET  /api/admin/care        — paginated list of all CARE bookings
  * PATCH /api/admin/care       — admin force-action on a booking
- *   body: { bookingId, action: "force_complete" | "cancel" | "replace_driver" }
+ *   body: { bookingId, action: "force_complete" | "cancel" | "replace_driver" | "create_assignment" }
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { dispatchCareBookingClosed, dispatchCareAssignmentStatus } from "@/lib/socket/dispatcher";
+import { pushToDriver } from "@/lib/webpush";
+import { dispatchCareBookingClosed, dispatchCareAssignmentStatus, dispatchCarePrimaryDispatched, dispatchCareSupportDispatched } from "@/lib/socket/dispatcher";
 
 export async function GET(req: NextRequest) {
   try {
@@ -72,9 +73,10 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json() as {
       bookingId: string;
-      action: "force_complete" | "cancel" | "replace_driver";
+      action: "force_complete" | "cancel" | "replace_driver" | "create_assignment";
       assignmentId?: string;
       newDriverId?: string;
+      role?: "PRIMARY" | "SUPPORT";
     };
 
     const { bookingId, action } = body;
@@ -132,6 +134,14 @@ export async function PATCH(req: NextRequest) {
         data:  { driverId: newDriverId, status: "PENDING", dispatchedAt: new Date(), acceptedAt: null },
       });
 
+      /* Notify the new driver via push + socket */
+      await pushToDriver(newDriverId, {
+        title: assignment.role === "PRIMARY" ? "🌟 Movo Care Ride — Primary Chauffeur" : "🔄 Care Ride — Support Chauffeur",
+        body:  `You have been assigned to a Care Ride. Tap to view details.`,
+        tag:   `care-${assignment.role.toLowerCase()}-${bookingId}`,
+        data:  { type: assignment.role === "PRIMARY" ? "care_primary" : "care_support", bookingId, assignmentId, requireInteraction: "true" },
+      }).catch(() => {});
+
       dispatchCareAssignmentStatus({
         bookingId, assignmentId,
         role:   assignment.role,
@@ -140,6 +150,48 @@ export async function PATCH(req: NextRequest) {
         userId:   booking.userId,
       });
       return NextResponse.json({ ok: true });
+    }
+
+    if (action === "create_assignment") {
+      const { newDriverId, role } = body;
+      if (!newDriverId || !role) {
+        return NextResponse.json({ error: "newDriverId and role required" }, { status: 400 });
+      }
+      if (role !== "PRIMARY" && role !== "SUPPORT") {
+        return NextResponse.json({ error: "role must be PRIMARY or SUPPORT" }, { status: 400 });
+      }
+
+      /* Cancel any existing PENDING assignments for that role before creating new one */
+      await prisma.careAssignment.updateMany({
+        where: { bookingId, role, status: "PENDING" },
+        data:  { status: "CANCELLED", cancelledAt: new Date() },
+      });
+
+      const assignment = await prisma.careAssignment.create({
+        data: {
+          bookingId,
+          driverId:    newDriverId,
+          role,
+          status:      "PENDING",
+          dispatchedAt: new Date(),
+        },
+      });
+
+      /* Notify the assigned driver via push + socket */
+      await pushToDriver(newDriverId, {
+        title: role === "PRIMARY" ? "🌟 Movo Care Ride — Primary Chauffeur" : "🔄 Care Ride — Support Chauffeur",
+        body:  `Admin has manually assigned you to a Care Ride. Tap to view.`,
+        tag:   `care-${role.toLowerCase()}-${bookingId}`,
+        data:  { type: role === "PRIMARY" ? "care_primary" : "care_support", bookingId, assignmentId: assignment.id, requireInteraction: "true" },
+      }).catch(() => {});
+
+      if (role === "PRIMARY") {
+        dispatchCarePrimaryDispatched({ bookingId, assignmentId: assignment.id, driverId: newDriverId, userId: booking.userId });
+      } else {
+        dispatchCareSupportDispatched({ bookingId, driverIds: [newDriverId], userId: booking.userId });
+      }
+
+      return NextResponse.json({ ok: true, assignmentId: assignment.id });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

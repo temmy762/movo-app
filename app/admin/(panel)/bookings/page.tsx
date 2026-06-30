@@ -654,6 +654,9 @@ const careStatusColor: Record<string, string> = {
   CANCELLED:  "#dc2626",
 };
 
+const CARE_STATUS_OPTIONS = ["ALL", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
+type CareStatusFilter = typeof CARE_STATUS_OPTIONS[number];
+
 function CareBookingsTable() {
   const [rows, setRows]       = useState<CareBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -661,11 +664,16 @@ function CareBookingsTable() {
   const [total, setTotal]     = useState(0);
   const [actioning, setActioning] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ bookingId: string; action: "force_complete" | "cancel" } | null>(null);
+  const [statusFilter, setStatusFilter] = useState<CareStatusFilter>("ALL");
+  const [assignModal, setAssignModal] = useState<{ bookingId: string; role: "PRIMARY" | "SUPPORT" } | null>(null);
+  const [assignDriverId, setAssignDriverId] = useState("");
+  const [assigning, setAssigning] = useState(false);
   const LIMIT = 10;
 
-  const load = useCallback((p = page) => {
+  const load = useCallback((p = page, sf = statusFilter) => {
     setLoading(true);
-    fetch(`/api/admin/care?page=${p}&limit=${LIMIT}`)
+    const qs = sf === "ALL" ? `` : `&status=${sf}`;
+    fetch(`/api/admin/care?page=${p}&limit=${LIMIT}${qs}`)
       .then(r => r.json())
       .then(d => {
         setRows(Array.isArray(d.bookings) ? d.bookings : []);
@@ -673,9 +681,9 @@ function CareBookingsTable() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, statusFilter]);
 
-  useEffect(() => { load(page); }, [page, load]);
+  useEffect(() => { load(page, statusFilter); }, [page, statusFilter, load]);
 
   const doAction = async (bookingId: string, action: "force_complete" | "cancel") => {
     setActioning(bookingId);
@@ -686,6 +694,25 @@ function CareBookingsTable() {
     });
     setConfirmModal(null);
     setActioning(null);
+    load(page);
+  };
+
+  const doAssign = async () => {
+    if (!assignModal || !assignDriverId.trim()) return;
+    setAssigning(true);
+    await fetch("/api/admin/care", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bookingId:   assignModal.bookingId,
+        action:      "create_assignment",
+        newDriverId: assignDriverId.trim(),
+        role:        assignModal.role,
+      }),
+    });
+    setAssigning(false);
+    setAssignModal(null);
+    setAssignDriverId("");
     load(page);
   };
 
@@ -713,14 +740,27 @@ function CareBookingsTable() {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <span className="text-[15px] font-bold text-gray-900">Movo Care Ride Bookings</span>
           <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white" style={{ background: "#1e2d45" }}>{total}</span>
         </div>
-        <button onClick={() => load(page)} className="no-hover-fx px-4 py-2 rounded-xl text-white text-[12px] font-semibold" style={{ background: "#ef4444" }}>
-          Refresh
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {CARE_STATUS_OPTIONS.map(s => (
+            <button key={s} type="button"
+              onClick={() => { setStatusFilter(s); setPage(1); }}
+              className="no-hover-fx px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors"
+              style={{
+                background: statusFilter === s ? "#1e2d45" : "#f3f4f6",
+                color:      statusFilter === s ? "white"   : "#6b7280",
+              }}>
+              {s}
+            </button>
+          ))}
+          <button onClick={() => load(page)} className="no-hover-fx px-3 py-1.5 rounded-xl text-white text-[11px] font-semibold" style={{ background: "#ef4444" }}>
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Desktop table */}
@@ -769,6 +809,23 @@ function CareBookingsTable() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
                         <>
+                          {/* Assign driver if a role has no active assignment */}
+                          {!pA && (
+                            <button
+                              onClick={() => setAssignModal({ bookingId: b.id, role: "PRIMARY" })}
+                              className="no-hover-fx px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold"
+                              style={{ background: "#7c3aed" }}>
+                              + Primary
+                            </button>
+                          )}
+                          {!sA && (
+                            <button
+                              onClick={() => setAssignModal({ bookingId: b.id, role: "SUPPORT" })}
+                              className="no-hover-fx px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold"
+                              style={{ background: "#0284c7" }}>
+                              + Support
+                            </button>
+                          )}
                           <button
                             disabled={actioning === b.id}
                             onClick={() => setConfirmModal({ bookingId: b.id, action: "force_complete" })}
@@ -838,6 +895,42 @@ function CareBookingsTable() {
           );
         })}
       </div>
+
+      {/* Assign Driver modal */}
+      {assignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-[15px] font-bold text-gray-900 mb-1">
+              Assign {assignModal.role === "PRIMARY" ? "Primary" : "Support"} Chauffeur
+            </h3>
+            <p className="text-[12px] text-gray-400 mb-4">
+              Booking <span className="font-mono">{assignModal.bookingId.slice(0, 10)}…</span>
+            </p>
+            <label className="text-[12px] font-semibold text-gray-600 block mb-1">Driver ID</label>
+            <input
+              type="text"
+              placeholder="Paste driver ID…"
+              value={assignDriverId}
+              onChange={e => setAssignDriverId(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-[#131936] mb-5"
+            />
+            <div className="flex gap-3">
+              <button type="button"
+                onClick={() => { setAssignModal(null); setAssignDriverId(""); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700">
+                Cancel
+              </button>
+              <button type="button"
+                disabled={assigning || !assignDriverId.trim()}
+                onClick={doAssign}
+                className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-bold"
+                style={{ background: assigning || !assignDriverId.trim() ? "#9ca3af" : "#131936" }}>
+                {assigning ? "Assigning…" : "Assign"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm action modal */}
       {confirmModal && (
