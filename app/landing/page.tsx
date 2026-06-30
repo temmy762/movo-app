@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { saveBookingDraft, getBookingDraft, clearBookingDraft } from "@/lib/booking-draft";
 import { useJsApiLoader, Autocomplete as GPlacesAuto } from "@react-google-maps/api";
 
 const GMAPS_KEY  = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -112,13 +113,9 @@ export default function LandingPage() {
   const [tab,     setTab]     = useState<"oneway" | "hourly" | "airport" | "care">("oneway");
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
-  const [contactName,    setContactName]    = useState("");
-  const [contactEmail,   setContactEmail]   = useState("");
-  const [contactPhone,   setContactPhone]   = useState("");
-  const [contactMsg,     setContactMsg]     = useState("");
-  const [contactSending, setContactSending] = useState(false);
-  const [contactSent,    setContactSent]    = useState(false);
-  const contactRef = useRef<HTMLElement>(null);
+  const [widgetError,  setWidgetError]  = useState("");
+  const [draftBanner,  setDraftBanner]  = useState<"show" | "none">("none");
+  const [bookingBusy,  setBookingBusy]  = useState(false);
   const pickupAutoRef  = useRef<google.maps.places.Autocomplete | null>(null);
   const dropoffAutoRef = useRef<google.maps.places.Autocomplete | null>(null);
 
@@ -132,7 +129,22 @@ export default function LandingPage() {
     libraries: GMAPS_LIBS,
   });
 
-  const scrollToContact = () => contactRef.current?.scrollIntoView({ behavior: "smooth" });
+  useEffect(() => {
+    const draft = getBookingDraft();
+    if (draft) setDraftBanner("show");
+  }, []);
+
+  const restoreDraft = () => {
+    const draft = getBookingDraft();
+    if (!draft) return;
+    setTab(draft.tab);
+    setPickup(draft.pickup);
+    setDropoff(draft.dropoff);
+    setDate(draft.date);
+    setTime(draft.time);
+    setPassengers(draft.passengers);
+    setDraftBanner("none");
+  };
 
   const onPickupPlaceChanged = () => {
     const pl = pickupAutoRef.current?.getPlace();
@@ -145,36 +157,44 @@ export default function LandingPage() {
     else if (pl?.name) setDropoff(pl.name);
   };
 
-  const handleGetStarted = () => {
+  const handleGetStarted = async () => {
+    setWidgetError("");
+    if (!pickup.trim())                        { setWidgetError("Please enter a pickup location."); return; }
+    if (tab !== "hourly" && !dropoff.trim())   { setWidgetError("Please enter your destination."); return; }
+    if (!date)                                 { setWidgetError("Please select a date."); return; }
+    if (!time)                                 { setWidgetError("Please select a time."); return; }
+
+    setBookingBusy(true);
     const p = new URLSearchParams();
-    if (pickup)  p.set("pickup",  pickup);
-    if (dropoff) p.set("dropoff", dropoff);
-    if (date)    p.set("date",    date);
-    if (time)    p.set("time",    time);
+    p.set("pickup",     pickup);
+    if (tab !== "hourly") p.set("dropoff", dropoff);
+    p.set("date",       date);
+    p.set("time",       time);
     p.set("passengers", String(passengers));
 
-    if (tab === "care") {
-      p.set("service", "care"); p.set("tier", "black");
-    } else if (tab === "airport") {
-      p.set("tier", "all"); p.set("mode", "airport");
-    } else if (tab === "hourly") {
-      p.set("tier", "all"); p.set("mode", "hourly");
-    } else {
-      p.set("tier", "all");
-    }
+    const tier    = tab === "care" ? "black" : "all";
+    const service = tab === "care" ? "care"  : "";
+    if (tab === "care")    { p.set("service", "care"); p.set("tier", "black"); }
+    else if (tab === "airport") { p.set("tier", "all"); p.set("mode", "airport"); }
+    else if (tab === "hourly")  { p.set("tier", "all"); p.set("mode", "hourly"); }
+    else                        { p.set("tier", "all"); }
 
-    /* Skip role-select: go straight to rider login, bounce back to pickup page */
-    const next = `/home/pickup?${p.toString()}`;
-    router.push(`/user/login?redirect=${encodeURIComponent(next)}`);
-  };
+    saveBookingDraft({ pickup, dropoff, date, time, passengers, tab, tier, service });
 
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setContactSending(true);
-    await new Promise(r => setTimeout(r, 1000));
-    setContactSending(false);
-    setContactSent(true);
-    setContactName(""); setContactEmail(""); setContactPhone(""); setContactMsg("");
+    const targetUrl = `/home/pickup/available-cars?${p.toString()}`;
+    try {
+      const res  = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.role === "USER") {
+          clearBookingDraft();
+          router.push(targetUrl);
+          return;
+        }
+      }
+    } catch { /* not logged in */ }
+    setBookingBusy(false);
+    router.push(`/user/login?redirect=${encodeURIComponent(targetUrl)}`);
   };
 
   return (
@@ -275,6 +295,16 @@ export default function LandingPage() {
             </div>
 
             <div className="p-5 flex flex-col gap-4">
+              {/* Draft restore banner */}
+              {draftBanner === "show" && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl" style={{ background: `${GOLD}18`, border: `1px solid ${GOLD}50` }}>
+                  <p className="text-[11px] text-white/70"><span style={{ color: GOLD }} className="font-bold">Saved booking found.</span> Continue where you left off?</p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={restoreDraft} className="text-[11px] font-bold px-2 py-1 rounded-lg" style={{ background: GOLD, color: DARK }}>Restore</button>
+                    <button onClick={() => { clearBookingDraft(); setDraftBanner("none"); }} className="text-[11px] text-white/40 hover:text-white/70">✕</button>
+                  </div>
+                </div>
+              )}
               {tab === "care" && (
                 <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(198,191,178,0.08)", border: `1px solid ${GOLD}40` }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -371,10 +401,18 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <button onClick={handleGetStarted}
-                className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] tracking-wide mt-1"
+              {widgetError && (
+                <p className="text-[11px] font-semibold text-red-400 flex items-center gap-1.5">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  {widgetError}
+                </p>
+              )}
+              <button onClick={handleGetStarted} disabled={bookingBusy}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] tracking-wide mt-1 flex items-center justify-center gap-2 disabled:opacity-70"
                 style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-                Book Now →
+                {bookingBusy
+                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Finding your ride…</>
+                  : "Book Now →"}
               </button>
               <p className="text-center text-[10px] text-white/30">Sign in or create an account to complete your booking.</p>
             </div>
@@ -397,13 +435,7 @@ export default function LandingPage() {
               { n: 3, title: "Enjoy your ride",           desc: "Relax while we drive you safely to your destination.",             icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" },
               { n: 4, title: "Trip complete",             desc: "You arrive safely. Your car is parked. We handle the rest.",       icon: "M22 11.08V12a10 10 0 1 1-5.93-9.14" },
             ].map((s, i) => (
-              <div key={s.n} className="relative flex flex-col items-center text-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/10">
-                {/* Arrow connector on desktop */}
-                {i < 3 && (
-                  <div className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 z-10 items-center">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.5"><polyline points="9 18 15 12 9 6"/></svg>
-                  </div>
-                )}
+              <div key={s.n} className="flex flex-col items-center text-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/10">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center"
                   style={{ background: `linear-gradient(135deg,${NAVY},${GOLD}44)`, border: `1px solid ${GOLD}40` }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8"><path d={s.icon}/></svg>
@@ -416,26 +448,39 @@ export default function LandingPage() {
           </div>
 
           {/* Why Safe Ride card */}
-          <div className="mt-14 rounded-2xl p-6 grid md:grid-cols-2 gap-6" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(198,191,178,0.12)" }}>
-            <div>
-              <p className="text-[16px] font-bold text-white mb-4">Why Safe Ride?</p>
-              {["Drive your own car", "Professional & discreet", "Perfect for late nights", "Available when you need it most"].map(f => (
-                <div key={f} className="flex items-center gap-2 mb-2">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span className="text-[13px] text-white/70">{f}</span>
+          <div className="mt-14 rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(198,191,178,0.12)" }}>
+            <div className="grid md:grid-cols-2 gap-0">
+              {/* Image */}
+              <div className="relative h-56 md:h-auto min-h-[200px]">
+                <Image src="/images/home banner.png" alt="Safe Ride" fill className="object-cover object-center opacity-70" unoptimized />
+                <div className="absolute inset-0" style={{ background: `linear-gradient(135deg,${DARK}99,transparent 70%)` }} />
+                <div className="absolute bottom-4 left-4">
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-full" style={{ background: GOLD, color: DARK }}>Safe Ride</span>
                 </div>
-              ))}
-            </div>
-            <div className="flex flex-col justify-center">
-              <div className="flex items-center gap-2 p-3 rounded-xl mb-3" style={{ background: "rgba(198,191,178,0.06)", border: `1px solid ${GOLD}30` }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <p className="text-[12px] text-white/60">Your safety is our priority. All chauffeurs are fully vetted and trained.</p>
               </div>
-              <Link href="/home/pickup?service=care&tier=black"
-                className="w-full py-3 rounded-xl text-white font-bold text-[13px] text-center block"
-                style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
-                Book Now
-              </Link>
+              {/* Content */}
+              <div className="p-6 flex flex-col justify-between gap-5">
+                <div>
+                  <p className="text-[16px] font-bold text-white mb-4">Why Safe Ride?</p>
+                  {["Drive your own car", "Professional & discreet", "Perfect for late nights", "Available when you need it most"].map(f => (
+                    <div key={f} className="flex items-center gap-2 mb-2">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span className="text-[13px] text-white/70">{f}</span>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 p-3 rounded-xl mb-3" style={{ background: "rgba(198,191,178,0.06)", border: `1px solid ${GOLD}30` }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <p className="text-[12px] text-white/60">All chauffeurs are fully vetted and trained.</p>
+                  </div>
+                  <Link href="/home/pickup?service=care&tier=black"
+                    className="w-full py-3 rounded-xl text-white font-bold text-[13px] text-center block"
+                    style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+                    Book Now
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -570,10 +615,10 @@ export default function LandingPage() {
                 style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
                 Book Now
               </Link>
-              <button onClick={scrollToContact} className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
+              <Link href="/user/login" className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
                 style={{ borderColor: NAVY, color: NAVY }}>
-                Contact Us
-              </button>
+                Sign In
+              </Link>
             </div>
           </div>
           <div className="rounded-3xl overflow-hidden h-72 relative">
@@ -708,64 +753,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CONTACT FORM ── */}
-      <section ref={contactRef as React.RefObject<HTMLDivElement>} id="contact" className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-10">
-            <SectionLabel>Get In Touch</SectionLabel>
-            <SectionHeading>Contact Us</SectionHeading>
-            <p className="text-gray-500 mt-3 text-[14px]">Questions about corporate accounts, Care Ride, or just want to know more? We&apos;ll get back to you within 24 hours.</p>
-          </div>
-          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm">
-            {contactSent ? (
-              <div className="flex flex-col items-center gap-4 py-8">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                </div>
-                <p className="text-[18px] font-bold text-gray-900">Message received!</p>
-                <p className="text-[13px] text-gray-500 text-center">Thanks for reaching out. Our team will contact you shortly.</p>
-                <button onClick={() => setContactSent(false)}
-                  className="mt-2 text-[13px] font-semibold underline" style={{ color: NAVY }}>Send another message</button>
-              </div>
-            ) : (
-              <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Full Name *</label>
-                    <input required value={contactName} onChange={e => setContactName(e.target.value)}
-                      placeholder="Your name"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors" />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Email *</label>
-                    <input required type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors" />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Phone (optional)</label>
-                  <input value={contactPhone} onChange={e => setContactPhone(e.target.value)}
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors" />
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Message *</label>
-                  <textarea required value={contactMsg} onChange={e => setContactMsg(e.target.value)}
-                    placeholder="Tell us how we can help…"
-                    rows={4}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors resize-none" />
-                </div>
-                <button type="submit" disabled={contactSending}
-                  className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] transition-opacity disabled:opacity-60"
-                  style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
-                  {contactSending ? "Sending…" : "Send Message"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* ── CTA BANNER ── */}
       <section className="py-16 px-5 md:px-10" style={{ background: `linear-gradient(135deg,${NAVY},${GOLD})` }}>
@@ -802,14 +789,14 @@ export default function LandingPage() {
             <p className="text-white font-semibold text-[13px] mb-4">Company</p>
             <div className="flex flex-col gap-2">
               <a href="#why-movo" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">About Us</a>
-              <button onClick={scrollToContact} className="text-left text-white/40 text-[12px] hover:text-white/70 transition-colors">For Business</button>
+              <a href="#services" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Business</a>
               <Link href="/auth/select" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Chauffeurs</Link>
             </div>
           </div>
           <div>
             <p className="text-white font-semibold text-[13px] mb-4">Support</p>
             <div className="flex flex-col gap-2">
-              <button onClick={scrollToContact} className="text-left text-white/40 text-[12px] hover:text-white/70 transition-colors">Contact Us</button>
+              <Link href="/user/login" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Book Now</Link>
               <Link href="/privacy-policy" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Privacy Policy</Link>
               <Link href="/terms" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Terms of Service</Link>
             </div>

@@ -76,6 +76,13 @@ function RegisterContent() {
         }
         return;
       }
+      const redirect = searchParams.get("redirect");
+      if (redirect) { router.push(redirect); return; }
+      try {
+        const { getBookingDraft, clearBookingDraft, draftToUrl } = await import("@/lib/booking-draft");
+        const draft = getBookingDraft();
+        if (draft) { clearBookingDraft(); router.push(draftToUrl(draft)); return; }
+      } catch {}
       router.push("/home");
     } catch {
       setError("Network error. Please check your connection and try again.");
