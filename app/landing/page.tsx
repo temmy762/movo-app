@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 /* ── Brand tokens ──────────────────────────────────────────────────────────── */
@@ -12,19 +12,19 @@ const DARK  = "#0A0A0F";
 
 /* ── Data ───────────────────────────────────────────────────────────────────── */
 const SERVICES = [
-  { id: "classic",  label: "Movo Classic",     desc: "Everyday city rides, elevated.",             img: "/images/movo classic.png",    from: 18 },
-  { id: "premium",  label: "Movo Premium",      desc: "More space, more presence.",                 img: "/images/movo premium.png",    from: 25 },
-  { id: "black",    label: "Movo Privé Black",  desc: "Unparalleled luxury at your fingertips.",    img: "/images/prive black.png",      from: 35 },
-  { id: "care",     label: "Movo Care Ride",    desc: "We drive you home in your own vehicle.",     img: "/images/movo classic.png",    from: 129, badge: "New" },
+  { id: "classic",  label: "Movo Classic",     desc: "Everyday city rides, elevated.",          img: "/images/movo classic.png",  from: 18,  href: "/home/pickup?tier=classic" },
+  { id: "premium",  label: "Movo Premium",      desc: "More space, more presence.",              img: "/images/movo premium.png",  from: 25,  href: "/home/pickup?tier=premium" },
+  { id: "black",    label: "Movo Privé Black",  desc: "Unparalleled luxury at your fingertips.", img: "/images/prive black.png",   from: 35,  href: "/home/pickup?tier=black" },
+  { id: "care",     label: "Movo Care Ride",    desc: "We drive you home in your own vehicle.",  img: "/images/movo classic.png",  from: 129, href: "/home/care-ride", badge: "New" },
 ];
 
 const WHY_ITEMS = [
-  { icon: "🛡️", title: "Vetted Chauffeurs",     desc: "Every driver is background-checked, licensed, and trained to Movo's luxury standard." },
-  { icon: "📍", title: "Real-Time Tracking",    desc: "Follow your chauffeur live from dispatch to arrival—no guessing, no waiting." },
-  { icon: "⏱️", title: "On-Time, Every Time",   desc: "Precision scheduling so you are never left waiting at the kerb." },
-  { icon: "💳", title: "Transparent Pricing",   desc: "Fare estimated before you book. No surge, no surprises." },
-  { icon: "🚗", title: "Premium Fleet",         desc: "Curated vehicles kept to the highest maintenance and presentation standard." },
-  { icon: "🌙", title: "24 / 7 Service",        desc: "Your personal driver, available round the clock, every day of the year." },
+  { iconKey: "shield",  title: "Vetted Chauffeurs",   desc: "Every driver is background-checked, licensed, and trained to Movo's luxury standard." },
+  { iconKey: "pin",     title: "Real-Time Tracking",  desc: "Follow your chauffeur live from dispatch to arrival — no guessing, no waiting." },
+  { iconKey: "clock",   title: "On-Time, Every Time", desc: "Precision scheduling so you are never left waiting at the kerb." },
+  { iconKey: "card",    title: "Transparent Pricing", desc: "Fare estimated before you book. No surge, no surprises." },
+  { iconKey: "car",     title: "Premium Fleet",       desc: "Curated vehicles kept to the highest maintenance and presentation standard." },
+  { iconKey: "moon",    title: "24 / 7 Service",      desc: "Your personal driver, available round the clock, every day of the year." },
 ];
 
 const HOW_IT_WORKS = [
@@ -68,6 +68,17 @@ function StarRow({ n }: { n: number }) {
   );
 }
 
+function WhyIcon({ k }: { k: string }) {
+  const p = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: GOLD, strokeWidth: 1.8 };
+  if (k === "shield") return <svg {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
+  if (k === "pin")    return <svg {...p}><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>;
+  if (k === "clock")  return <svg {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+  if (k === "card")   return <svg {...p}><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+  if (k === "car")    return <svg {...p}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+  if (k === "moon")   return <svg {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>;
+  return null;
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ color: GOLD }}>{children}</p>
@@ -90,19 +101,42 @@ export default function LandingPage() {
   const [tab,     setTab]     = useState<"oneway" | "hourly" | "airport" | "care">("oneway");
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
+  const [contactName,    setContactName]    = useState("");
+  const [contactEmail,   setContactEmail]   = useState("");
+  const [contactPhone,   setContactPhone]   = useState("");
+  const [contactMsg,     setContactMsg]     = useState("");
+  const [contactSending, setContactSending] = useState(false);
+  const [contactSent,    setContactSent]    = useState(false);
+  const contactRef = useRef<HTMLElement>(null);
+
+  const scrollToContact = () => contactRef.current?.scrollIntoView({ behavior: "smooth" });
 
   const handleGetStarted = () => {
+    const p = new URLSearchParams();
+    if (pickup)  p.set("pickup",  pickup);
+    if (dropoff) p.set("dropoff", dropoff);
     if (tab === "care") {
-      const p = new URLSearchParams({ service: "care", tier: "black" });
-      if (pickup)  p.set("pickup",  pickup);
-      if (dropoff) p.set("dropoff", dropoff);
+      p.set("service", "care"); p.set("tier", "black");
+      router.push(`/home/pickup?${p.toString()}`);
+    } else if (tab === "airport") {
+      p.set("tier", "all"); p.set("mode", "airport");
+      router.push(`/home/pickup?${p.toString()}`);
+    } else if (tab === "hourly") {
+      p.set("tier", "all"); p.set("mode", "hourly");
       router.push(`/home/pickup?${p.toString()}`);
     } else {
-      const p = new URLSearchParams({ tier: "all" });
-      if (pickup)  p.set("pickup",  pickup);
-      if (dropoff) p.set("dropoff", dropoff);
+      p.set("tier", "all");
       router.push(`/home/pickup?${p.toString()}`);
     }
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactSending(true);
+    await new Promise(r => setTimeout(r, 1000));
+    setContactSending(false);
+    setContactSent(true);
+    setContactName(""); setContactEmail(""); setContactPhone(""); setContactMsg("");
   };
 
   return (
@@ -111,16 +145,16 @@ export default function LandingPage() {
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-[999] border-b border-white/10" style={{ background: DARK }}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-white font-extrabold text-[20px] tracking-tight">MOVO</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ color: GOLD, border: `1px solid ${GOLD}` }}>Privé</span>
+          <Link href="/" className="flex items-center">
+            <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo Privé" width={110} height={32} priority unoptimized />
           </Link>
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-8">
-            {["Services", "For Business", "For Chauffeurs", "About Us"].map(l => (
-              <span key={l} className="text-[13px] font-medium text-white/70 hover:text-white cursor-pointer transition-colors">{l}</span>
-            ))}
+            <a href="#services"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">Services</a>
+            <button onClick={scrollToContact} className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Business</button>
+            <Link href="/auth/select" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Chauffeurs</Link>
+            <a href="#why-movo"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">About Us</a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -128,7 +162,7 @@ export default function LandingPage() {
             <Link href="/auth/select"
               className="px-4 py-2 rounded-full text-[13px] font-bold text-white"
               style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-              Book a Ride
+              Book Now
             </Link>
             <button className="md:hidden text-white" onClick={() => setNavOpen(v => !v)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -139,9 +173,10 @@ export default function LandingPage() {
         </div>
         {navOpen && (
           <div className="md:hidden px-5 pb-4 flex flex-col gap-3 border-t border-white/10" style={{ background: DARK }}>
-            {["Services", "For Business", "For Chauffeurs", "About Us"].map(l => (
-              <span key={l} className="text-[14px] font-medium text-white/70 py-1">{l}</span>
-            ))}
+            <a href="#services" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">Services</a>
+            <button onClick={() => { setNavOpen(false); scrollToContact(); }} className="text-left text-[14px] font-medium text-white/70 py-1">For Business</button>
+            <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">For Chauffeurs</Link>
+            <a href="#why-movo" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">About Us</a>
             <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">Sign in</Link>
           </div>
         )}
@@ -154,17 +189,17 @@ export default function LandingPage() {
           <div className="absolute inset-0" style={{ background: `linear-gradient(135deg,${DARK} 0%,${NAVY}88 50%,transparent 100%)` }} />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-5 md:px-10 pt-16 md:pt-24 pb-10 grid md:grid-cols-2 gap-12 items-center min-h-[92vh]">
+        <div className="relative max-w-7xl mx-auto px-5 md:px-10 pt-16 sm:pt-20 md:pt-24 pb-10 grid sm:grid-cols-2 gap-8 sm:gap-10 md:gap-12 items-center min-h-[92vh]">
           {/* Left copy */}
           <div>
             <div className="flex items-center gap-2 mb-5">
               <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: GOLD }} />
               <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: GOLD }}>Premium Chauffeur Platform</span>
             </div>
-            <h1 className="text-[40px] md:text-[58px] font-extrabold text-white leading-[1.1] mb-5">
+            <h1 className="text-[32px] sm:text-[44px] md:text-[58px] font-extrabold text-white leading-[1.1] mb-5">
               Premium<br />chauffeur<br />services,<br /><span style={{ color: GOLD }}>on your terms.</span>
             </h1>
-            <p className="text-white/60 text-[15px] md:text-[17px] leading-relaxed mb-8 max-w-md">
+            <p className="text-white/60 text-[14px] sm:text-[15px] md:text-[17px] leading-relaxed mb-8 max-w-md">
               Professional chauffeurs. Reliable service.<br />Every ride, your way.
             </p>
             <div className="flex items-center gap-4 flex-wrap">
@@ -181,7 +216,7 @@ export default function LandingPage() {
           </div>
 
           {/* Booking widget */}
-          <div className="rounded-3xl overflow-hidden shadow-2xl" style={{ background: "#111827", border: "1px solid rgba(198,191,178,0.15)" }}>
+          <div className="rounded-3xl overflow-hidden shadow-2xl mt-8 sm:mt-0" style={{ background: "#111827", border: "1px solid rgba(198,191,178,0.15)" }}>
             {/* Tabs */}
             <div className="flex border-b border-white/10">
               {([
@@ -252,7 +287,7 @@ export default function LandingPage() {
               <button onClick={handleGetStarted}
                 className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] tracking-wide mt-1"
                 style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-                Get Started
+                Book Now
               </button>
             </div>
           </div>
@@ -267,21 +302,27 @@ export default function LandingPage() {
             <SectionHeading light>How Safe Ride works</SectionHeading>
             <p className="text-white/50 mt-3 text-[14px]">Two chauffeurs. One mission: get you and your vehicle home safely.</p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { n: 1, title: "You book Safe Ride",        desc: "Enter your pickup and destination." },
-              { n: 2, title: "We assign your chauffeur",  desc: "A professional chauffeur will pick you up in your own vehicle." },
-              { n: 3, title: "Enjoy your ride",           desc: "Relax while we drive you safely to your destination." },
-              { n: 4, title: "Trip complete",             desc: "You arrive safely. We handle the rest." },
-            ].map(s => (
-              <div key={s.n} className="flex flex-col items-center text-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-[15px] text-white"
-                  style={{ background: `linear-gradient(135deg,${NAVY},${GOLD})` }}>
-                  {s.n}
+              { n: 1, title: "Book Safe Ride",            desc: "Enter your pickup and destination.",                               icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
+              { n: 2, title: "We assign chauffeurs",      desc: "A primary chauffeur drives your vehicle, a support follows.",     icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" },
+              { n: 3, title: "Enjoy your ride",           desc: "Relax while we drive you safely to your destination.",             icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" },
+              { n: 4, title: "Trip complete",             desc: "You arrive safely. Your car is parked. We handle the rest.",       icon: "M22 11.08V12a10 10 0 1 1-5.93-9.14" },
+            ].map((s, i) => (
+              <div key={s.n} className="relative flex flex-col items-center text-center gap-3 bg-white/5 rounded-2xl p-4 border border-white/10">
+                {/* Arrow connector on desktop */}
+                {i < 3 && (
+                  <div className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 z-10 items-center">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.5"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
+                )}
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg,${NAVY},${GOLD}44)`, border: `1px solid ${GOLD}40` }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8"><path d={s.icon}/></svg>
                 </div>
-                <div className="w-full h-0.5 rounded-full hidden md:block" style={{ background: s.n < 4 ? `linear-gradient(90deg,${GOLD},transparent)` : "transparent" }} />
-                <p className="text-[13px] font-bold text-white">{s.title}</p>
-                <p className="text-[12px] text-white/50 leading-snug">{s.desc}</p>
+                <span className="text-[9px] font-extrabold tracking-widest uppercase" style={{ color: GOLD }}>Step {s.n}</span>
+                <p className="text-[12px] font-bold text-white leading-snug">{s.title}</p>
+                <p className="text-[11px] text-white/50 leading-snug">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -302,10 +343,10 @@ export default function LandingPage() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 <p className="text-[12px] text-white/60">Your safety is our priority. All chauffeurs are fully vetted and trained.</p>
               </div>
-              <Link href="/auth/select"
+              <Link href="/home/pickup?service=care&tier=black"
                 className="w-full py-3 rounded-xl text-white font-bold text-[13px] text-center block"
                 style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
-                Book Safe Ride
+                Book Now
               </Link>
             </div>
           </div>
@@ -313,7 +354,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CHOOSE YOUR LEVEL ── */}
-      <section className="py-20 px-5 md:px-10 bg-white">
+      <section id="services" className="py-20 px-5 md:px-10 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <SectionLabel>Services</SectionLabel>
@@ -322,8 +363,8 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {SERVICES.map(s => (
-              <div key={s.id}
-                className="rounded-2xl p-4 flex flex-col gap-3 border transition-all cursor-pointer hover:shadow-lg"
+              <Link key={s.id} href={s.href}
+                className="rounded-2xl p-4 flex flex-col gap-3 border transition-all cursor-pointer hover:shadow-lg hover:-translate-y-0.5 group"
                 style={{ border: s.id === "care" ? `2px solid ${NAVY}` : "1px solid #e5e7eb", background: s.id === "care" ? `linear-gradient(135deg,${DARK},${NAVY})` : "white" }}>
                 {s.badge && (
                   <span className="self-start text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: GOLD, color: DARK }}>{s.badge}</span>
@@ -333,25 +374,19 @@ export default function LandingPage() {
                 </div>
                 <p className="text-[13px] font-bold" style={{ color: s.id === "care" ? "white" : "#111827" }}>{s.label}</p>
                 <p className="text-[11px] leading-snug" style={{ color: s.id === "care" ? "rgba(255,255,255,0.6)" : "#6b7280" }}>{s.desc}</p>
-                <div className="flex items-center gap-2 text-[10px]" style={{ color: s.id === "care" ? "rgba(255,255,255,0.5)" : "#9ca3af" }}>
-                  <span>1–3 👤</span><span>·</span><span>From ${s.from}</span>
+                <div className="flex items-center justify-between mt-auto">
+                  <span className="text-[10px]" style={{ color: s.id === "care" ? "rgba(255,255,255,0.5)" : "#9ca3af" }}>From ${s.from}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.id === "care" ? `${GOLD}22` : `${NAVY}11`, color: s.id === "care" ? GOLD : NAVY }}>Book Now</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
-          <div className="text-center mt-6">
-            <p className="text-[11px] text-gray-400">Prices are estimates and may vary based on time, distance, and traffic.</p>
-            <Link href="/auth/select"
-              className="inline-block mt-4 px-8 py-3 rounded-full text-white font-bold text-[14px]"
-              style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-              Continue to Booking
-            </Link>
-          </div>
+          <p className="text-center text-[11px] text-gray-400 mt-6">Prices are estimates and may vary based on time, distance, and traffic.</p>
         </div>
       </section>
 
       {/* ── WHY MOVO ── */}
-      <section className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
+      <section id="why-movo" className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <SectionLabel>Why Movo Privé</SectionLabel>
@@ -360,7 +395,10 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {WHY_ITEMS.map(w => (
               <div key={w.title} className="bg-white rounded-2xl p-5 shadow-sm flex flex-col gap-3">
-                <span className="text-2xl">{w.icon}</span>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+                  <WhyIcon k={w.iconKey} />
+                </div>
                 <p className="text-[15px] font-bold text-gray-900">{w.title}</p>
                 <p className="text-[13px] text-gray-500 leading-relaxed">{w.desc}</p>
               </div>
@@ -439,10 +477,16 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <Link href="/auth/select" className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
-              style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
-              Enquire About Corporate
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/auth/select" className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
+                style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+                Book Now
+              </Link>
+              <button onClick={scrollToContact} className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
+                style={{ borderColor: NAVY, color: NAVY }}>
+                Contact Us
+              </button>
+            </div>
           </div>
           <div className="rounded-3xl overflow-hidden h-72 relative">
             <Image src="/images/home banner.png" alt="Corporate" fill className="object-cover object-center opacity-80" unoptimized />
@@ -463,10 +507,10 @@ export default function LandingPage() {
             <p className="text-gray-500 text-[14px] leading-relaxed mt-4 mb-6">
               Flight-monitored pickups, meet-and-greet arrivals, and door-to-terminal service. Your chauffeur tracks your flight in real time — if it is early or delayed, your driver adapts.
             </p>
-            <Link href="/auth/select"
+            <Link href="/home/pickup?tier=all&mode=airport"
               className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
               style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
-              Book Airport Transfer
+              Book Now
             </Link>
           </div>
         </div>
@@ -483,21 +527,21 @@ export default function LandingPage() {
             </p>
             <div className="grid grid-cols-2 gap-3 mb-8">
               {[
-                { icon: "🚗", label: "Your car, our driver" },
-                { icon: "👥", label: "Two-chauffeur team" },
-                { icon: "📍", label: "One seamless booking" },
-                { icon: "🔒", label: "Safe & professional" },
+                { path: "M19 17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11l5 5v5a2 2 0 0 1-2 2z", label: "Your car, our driver" },
+                { path: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75", label: "Two-chauffeur team" },
+                { path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z", label: "One seamless booking" },
+                { path: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", label: "Safe & professional" },
               ].map(f => (
                 <div key={f.label} className="flex items-center gap-2 p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <span>{f.icon}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8"><path d={f.path}/></svg>
                   <span className="text-[12px] text-white/70 font-medium">{f.label}</span>
                 </div>
               ))}
             </div>
-            <Link href="/auth/select"
+            <Link href="/home/care-ride"
               className="inline-block px-6 py-3 rounded-full font-bold text-[13px]"
               style={{ background: GOLD, color: DARK }}>
-              Book Movo Care Ride
+              Book Now
             </Link>
           </div>
           <div className="rounded-3xl overflow-hidden h-72 relative bg-gray-900 border border-white/10">
@@ -576,6 +620,65 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── CONTACT FORM ── */}
+      <section ref={contactRef as React.RefObject<HTMLDivElement>} id="contact" className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10">
+            <SectionLabel>Get In Touch</SectionLabel>
+            <SectionHeading>Contact Us</SectionHeading>
+            <p className="text-gray-500 mt-3 text-[14px]">Questions about corporate accounts, Care Ride, or just want to know more? We&apos;ll get back to you within 24 hours.</p>
+          </div>
+          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm">
+            {contactSent ? (
+              <div className="flex flex-col items-center gap-4 py-8">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <p className="text-[18px] font-bold text-gray-900">Message received!</p>
+                <p className="text-[13px] text-gray-500 text-center">Thanks for reaching out. Our team will contact you shortly.</p>
+                <button onClick={() => setContactSent(false)}
+                  className="mt-2 text-[13px] font-semibold underline" style={{ color: NAVY }}>Send another message</button>
+              </div>
+            ) : (
+              <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Full Name *</label>
+                    <input required value={contactName} onChange={e => setContactName(e.target.value)}
+                      placeholder="Your name"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Email *</label>
+                    <input required type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Phone (optional)</label>
+                  <input value={contactPhone} onChange={e => setContactPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 block mb-1.5">Message *</label>
+                  <textarea required value={contactMsg} onChange={e => setContactMsg(e.target.value)}
+                    placeholder="Tell us how we can help…"
+                    rows={4}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-[#131936] transition-colors resize-none" />
+                </div>
+                <button type="submit" disabled={contactSending}
+                  className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] transition-opacity disabled:opacity-60"
+                  style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+                  {contactSending ? "Sending…" : "Send Message"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA BANNER ── */}
       <section className="py-16 px-5 md:px-10" style={{ background: `linear-gradient(135deg,${NAVY},${GOLD})` }}>
         <div className="max-w-3xl mx-auto text-center">
@@ -584,7 +687,7 @@ export default function LandingPage() {
           <Link href="/auth/select"
             className="inline-block px-10 py-4 rounded-full font-bold text-[15px]"
             style={{ background: "white", color: NAVY }}>
-            Book Your Chauffeur Now
+            Book Now
           </Link>
         </div>
       </section>
@@ -593,30 +696,43 @@ export default function LandingPage() {
       <footer style={{ background: DARK }}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-16 grid grid-cols-2 md:grid-cols-4 gap-8 border-b border-white/10">
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-white font-extrabold text-[18px]">MOVO</span>
-              <span className="text-[9px] font-semibold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ color: GOLD, border: `1px solid ${GOLD}` }}>Privé</span>
+            <div className="mb-4">
+              <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo Privé" width={100} height={30} unoptimized />
             </div>
             <p className="text-white/40 text-[12px] leading-relaxed">Premium chauffeur services for every occasion. Professional. Reliable. Yours.</p>
           </div>
-          {[
-            { title: "Services",  links: ["In-City Rides", "Airport Transfer", "Hourly Chauffeur", "Movo Care Ride"] },
-            { title: "Company",   links: ["About Us", "For Business", "For Chauffeurs", "Careers"] },
-            { title: "Support",   links: ["Help Centre", "Contact Us", "Privacy Policy", "Terms of Service"] },
-          ].map(col => (
-            <div key={col.title}>
-              <p className="text-white font-semibold text-[13px] mb-4">{col.title}</p>
-              <div className="flex flex-col gap-2">
-                {col.links.map(l => (
-                  <span key={l} className="text-white/40 text-[12px] hover:text-white/70 cursor-pointer transition-colors">{l}</span>
-                ))}
-              </div>
+          <div>
+            <p className="text-white font-semibold text-[13px] mb-4">Services</p>
+            <div className="flex flex-col gap-2">
+              <Link href="/home/pickup?tier=classic" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">In-City Rides</Link>
+              <Link href="/home/pickup?tier=all&mode=airport" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Airport Transfer</Link>
+              <Link href="/home/pickup?tier=all&mode=hourly" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Hourly Chauffeur</Link>
+              <Link href="/home/care-ride" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Movo Care Ride</Link>
             </div>
-          ))}
+          </div>
+          <div>
+            <p className="text-white font-semibold text-[13px] mb-4">Company</p>
+            <div className="flex flex-col gap-2">
+              <a href="#why-movo" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">About Us</a>
+              <button onClick={scrollToContact} className="text-left text-white/40 text-[12px] hover:text-white/70 transition-colors">For Business</button>
+              <Link href="/auth/select" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Chauffeurs</Link>
+            </div>
+          </div>
+          <div>
+            <p className="text-white font-semibold text-[13px] mb-4">Support</p>
+            <div className="flex flex-col gap-2">
+              <button onClick={scrollToContact} className="text-left text-white/40 text-[12px] hover:text-white/70 transition-colors">Contact Us</button>
+              <Link href="/privacy-policy" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Terms of Service</Link>
+            </div>
+          </div>
         </div>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-5 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-white/30 text-[11px]">© {new Date().getFullYear()} Movo Privé. All rights reserved.</p>
-          <p className="text-white/30 text-[11px]">Built for premium chauffeur experiences.</p>
+          <p className="text-white/30 text-[11px]">&copy; {new Date().getFullYear()} Movo Privé. All rights reserved.</p>
+          <a href="https://www.upwork.com/freelancers/~01570d6e8820d27bcf" target="_blank" rel="noopener noreferrer"
+            className="text-white/30 text-[11px] hover:text-white/60 transition-colors">
+            Built by <span className="font-semibold">SolvaTree</span>
+          </a>
         </div>
       </footer>
 
