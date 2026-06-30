@@ -5,23 +5,40 @@ import { createSession, buildSetCookieHeader } from "@/lib/session";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-function loginRedirect(token: string) {
-  return NextResponse.redirect(`${BASE_URL}/home`, {
+function loginRedirect(token: string, destination: string = "/home") {
+  /* Only allow relative paths to prevent open redirect */
+  const safe = destination.startsWith("/") ? destination : "/home";
+  return NextResponse.redirect(`${BASE_URL}${safe}`, {
     headers: { "Set-Cookie": buildSetCookieHeader(token) },
   });
 }
 
-function errorRedirect(page: "login" | "register", code: string) {
-  const path = page === "register" ? "/onboarding/register" : "/onboarding/login";
-  return NextResponse.redirect(`${BASE_URL}${path}?error=${code}`);
+function errorRedirect(page: "login" | "register", code: string, redirect?: string) {
+  const path   = page === "register" ? "/user/register" : "/user/login";
+  const params = new URLSearchParams({ error: code });
+  if (redirect) params.set("redirect", redirect);
+  return NextResponse.redirect(`${BASE_URL}${path}?${params.toString()}`);
+}
+
+function decodeState(raw: string | null): { intent: "login" | "signup"; redirect: string } {
+  try {
+    if (!raw) return { intent: "login", redirect: "" };
+    const obj = JSON.parse(Buffer.from(raw, "base64url").toString());
+    return {
+      intent:   obj.intent === "signup" ? "signup" : "login",
+      redirect: typeof obj.redirect === "string" ? obj.redirect : "",
+    };
+  } catch {
+    /* Legacy state was just the intent string */
+    return { intent: raw === "signup" ? "signup" : "login", redirect: "" };
+  }
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const code = searchParams.get("code");
+  const code        = searchParams.get("code");
   const googleError = searchParams.get("error");
-  const state = searchParams.get("state");
-  const intent: "login" | "signup" = state === "signup" ? "signup" : "login";
+  const { intent, redirect } = decodeState(searchParams.get("state"));
   const errorPage = intent === "signup" ? "register" : "login";
 
   if (googleError) {
@@ -67,41 +84,41 @@ export async function GET(req: NextRequest) {
 
     const googleId: string = googleUser.id;
 
+    const dest = redirect || "/home";
+
     if (intent === "login") {
       const byGoogleId = await prisma.user.findUnique({ where: { googleId } });
       if (byGoogleId) {
         const token = await createSession("USER", byGoogleId.id);
-        return loginRedirect(token);
+        return loginRedirect(token, dest);
       }
 
       const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } });
       if (byEmail) {
-        // Link Google account if not already linked, then log in
         if (!byEmail.googleId) {
           await prisma.user.update({ where: { id: byEmail.id }, data: { googleId } });
         }
         const token = await createSession("USER", byEmail.id);
-        return loginRedirect(token);
+        return loginRedirect(token, dest);
       }
 
-      return errorRedirect("login", "google_not_linked");
+      return errorRedirect("login", "google_not_linked", redirect);
     }
 
     if (intent === "signup") {
       const byGoogleId = await prisma.user.findUnique({ where: { googleId } });
       if (byGoogleId) {
         const token = await createSession("USER", byGoogleId.id);
-        return loginRedirect(token);
+        return loginRedirect(token, dest);
       }
 
       const byEmail = await prisma.user.findUnique({ where: { email: googleUser.email } });
       if (byEmail) {
-        // Account already exists — link Google and log in
         if (!byEmail.googleId) {
           await prisma.user.update({ where: { id: byEmail.id }, data: { googleId } });
         }
         const token = await createSession("USER", byEmail.id);
-        return loginRedirect(token);
+        return loginRedirect(token, dest);
       }
 
       const password = await bcrypt.hash(crypto.randomUUID(), 12);
@@ -115,7 +132,7 @@ export async function GET(req: NextRequest) {
         },
       });
       const token = await createSession("USER", newUser.id);
-      return loginRedirect(token);
+      return loginRedirect(token, dest);
     }
 
     return errorRedirect(errorPage, "google_token_failed");

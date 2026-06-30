@@ -4,16 +4,20 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_APP
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const intent = searchParams.get("intent") === "signup" ? "signup" : "login";
-  const errorPath = intent === "signup" ? "/onboarding/register" : "/onboarding/login";
+  const intent   = searchParams.get("intent") === "signup" ? "signup" : "login";
+  const redirect = searchParams.get("redirect") ?? "";
+  const errorPath = intent === "signup" ? "/user/register" : "/user/login";
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientId     = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(`${BASE_URL}${errorPath}?error=oauth_config`);
   }
 
   const redirectUri = `${BASE_URL}/api/auth/google/callback`;
+
+  /* Encode both intent and the post-login destination into state */
+  const state = Buffer.from(JSON.stringify({ intent, redirect })).toString("base64url");
 
   const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   url.searchParams.set("client_id", clientId);
@@ -22,7 +26,7 @@ export async function GET(req: NextRequest) {
   url.searchParams.set("scope", "openid email profile");
   url.searchParams.set("access_type", "offline");
   url.searchParams.set("prompt", "select_account");
-  url.searchParams.set("state", intent);
+  url.searchParams.set("state", state);
 
   return NextResponse.redirect(url.toString());
 }
