@@ -210,7 +210,7 @@ export default function LandingPage() {
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-8">
             <a href="#services"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">Services</a>
-            <button onClick={scrollToContact} className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Business</button>
+            <a href="#services" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Business</a>
             <Link href="/auth/select" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Chauffeurs</Link>
             <a href="#why-movo"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">About Us</a>
           </div>
@@ -232,7 +232,7 @@ export default function LandingPage() {
         {navOpen && (
           <div className="md:hidden px-5 pb-4 flex flex-col gap-3 border-t border-white/10" style={{ background: DARK }}>
             <a href="#services" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">Services</a>
-            <button onClick={() => { setNavOpen(false); scrollToContact(); }} className="text-left text-[14px] font-medium text-white/70 py-1">For Business</button>
+            <a href="#services" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Business</a>
             <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">For Chauffeurs</Link>
             <a href="#why-movo" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">About Us</a>
             <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">Sign in</Link>
