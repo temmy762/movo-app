@@ -85,8 +85,24 @@ function PickupContent() {
   };
 
   const handleConfirm = () => {
+    if (service === "care") {
+      /* Care Ride: skip car selection — go straight to the Care confirm/pay page */
+      const params = new URLSearchParams({
+        pickup,
+        dropoff,
+        service: "care",
+        tier:    "black",
+        car:     "Movo Care Ride",
+      });
+      if (selectedPoint) {
+        params.set("pickupLat", String(selectedPoint.lat));
+        params.set("pickupLng", String(selectedPoint.lng));
+      }
+      router.push(`/home/ride/confirm?${params.toString()}`);
+      return;
+    }
+
     const params = new URLSearchParams({ tier, pickup, dropoff });
-    if (service)       params.set("service",   service);
     if (selectedPoint) {
       params.set("pickupLat", String(selectedPoint.lat));
       params.set("pickupLng", String(selectedPoint.lng));

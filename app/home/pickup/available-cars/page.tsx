@@ -389,12 +389,11 @@ function AvailableCarsContent() {
               <p className="text-[12px] font-semibold text-gray-500">You&apos;re booking a <span className="text-[#131936] font-bold">Movo Care Ride</span></p>
             </div>
           )}
-          {isCare && (
-            <div
-              className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border-2 cursor-pointer active:scale-[0.99] transition-transform"
-              style={{ borderColor: "#131936", background: "linear-gradient(135deg,#0A0A0F 0%,#131936 60%,#2A3055 100%)" }}
-              onClick={handleBookCare}
-            >
+          <div
+            className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border-2 cursor-pointer active:scale-[0.99] transition-transform"
+            style={{ borderColor: "#131936", background: "linear-gradient(135deg,#0A0A0F 0%,#131936 60%,#2A3055 100%)" }}
+            onClick={handleBookCare}
+          >
               <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -420,13 +419,18 @@ function AvailableCarsContent() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
 
-          {isCare && !loading && (
+          {isCare ? (
             <div className="mt-1 mb-2">
               <p className="text-[11px] text-center text-gray-400">Not looking for a Care Ride? Choose a regular category below.</p>
             </div>
+          ) : (
+            !loading && (
+              <div className="mt-1 mb-2">
+                <p className="text-[11px] text-center text-gray-400">Or choose a regular category below.</p>
+              </div>
+            )
           )}
 
           {loading ? (
