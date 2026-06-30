@@ -4,6 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useJsApiLoader, Autocomplete as GPlacesAuto } from "@react-google-maps/api";
+
+const GMAPS_KEY  = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+const GMAPS_LIBS: ("places")[] = ["places"];
+
+const todayStr = () => new Date().toISOString().split("T")[0];
+const nowTimeStr = () => {
+  const d = new Date();
+  d.setMinutes(Math.ceil(d.getMinutes() / 30) * 30, 0, 0);
+  return d.toTimeString().slice(0, 5);
+};
 
 /* ── Brand tokens ──────────────────────────────────────────────────────────── */
 const NAVY  = "#131936";
@@ -108,26 +119,53 @@ export default function LandingPage() {
   const [contactSending, setContactSending] = useState(false);
   const [contactSent,    setContactSent]    = useState(false);
   const contactRef = useRef<HTMLElement>(null);
+  const pickupAutoRef  = useRef<google.maps.places.Autocomplete | null>(null);
+  const dropoffAutoRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+  const [date,       setDate]       = useState(todayStr);
+  const [time,       setTime]       = useState(nowTimeStr);
+  const [passengers, setPassengers] = useState(1);
+
+  const { isLoaded: mapsLoaded } = useJsApiLoader({
+    id: "movo-landing-widget",
+    googleMapsApiKey: GMAPS_KEY,
+    libraries: GMAPS_LIBS,
+  });
 
   const scrollToContact = () => contactRef.current?.scrollIntoView({ behavior: "smooth" });
+
+  const onPickupPlaceChanged = () => {
+    const pl = pickupAutoRef.current?.getPlace();
+    if (pl?.formatted_address) setPickup(pl.formatted_address);
+    else if (pl?.name) setPickup(pl.name);
+  };
+  const onDropoffPlaceChanged = () => {
+    const pl = dropoffAutoRef.current?.getPlace();
+    if (pl?.formatted_address) setDropoff(pl.formatted_address);
+    else if (pl?.name) setDropoff(pl.name);
+  };
 
   const handleGetStarted = () => {
     const p = new URLSearchParams();
     if (pickup)  p.set("pickup",  pickup);
     if (dropoff) p.set("dropoff", dropoff);
+    if (date)    p.set("date",    date);
+    if (time)    p.set("time",    time);
+    p.set("passengers", String(passengers));
+
     if (tab === "care") {
       p.set("service", "care"); p.set("tier", "black");
-      router.push(`/home/pickup?${p.toString()}`);
     } else if (tab === "airport") {
       p.set("tier", "all"); p.set("mode", "airport");
-      router.push(`/home/pickup?${p.toString()}`);
     } else if (tab === "hourly") {
       p.set("tier", "all"); p.set("mode", "hourly");
-      router.push(`/home/pickup?${p.toString()}`);
     } else {
       p.set("tier", "all");
-      router.push(`/home/pickup?${p.toString()}`);
     }
+
+    /* Skip role-select: go straight to rider login, bounce back to pickup page */
+    const next = `/home/pickup?${p.toString()}`;
+    router.push(`/user/login?redirect=${encodeURIComponent(next)}`);
   };
 
   const handleContactSubmit = async (e: React.FormEvent) => {
@@ -243,43 +281,92 @@ export default function LandingPage() {
                   <p className="text-[11px] text-white/60"><span style={{ color: GOLD }} className="font-bold">Movo Safe Ride</span> — We drive you and your vehicle home safely.</p>
                 </div>
               )}
+              {tab === "hourly" && (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(198,191,178,0.08)", border: `1px solid ${GOLD}40` }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <p className="text-[11px] text-white/60"><span style={{ color: GOLD }} className="font-bold">Hourly Charter</span> — A dedicated chauffeur at your disposal for as long as you need.</p>
+                </div>
+              )}
 
               {/* Pickup */}
               <div>
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Pickup location</label>
                 <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-                  <input value={pickup} onChange={e => setPickup(e.target.value)}
-                    placeholder="Enter pickup location"
-                    className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none" />
+                  {mapsLoaded ? (
+                    <GPlacesAuto onLoad={a => { pickupAutoRef.current = a; }} onPlaceChanged={onPickupPlaceChanged}>
+                      <input value={pickup} onChange={e => setPickup(e.target.value)}
+                        placeholder="Enter pickup location"
+                        className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none w-full" />
+                    </GPlacesAuto>
+                  ) : (
+                    <input value={pickup} onChange={e => setPickup(e.target.value)}
+                      placeholder="Enter pickup location"
+                      className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none" />
+                  )}
                 </div>
               </div>
 
-              {/* Dropoff */}
-              <div>
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Where are we going?</label>
-                <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
-                  <input value={dropoff} onChange={e => setDropoff(e.target.value)}
-                    placeholder="Enter destination"
-                    className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none" />
+              {/* Dropoff — hidden for hourly (no destination needed) */}
+              {tab !== "hourly" && (
+                <div>
+                  <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Where are we going?</label>
+                  <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                    {mapsLoaded ? (
+                      <GPlacesAuto onLoad={a => { dropoffAutoRef.current = a; }} onPlaceChanged={onDropoffPlaceChanged}>
+                        <input value={dropoff} onChange={e => setDropoff(e.target.value)}
+                          placeholder="Enter destination"
+                          className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none w-full" />
+                      </GPlacesAuto>
+                    ) : (
+                      <input value={dropoff} onChange={e => setDropoff(e.target.value)}
+                        placeholder="Enter destination"
+                        className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none" />
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Date / Passengers row */}
+              {/* Date + Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Date</label>
                   <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    <span className="text-[12px] text-white/40">Today</span>
+                    <input type="date" value={date} min={todayStr()} onChange={e => setDate(e.target.value)}
+                      className="flex-1 bg-transparent text-white text-[12px] focus:outline-none [color-scheme:dark]" />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Passengers</label>
+                  <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Time</label>
                   <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <input type="time" value={time} onChange={e => setTime(e.target.value)}
+                      className="flex-1 bg-transparent text-white text-[12px] focus:outline-none [color-scheme:dark]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Passengers */}
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 block mb-1.5">Passengers</label>
+                <div className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <div className="flex items-center gap-2">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><circle cx="12" cy="7" r="4"/><path d="M5 21c0-4 3.1-7 7-7s7 3 7 7"/></svg>
-                    <span className="text-[12px] text-white/40">1</span>
+                    <span className="text-[12px] text-white">{passengers} passenger{passengers > 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setPassengers(p => Math.max(1, p - 1))}
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-[16px] leading-none transition-opacity"
+                      style={{ background: "rgba(255,255,255,0.12)" }} disabled={passengers <= 1}>
+                      −
+                    </button>
+                    <button type="button" onClick={() => setPassengers(p => Math.min(8, p + 1))}
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-[16px] leading-none transition-opacity"
+                      style={{ background: "rgba(255,255,255,0.12)" }} disabled={passengers >= 8}>
+                      +
+                    </button>
                   </div>
                 </div>
               </div>
@@ -287,8 +374,9 @@ export default function LandingPage() {
               <button onClick={handleGetStarted}
                 className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] tracking-wide mt-1"
                 style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-                Book Now
+                Book Now →
               </button>
+              <p className="text-center text-[10px] text-white/30">Sign in or create an account to complete your booking.</p>
             </div>
           </div>
         </div>

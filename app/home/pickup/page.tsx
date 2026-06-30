@@ -22,8 +22,8 @@ function PickupContent() {
     libraries: LIBRARIES,
   });
 
-  const [pickup, setPickup] = useState("");
-  const [dropoff, setDropoff] = useState("");
+  const [pickup, setPickup] = useState(searchParams.get("pickup") ?? "");
+  const [dropoff, setDropoff] = useState(searchParams.get("dropoff") ?? "");
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedDropoff, setSelectedDropoff] = useState<{ lat: number; lng: number } | null>(null);
   const [mapMode, setMapMode] = useState<"pickup" | "dropoff">("pickup");
@@ -91,6 +91,13 @@ function PickupContent() {
       params.set("pickupLat", String(selectedPoint.lat));
       params.set("pickupLng", String(selectedPoint.lng));
     }
+    /* forward landing-widget scheduling context if present */
+    const d = searchParams.get("date");
+    const t = searchParams.get("time");
+    const p = searchParams.get("passengers");
+    if (d) params.set("date", d);
+    if (t) params.set("time", t);
+    if (p) params.set("passengers", p);
     router.push(`/home/pickup/available-cars?${params.toString()}`);
   };
 
