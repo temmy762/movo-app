@@ -48,8 +48,8 @@ export function haversineKm(
 /* ── Find nearest available drivers ────────────────────────────────────── */
 
 async function findNearbyDrivers(
-  lat: number,
-  lng: number,
+  lat: number | null,
+  lng: number | null,
   radiusKm: number,
   excludeIds: string[] = [],
   limit = 1,
@@ -58,14 +58,21 @@ async function findNearbyDrivers(
     where: {
       status:   "ACTIVE",
       isOnline: true,
-      lat:      { not: null },
-      lng:      { not: null },
+      vehicle:  { tier: "black" },
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,
     },
     select: { id: true, firstName: true, lastName: true, lat: true, lng: true },
   });
 
+  /* When geocoding failed (no pickup coords), dispatch to all online black-tier drivers */
+  if (lat === null || lng === null) {
+    return candidates
+      .slice(0, limit)
+      .map((d) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
+  }
+
   return candidates
+    .filter((d) => d.lat !== null && d.lng !== null)
     .map((d) => ({
       id:        d.id,
       firstName: d.firstName,
@@ -81,8 +88,8 @@ async function findNearbyDrivers(
 
 export async function dispatchPrimary(
   bookingId: string,
-  pickupLat: number,
-  pickupLng: number,
+  pickupLat: number | null,
+  pickupLng: number | null,
   userId: string | null,
   excludeDriverIds: string[] = [],
   retryRound = 0,
@@ -187,8 +194,8 @@ export async function dispatchPrimary(
 
 export async function dispatchSupport(
   bookingId: string,
-  dropoffLat: number,
-  dropoffLng: number,
+  dropoffLat: number | null,
+  dropoffLng: number | null,
   userId: string | null,
   excludeDriverIds: string[] = [],
   retryRound = 0,

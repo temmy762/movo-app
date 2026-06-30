@@ -105,16 +105,14 @@ export async function PATCH(
         driverId: driver!.id, driverName, userId,
       });
 
-      /* Trigger SUPPORT dispatch from the dropoff location */
-      if (booking.dropoffLat && booking.dropoffLng) {
-        dispatchSupport(
-          booking.id,
-          booking.dropoffLat,
-          booking.dropoffLng,
-          userId,
-          [driver!.id],
-        ).catch((e) => console.error("[care dispatch support]", e));
-      }
+      /* Trigger SUPPORT dispatch from the dropoff location (null if geocoding failed) */
+      dispatchSupport(
+        booking.id,
+        booking.dropoffLat ?? null,
+        booking.dropoffLng ?? null,
+        userId,
+        [driver!.id],
+      ).catch((e) => console.error("[care dispatch support]", e));
     }
 
     if (newStatus === "ACCEPTED" && assignment.role === "SUPPORT") {
@@ -215,12 +213,22 @@ export async function PATCH(
           })
         ).map((a) => a.driverId).filter(Boolean) as string[];
 
-        if (assignment.role === "PRIMARY" && booking.pickupLat && booking.pickupLng) {
+        if (assignment.role === "PRIMARY") {
           const { dispatchPrimary } = await import("@/lib/care/dispatch");
-          dispatchPrimary(booking.id, booking.pickupLat, booking.pickupLng, userId, usedDriverIds).catch(() => {});
+          dispatchPrimary(
+            booking.id,
+            booking.pickupLat ?? null,
+            booking.pickupLng ?? null,
+            userId, usedDriverIds,
+          ).catch(() => {});
         }
-        if (assignment.role === "SUPPORT" && booking.dropoffLat && booking.dropoffLng) {
-          dispatchSupport(booking.id, booking.dropoffLat, booking.dropoffLng, userId, usedDriverIds).catch(() => {});
+        if (assignment.role === "SUPPORT") {
+          dispatchSupport(
+            booking.id,
+            booking.dropoffLat ?? null,
+            booking.dropoffLng ?? null,
+            userId, usedDriverIds,
+          ).catch(() => {});
         }
       }
     }

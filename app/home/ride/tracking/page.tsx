@@ -453,8 +453,8 @@ function RideTrackingContent() {
               {rideStatus === "PENDING" ? "Searching" : etaText}
             </p>
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
-              {rideStatus === "PENDING"    ? "Waiting for a driver to accept your ride…" :
-               rideStatus === "CONFIRMED"  ? "Driver is on the way to you" :
+              {rideStatus === "PENDING"    ? (isCareRide ? "Finding your chauffeurs…" : "Waiting for a driver to accept your ride…") :
+               rideStatus === "CONFIRMED"  ? (isCareRide ? "Both chauffeurs are on the way" : "Driver is on the way to you") :
                rideStatus === "STARTED"    ? "Ride in progress" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
                "Ride in progress"}
@@ -551,12 +551,14 @@ function RideTrackingContent() {
           {rideStatus === "PENDING" && (
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 mb-4">
               <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
-              <p className="text-[13px] font-semibold text-amber-700">Waiting for a driver to accept your ride…</p>
+              <p className="text-[13px] font-semibold text-amber-700">
+                {isCareRide ? "Searching for your primary and support chauffeurs…" : "Waiting for a driver to accept your ride…"}
+              </p>
             </div>
           )}
 
-          {/* Driver + Car */}
-          <div className="flex items-start justify-between mb-4">
+          {/* Driver + Car — hidden for Care rides (dual-chauffeur panel handles this) */}
+          {!isCareRide && <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-[18px] font-bold shrink-0" style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
                 {driverInitial}
@@ -582,10 +584,10 @@ function RideTrackingContent() {
               )}
               <p className="text-[11px] text-gray-400">{vehicleSeats} Seats</p>
             </div>
-          </div>
+          </div>}
 
-          {/* Message / Call */}
-          <div className="flex gap-3 mb-4">
+          {/* Message / Call — hidden for Care (drivers are in the Care panel) */}
+          {!isCareRide && <div className="flex gap-3 mb-4">
             <button type="button" onClick={() => setChatOpen(true)}
               className="no-hover-fx flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full border border-gray-200 text-gray-700 relative">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
@@ -600,7 +602,7 @@ function RideTrackingContent() {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.6 19.79 19.79 0 0 1 1.61 5.06 2 2 0 0 1 3.58 3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.91a16 16 0 0 0 6.1 6.1l1.08-1.08a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
               <span className="text-[13px] font-medium">Call</span>
             </button>
-          </div>
+          </div>}
 
           {/* View toggle */}
           <div className="flex gap-2 mb-4 p-1 bg-gray-100 rounded-full">

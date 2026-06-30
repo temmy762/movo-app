@@ -95,10 +95,14 @@ export async function POST(req: NextRequest) {
     }
 
     /* ── Trigger PRIMARY dispatch whenever payment is captured (fire-and-forget) ── */
-    if (resolvedPaymentStatus === "PAID" && coordinates?.pickupLat && coordinates?.pickupLng) {
-      dispatchPrimary(booking.id, coordinates.pickupLat, coordinates.pickupLng, userId).catch((e) =>
-        console.error("[care dispatch primary]", e),
-      );
+    /* Pass null coords if geocoding failed — dispatch.ts handles no-coordinate fallback */
+    if (resolvedPaymentStatus === "PAID") {
+      dispatchPrimary(
+        booking.id,
+        coordinates?.pickupLat  ?? null,
+        coordinates?.pickupLng  ?? null,
+        userId,
+      ).catch((e) => console.error("[care dispatch primary]", e));
     }
 
     return NextResponse.json({ bookingId: booking.id }, { status: 201 });
