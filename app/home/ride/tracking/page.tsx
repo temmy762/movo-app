@@ -147,12 +147,10 @@ function RideTrackingContent() {
   }, [bookingId]);
 
   /* ── Detect Care Ride + fetch assignments ── */
-  useEffect(() => {
-    if (!bookingId) return;
-    fetch(`/api/care/${bookingId}`)
+  const fetchCareAssignments = useCallback((id: string) => {
+    fetch(`/api/care/${id}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        /* API returns the booking object directly with careAssignments embedded */
         if (!data?.id || data.bookingType !== "CARE") return;
         setIsCareRide(true);
         const rows: CareAssignmentRow[] = (data.careAssignments ?? []).map((a: {
@@ -162,13 +160,24 @@ function RideTrackingContent() {
           id:         a.id,
           role:       a.role as "PRIMARY" | "SUPPORT",
           status:     a.status,
-          driverName: a.driver ? `${a.driver.firstName ?? ""} ${a.driver.lastName ?? ""}`.trim() : "Searching…",
+          driverName: a.driver ? `${a.driver.firstName ?? ""} ${a.driver.lastName ?? ""}`.trim() || "Searching…" : "Searching…",
         }));
         setCareAssignments(rows);
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookingId]);
+  }, []);
+
+  useEffect(() => {
+    if (!bookingId) return;
+    fetchCareAssignments(bookingId);
+  }, [bookingId, fetchCareAssignments]);
+
+  /* ── Care assignments polling — catches status changes when socket events are missed ── */
+  useEffect(() => {
+    if (!bookingId || !isCareRide) return;
+    const timer = setInterval(() => fetchCareAssignments(bookingId), 6000);
+    return () => clearInterval(timer);
+  }, [bookingId, isCareRide, fetchCareAssignments]);
 
   /* ── Socket room join + realtime events ── */
   useEffect(() => {
@@ -234,18 +243,22 @@ function RideTrackingContent() {
     const unsubCarePrimary = on(SOCKET_EVENTS.CARE_PRIMARY_ACCEPTED, (data) => {
       const d = data as { bookingId: string; assignmentId: string; driverName: string };
       if (d.bookingId !== bookingId) return;
-      setCareAssignments(prev => prev.map(a =>
-        a.id === d.assignmentId ? { ...a, status: "ACCEPTED", driverName: d.driverName } : a
-      ));
+      setCareAssignments(prev => {
+        const exists = prev.some(a => a.id === d.assignmentId);
+        if (exists) return prev.map(a => a.id === d.assignmentId ? { ...a, status: "ACCEPTED", driverName: d.driverName } : a);
+        return [...prev, { id: d.assignmentId, role: "PRIMARY", status: "ACCEPTED", driverName: d.driverName }];
+      });
     });
 
     /* Care: support driver accepted */
     const unsubCareSupport = on(SOCKET_EVENTS.CARE_SUPPORT_ACCEPTED, (data) => {
       const d = data as { bookingId: string; assignmentId: string; driverName: string };
       if (d.bookingId !== bookingId) return;
-      setCareAssignments(prev => prev.map(a =>
-        a.id === d.assignmentId ? { ...a, status: "ACCEPTED", driverName: d.driverName } : a
-      ));
+      setCareAssignments(prev => {
+        const exists = prev.some(a => a.id === d.assignmentId);
+        if (exists) return prev.map(a => a.id === d.assignmentId ? { ...a, status: "ACCEPTED", driverName: d.driverName } : a);
+        return [...prev, { id: d.assignmentId, role: "SUPPORT", status: "ACCEPTED", driverName: d.driverName }];
+      });
     });
 
     /* Care: any assignment status change */
