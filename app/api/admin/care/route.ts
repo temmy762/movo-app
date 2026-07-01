@@ -129,6 +129,15 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
       }
 
+      const oppositeRole = assignment.role === "PRIMARY" ? "SUPPORT" : "PRIMARY";
+      const conflicting = booking.careAssignments.find(
+        (a) => a.role === oppositeRole && a.driverId === newDriverId &&
+          ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"].includes(a.status),
+      );
+      if (conflicting) {
+        return NextResponse.json({ error: `This driver is already assigned as ${oppositeRole} on this booking` }, { status: 409 });
+      }
+
       await prisma.careAssignment.update({
         where: { id: assignmentId },
         data:  { driverId: newDriverId, status: "PENDING", dispatchedAt: new Date(), acceptedAt: null },
@@ -159,6 +168,15 @@ export async function PATCH(req: NextRequest) {
       }
       if (role !== "PRIMARY" && role !== "SUPPORT") {
         return NextResponse.json({ error: "role must be PRIMARY or SUPPORT" }, { status: 400 });
+      }
+
+      const oppositeRole = role === "PRIMARY" ? "SUPPORT" : "PRIMARY";
+      const conflicting = booking.careAssignments.find(
+        (a) => a.role === oppositeRole && a.driverId === newDriverId &&
+          ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"].includes(a.status),
+      );
+      if (conflicting) {
+        return NextResponse.json({ error: `This driver is already assigned as ${oppositeRole} on this booking` }, { status: 409 });
       }
 
       /* Cancel any existing PENDING assignments for that role before creating new one */

@@ -16,6 +16,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { pushToDriver } from "@/lib/webpush";
+import { notifyAdmins } from "@/lib/notifications";
 import {
   dispatchCarePrimaryDispatched,
   dispatchCareSupportDispatched,
@@ -27,6 +28,48 @@ const PRIMARY_BATCH_SIZE  = 5;
 const SUPPORT_BATCH_SIZE  = 5;
 const RADII_KM            = [5, 10, 20];
 const MAX_RETRY_ROUNDS    = 3;        // maximum full radius-expansion cycles
+
+/* ── Notify admins + affected driver when a dispatch role is exhausted ──── */
+
+async function notifyDispatchExhausted(
+  bookingId: string,
+  role: "PRIMARY" | "SUPPORT",
+): Promise<void> {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { clientName: true, pickup: true, dropoff: true },
+  });
+
+  notifyAdmins(
+    "ADMIN_CARE_DISPATCH_FAILED",
+    {
+      bookingId,
+      role,
+      clientName: booking?.clientName,
+      pickup: booking?.pickup,
+      dropoff: booking?.dropoff,
+    },
+    ["EMAIL", "IN_APP", "SMS"],
+  ).catch((e) => console.error("[care dispatch] notifyAdmins failed:", e));
+
+  /* When SUPPORT can't be found, the PRIMARY driver has likely already
+     accepted and is waiting — let them know explicitly instead of leaving
+     them guessing why no support chauffeur has shown up. */
+  if (role === "SUPPORT") {
+    const primary = await prisma.careAssignment.findFirst({
+      where: { bookingId, role: "PRIMARY", status: { in: ["ACCEPTED", "ARRIVED", "STARTED"] } },
+      select: { driverId: true },
+    });
+    if (primary?.driverId) {
+      pushToDriver(primary.driverId, {
+        title: "⚠️ Movo Care Ride",
+        body: "No support chauffeur is currently available. Our team has been notified.",
+        tag: `care-support-failed-${bookingId}`,
+        data: { type: "care_support_failed", bookingId },
+      }).catch(() => {});
+    }
+  }
+}
 
 /* ── Haversine distance ─────────────────────────────────────────────────── */
 
@@ -115,6 +158,7 @@ export async function dispatchPrimary(
   if (retryRound >= MAX_RETRY_ROUNDS) {
     console.warn(`[care dispatch] PRIMARY exhausted ${MAX_RETRY_ROUNDS} rounds for booking ${bookingId}`);
     dispatchCareDispatchFailed({ bookingId, role: "PRIMARY", userId });
+    notifyDispatchExhausted(bookingId, "PRIMARY").catch(() => {});
     return { ok: false, message: "No available primary chauffeur after max retries" };
   }
 
@@ -220,6 +264,7 @@ export async function dispatchSupport(
   if (retryRound >= MAX_RETRY_ROUNDS) {
     console.warn(`[care dispatch] SUPPORT exhausted ${MAX_RETRY_ROUNDS} rounds for booking ${bookingId}`);
     dispatchCareDispatchFailed({ bookingId, role: "SUPPORT", userId });
+    notifyDispatchExhausted(bookingId, "SUPPORT").catch(() => {});
     return { ok: false, message: "No available support chauffeur after max retries" };
   }
 

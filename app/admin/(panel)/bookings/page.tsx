@@ -665,9 +665,7 @@ function CareBookingsTable() {
   const [actioning, setActioning] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ bookingId: string; action: "force_complete" | "cancel" } | null>(null);
   const [statusFilter, setStatusFilter] = useState<CareStatusFilter>("ALL");
-  const [assignModal, setAssignModal] = useState<{ bookingId: string; role: "PRIMARY" | "SUPPORT" } | null>(null);
-  const [assignDriverId, setAssignDriverId] = useState("");
-  const [assigning, setAssigning] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const LIMIT = 10;
 
   const load = useCallback((p = page, sf = statusFilter) => {
@@ -687,33 +685,29 @@ function CareBookingsTable() {
 
   const doAction = async (bookingId: string, action: "force_complete" | "cancel") => {
     setActioning(bookingId);
-    await fetch("/api/admin/care", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId, action }),
-    });
-    setConfirmModal(null);
-    setActioning(null);
-    load(page);
-  };
-
-  const doAssign = async () => {
-    if (!assignModal || !assignDriverId.trim()) return;
-    setAssigning(true);
-    await fetch("/api/admin/care", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        bookingId:   assignModal.bookingId,
-        action:      "create_assignment",
-        newDriverId: assignDriverId.trim(),
-        role:        assignModal.role,
-      }),
-    });
-    setAssigning(false);
-    setAssignModal(null);
-    setAssignDriverId("");
-    load(page);
+    setActionError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000); // never hang forever
+    try {
+      const res = await fetch("/api/admin/care", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, action }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setActionError(d?.error || `Action failed (${res.status})`);
+        return;
+      }
+      setConfirmModal(null);
+      await load(page);
+    } catch (e) {
+      setActionError(e instanceof Error && e.name === "AbortError" ? "Request timed out \u2014 please try again." : "Network error \u2014 please try again.");
+    } finally {
+      clearTimeout(timeout);
+      setActioning(null);
+    }
   };
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
@@ -809,22 +803,12 @@ function CareBookingsTable() {
                     <div className="flex items-center gap-2 flex-wrap">
                       {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
                         <>
-                          {/* Assign driver if a role has no active assignment */}
-                          {!pA && (
-                            <button
-                              onClick={() => setAssignModal({ bookingId: b.id, role: "PRIMARY" })}
-                              className="no-hover-fx px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold"
-                              style={{ background: "#7c3aed" }}>
-                              + Primary
-                            </button>
-                          )}
-                          {!sA && (
-                            <button
-                              onClick={() => setAssignModal({ bookingId: b.id, role: "SUPPORT" })}
-                              className="no-hover-fx px-2.5 py-1 rounded-lg text-white text-[10px] font-semibold"
-                              style={{ background: "#0284c7" }}>
-                              + Support
-                            </button>
+                          {/* Manual driver assignment removed — dispatch is fully automatic.
+                              Coming soon: manual override tools for admins. */}
+                          {(!pA || !sA) && (
+                            <span className="text-[10px] italic text-gray-400 px-1">
+                              Auto-assigning… (manual override coming soon)
+                            </span>
                           )}
                           <button
                             disabled={actioning === b.id}
@@ -896,42 +880,6 @@ function CareBookingsTable() {
         })}
       </div>
 
-      {/* Assign Driver modal */}
-      {assignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-[15px] font-bold text-gray-900 mb-1">
-              Assign {assignModal.role === "PRIMARY" ? "Primary" : "Support"} Chauffeur
-            </h3>
-            <p className="text-[12px] text-gray-400 mb-4">
-              Booking <span className="font-mono">{assignModal.bookingId.slice(0, 10)}…</span>
-            </p>
-            <label className="text-[12px] font-semibold text-gray-600 block mb-1">Driver ID</label>
-            <input
-              type="text"
-              placeholder="Paste driver ID…"
-              value={assignDriverId}
-              onChange={e => setAssignDriverId(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-[#131936] mb-5"
-            />
-            <div className="flex gap-3">
-              <button type="button"
-                onClick={() => { setAssignModal(null); setAssignDriverId(""); }}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700">
-                Cancel
-              </button>
-              <button type="button"
-                disabled={assigning || !assignDriverId.trim()}
-                onClick={doAssign}
-                className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-bold"
-                style={{ background: assigning || !assignDriverId.trim() ? "#9ca3af" : "#131936" }}>
-                {assigning ? "Assigning…" : "Assign"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Confirm action modal */}
       {confirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
@@ -944,8 +892,13 @@ function CareBookingsTable() {
                 ? "This will mark all assignments and the booking as COMPLETED."
                 : "This will cancel all active assignments and the booking."}
             </p>
+            {actionError && (
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">
+                {actionError}
+              </p>
+            )}
             <div className="flex gap-3">
-              <button onClick={() => setConfirmModal(null)}
+              <button onClick={() => { setConfirmModal(null); setActionError(null); }}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700">
                 Back
               </button>

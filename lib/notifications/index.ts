@@ -57,6 +57,7 @@ const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationType[]> = {
   ADMIN_EMERGENCY_INCIDENT: ["EMAIL", "IN_APP"],
   ADMIN_NEW_FLEET_APPLICATION: ["IN_APP"],
   ADMIN_PAYOUT_REQUEST: ["EMAIL", "IN_APP"],
+  ADMIN_CARE_DISPATCH_FAILED: ["EMAIL", "IN_APP", "SMS"],
   // Support events: Email + In-app
   SUPPORT_TICKET_CREATED: ["EMAIL", "IN_APP"],
   SUPPORT_TICKET_UPDATED: ["EMAIL", "IN_APP"],
@@ -124,15 +125,16 @@ export async function notifyAdmins(
   data: Record<string, unknown>,
   channels: NotificationType[] = ["IN_APP"]
 ): Promise<{ success: boolean; results: unknown[] }> {
-  // Get all admin emails
+  // Get all admin emails + phone numbers
   const admins = await prisma.user.findMany({
     where: { role: "ADMIN" },
-    select: { email: true, id: true },
+    select: { email: true, id: true, phone: true },
   });
 
   const adminEmails = admins.map((a) => a.email).filter(Boolean) as string[];
+  const adminPhones = admins.map((a) => a.phone).filter(Boolean) as string[];
 
-  if (adminEmails.length === 0) {
+  if (adminEmails.length === 0 && adminPhones.length === 0) {
     console.warn("[Notification] No admins found to notify");
     return { success: false, results: [] };
   }
@@ -140,7 +142,7 @@ export async function notifyAdmins(
   const results: { channel: string; success: boolean; error?: string }[] = [];
 
   // Create in-app broadcast
-  if (channels.includes("IN_APP")) {
+  if (channels.includes("IN_APP") && adminEmails.length > 0) {
     const inAppResult = await createAdminBroadcastNotification(
       eventType,
       data,
@@ -164,6 +166,23 @@ export async function notifyAdmins(
       )
     );
     results.push(...emailResults.map((r) => ({ channel: "EMAIL", ...r })));
+  }
+
+  // Send individual SMS to admins with a phone number on file
+  if (channels.includes("SMS") && adminPhones.length > 0) {
+    const smsResults = await Promise.all(
+      adminPhones.map((phone) =>
+        sendSMSChannel({
+          eventType,
+          recipient: {
+            type: "admin",
+            phone,
+          },
+          data,
+        })
+      )
+    );
+    results.push(...smsResults.map((r) => ({ channel: "SMS", ...r })));
   }
 
   return {

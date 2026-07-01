@@ -10,7 +10,7 @@ const TIER_IMG:   Record<string, string> = {
 };
 
 function deriveStatus(driverStatus: string, isOnline: boolean): "Available" | "Maintenance" | "Unavailable" {
-  if (driverStatus === "ACTIVE")    return isOnline ? "Available" : "Available";
+  if (driverStatus === "ACTIVE")    return isOnline ? "Available" : "Unavailable";
   if (driverStatus === "SUSPENDED") return "Maintenance";
   return "Unavailable";
 }

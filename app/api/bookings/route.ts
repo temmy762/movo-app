@@ -23,6 +23,10 @@ export async function GET(req: NextRequest) {
 
       const bookings = await prisma.booking.findMany({
         where: {
+          /* Care Ride bookings are never offered through the generic pool —
+             they are dispatched exclusively via CareAssignment (dispatchPrimary/
+             dispatchSupport), which targets specific drivers individually. */
+          bookingType: { not: "CARE" },
           OR: [
             // Pool bookings: paid, unassigned, tier-matched (PENDING or CONFIRMED-without-driver)
             {

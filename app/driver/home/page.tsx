@@ -37,6 +37,20 @@ type CareAssignment = {
   };
 };
 
+type CoDriver = {
+  id: string;
+  role: "PRIMARY" | "SUPPORT";
+  status: string;
+  driver: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    photoUrl: string | null;
+    vehicle: { make: string | null; model: string | null; plate: string | null } | null;
+  };
+};
+
 
 export default function DriverHomePage() {
   const router = useRouter();
@@ -61,6 +75,7 @@ export default function DriverHomePage() {
   const ridePhaseRef    = useRef<RidePhase>("idle");
   const [navEta,        setNavEta]        = useState<string | null>(null);
   const [careAssignment,   setCareAssignment]   = useState<CareAssignment | null>(null);
+  const [coDriver,         setCoDriver]         = useState<CoDriver | null>(null);
   type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started";
   const [carePhase,        setCarePhase]        = useState<CarePhase>("idle");
   const [careLoading,      setCareLoading]      = useState(false);
@@ -194,14 +209,16 @@ export default function DriverHomePage() {
       if (carePhase !== "idle") return;
       fetch("/api/care/driver")
         .then(r => r.json())
-        .then(({ assignment }) => {
+        .then(({ assignment, coDriver: co }) => {
           if (assignment && assignment.id === d.assignmentId) {
             setCareAssignment(assignment as CareAssignment);
+            setCoDriver(co ?? null);
             setCarePhase("requesting");
             playRequestAlert();
             startCountdown(() => {
               stopAlert();
               setCareAssignment(null);
+              setCoDriver(null);
               setCarePhase("idle");
             });
           }
@@ -215,14 +232,16 @@ export default function DriverHomePage() {
       if (carePhase !== "idle") return;
       fetch("/api/care/driver")
         .then(r => r.json())
-        .then(({ assignment }) => {
+        .then(({ assignment, coDriver: co }) => {
           if (assignment?.booking?.id === d.bookingId) {
             setCareAssignment(assignment as CareAssignment);
+            setCoDriver(co ?? null);
             setCarePhase("requesting");
             playRequestAlert();
             startCountdown(() => {
               stopAlert();
               setCareAssignment(null);
+              setCoDriver(null);
               setCarePhase("idle");
             });
           }
@@ -236,6 +255,7 @@ export default function DriverHomePage() {
       setCareAssignment(prev => {
         if (prev?.booking?.id === d.bookingId) {
           setCarePhase("idle");
+          setCoDriver(null);
           return null;
         }
         return prev;
@@ -250,9 +270,10 @@ export default function DriverHomePage() {
   useEffect(() => {
     fetch("/api/care/driver")
       .then(r => r.json())
-      .then(({ assignment }) => {
+      .then(({ assignment, coDriver: co }) => {
         if (assignment) {
           setCareAssignment(assignment as CareAssignment);
+          setCoDriver(co ?? null);
           const s = assignment.status;
           if (s === "PENDING")  setCarePhase("requesting");
           if (s === "ACCEPTED") setCarePhase("accepted");
@@ -686,7 +707,10 @@ export default function DriverHomePage() {
               <div className="flex items-center gap-2">
                 <span className="text-[14px]">🌟</span>
                 <div>
-                  <p className="text-[12px] font-bold text-white">Movo Care Ride</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[12px] font-bold text-white">Movo Care Ride</p>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-white/15 text-white/80">Care</span>
+                  </div>
                   <p className="text-[10px] text-white/70">
                     {careAssignment.role === "PRIMARY" ? "Primary Chauffeur" : "Support Chauffeur"}
                   </p>
@@ -699,6 +723,55 @@ export default function DriverHomePage() {
                 </span>
               )}
             </div>
+            {/* Co-driver status card */}
+            {coDriver && (
+              <div className="flex items-center gap-3 mb-3 bg-gray-50 rounded-xl px-3 py-2.5">
+                <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                  {coDriver.driver.photoUrl ? (
+                    <img src={coDriver.driver.photoUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                      <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-gray-800 truncate">
+                    {coDriver.driver.firstName} {coDriver.driver.lastName}
+                  </p>
+                  <p className="text-[10px] text-gray-500">
+                    {coDriver.role === "PRIMARY" ? "Primary Chauffeur" : "Support Chauffeur"}
+                    {coDriver.driver.vehicle ? ` · ${coDriver.driver.vehicle.make ?? ""} ${coDriver.driver.vehicle.model ?? ""}` : ""}
+                  </p>
+                  <p className="text-[10px] font-medium" style={{
+                    color: coDriver.status === "STARTED" ? "#16a34a" :
+                           coDriver.status === "ARRIVED" ? "#2563eb" :
+                           coDriver.status === "ACCEPTED" ? "#d97706" :
+                           "#6b7280"
+                  }}>
+                    {coDriver.status === "PENDING" ? "Awaiting acceptance…" :
+                     coDriver.status === "ACCEPTED" ? "En route" :
+                     coDriver.status === "ARRIVED" ? "Arrived at rendezvous" :
+                     coDriver.status === "STARTED" ? "In transit" : coDriver.status}
+                  </p>
+                </div>
+                {coDriver.driver.phone && (
+                  <a href={`tel:${coDriver.driver.phone}`}
+                    className="no-hover-fx w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            )}
+            {/* No co-driver yet hint (only after this driver has accepted) */}
+            {!coDriver && carePhase !== "requesting" && careAssignment.role === "PRIMARY" && (
+              <div className="flex items-center gap-2 mb-3 bg-amber-50 rounded-xl px-3 py-2.5">
+                <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
+                <p className="text-[11px] text-amber-700">Searching for a support chauffeur…</p>
+              </div>
+            )}
             {/* Route */}
             <div className="flex flex-col gap-1.5 mb-3 pl-1">
               {careAssignment.role === "PRIMARY" ? (
@@ -818,6 +891,7 @@ export default function DriverHomePage() {
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
                       </span>
                       <p className="text-[13px] font-bold text-white tracking-wide">New Ride Request!</p>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-white/15 text-white/80">Standard</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white">

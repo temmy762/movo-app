@@ -17,7 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { geocodeAddresses } from "@/lib/geocoding";
 import { sendNotification } from "@/lib/notifications";
-import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
+import { dispatchCareBookingCreated } from "@/lib/socket/dispatcher";
 import { dispatchPrimary } from "@/lib/care/dispatch";
 
 export async function POST(req: NextRequest) {
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    /* ── Socket: notify admin dashboard ── */
-    dispatchBookingCreated({
+    /* ── Socket: notify admin dashboard ONLY (never the driver tier room) ── */
+    dispatchCareBookingCreated({
       id: booking.id, pickup, dropoff, carTier: "black",
       carName: "Movo Care Ride",
       total: Number(total), status: resolvedStatus,

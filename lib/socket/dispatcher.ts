@@ -42,6 +42,21 @@ export function dispatchBookingCreated(booking: {
   emit(`tier:${booking.carTier}`, SOCKET_EVENTS.BOOKING_CREATED, booking);
 }
 
+/**
+ * Care Ride booking created — admin dashboard ONLY.
+ * Must NEVER broadcast to a driver tier room: Care Ride drivers are notified
+ * exclusively via dispatchCarePrimaryDispatched / dispatchCareSupportDispatched
+ * (targeted driver rooms + push). Broadcasting to tier:<x> would let ANY idle
+ * driver accept the booking through the generic accept flow, bypassing the
+ * dual-chauffeur CareAssignment system entirely.
+ */
+export function dispatchCareBookingCreated(booking: {
+  id: string; pickup: string; dropoff: string; carTier: string;
+  carName: string; total: number; status: string; createdAt: string;
+}) {
+  emit("admin", SOCKET_EVENTS.BOOKING_CREATED, booking);
+}
+
 export function dispatchBookingAccepted(payload: {
   bookingId: string; driverId: string; userId?: string | null;
   driverName: string; vehicle: string; pickup: string; dropoff: string;
