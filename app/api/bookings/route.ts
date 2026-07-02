@@ -6,6 +6,7 @@ import { PaymentStatus } from "@prisma/client";
 import { sendNotification } from "@/lib/notifications";
 import { pushToOnlineDriversByTier } from "@/lib/webpush";
 import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
+import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
 
 export async function GET(req: NextRequest) {
   try {
@@ -146,6 +147,12 @@ export async function POST(req: NextRequest) {
       tag:   `booking-${booking.id}`,
       data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
     }).catch(() => {});
+
+    /* If nobody claims a paid, unassigned booking in time, auto-cancel + refund
+       instead of leaving the rider charged and stuck on "Searching..." forever. */
+    if (resolvedPaymentStatus === "PAID" && !driverId) {
+      scheduleStandardDispatchTimeout(booking.id);
+    }
 
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {

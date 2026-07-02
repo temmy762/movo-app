@@ -8,6 +8,7 @@ import { riderRideCompletedTemplate } from "./rider/ride-completed";
 import { riderPaymentReceiptTemplate } from "./rider/payment-receipt";
 import { riderIncidentSubmittedTemplate } from "./rider/incident-submitted";
 import { riderIncidentResolvedTemplate } from "./rider/incident-resolved";
+import { riderRideUnavailableRefundedTemplate } from "./rider/ride-unavailable-refunded";
 
 // Import chauffeur templates
 import { chauffeurWelcomeTemplate } from "./chauffeur/welcome";
@@ -23,6 +24,7 @@ import { adminNewIncidentTemplate } from "./admin/new-incident";
 import { adminEmergencyIncidentTemplate } from "./admin/emergency-incident";
 import { adminPayoutRequestTemplate } from "./admin/payout-request";
 import { adminCareDispatchFailedTemplate } from "./admin/care-dispatch-failed";
+import { adminRideDispatchFailedTemplate } from "./admin/ride-dispatch-failed";
 
 // Generic fallback templates
 import { passwordResetTemplate } from "./generic/password-reset";
@@ -48,6 +50,7 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   RIDER_PAYMENT_RECEIPT: riderPaymentReceiptTemplate,
   RIDER_INCIDENT_SUBMITTED: riderIncidentSubmittedTemplate,
   RIDER_INCIDENT_RESOLVED: riderIncidentResolvedTemplate,
+  RIDER_RIDE_UNAVAILABLE_REFUNDED: riderRideUnavailableRefundedTemplate,
 
   // Chauffeur events
   CHAUFFEUR_WELCOME: chauffeurWelcomeTemplate,
@@ -62,6 +65,7 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   ADMIN_EMERGENCY_INCIDENT: adminEmergencyIncidentTemplate,
   ADMIN_PAYOUT_REQUEST: adminPayoutRequestTemplate,
   ADMIN_CARE_DISPATCH_FAILED: adminCareDispatchFailedTemplate,
+  ADMIN_RIDE_DISPATCH_FAILED: adminRideDispatchFailedTemplate,
 
   // Generic (used by multiple channels)
   RIDER_EMAIL_VERIFICATION: emailVerificationTemplate,

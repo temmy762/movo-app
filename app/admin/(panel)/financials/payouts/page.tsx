@@ -31,22 +31,26 @@ function formatDate(iso: string) {
 }
 
 export default function PayoutsPage() {
+  const [type, setType] = useState<"PAYOUT" | "TOPUP">("PAYOUT");
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"" | "PENDING" | "COMPLETED" | "FAILED">("");
   const [acting, setActing] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  const isTopup = type === "TOPUP";
+  const noun = isTopup ? "Top-up" : "Payout";
+
   const fetchPayouts = () => {
     setLoading(true);
-    fetch(`/api/admin/financials/payouts${filter ? `?status=${filter}` : ""}`)
+    fetch(`/api/admin/financials/payouts?type=${type}${filter ? `&status=${filter}` : ""}`)
       .then((r) => r.json())
       .then((d) => setPayouts(Array.isArray(d) ? d : []))
       .catch(() => setPayouts([]))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchPayouts(); }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchPayouts(); }, [filter, type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -62,7 +66,7 @@ export default function PayoutsPage() {
     });
     setActing(null);
     if (res.ok) {
-      showToast(action === "approve" ? "Payout approved!" : "Payout rejected.", action === "approve");
+      showToast(action === "approve" ? `${noun} approved!` : `${noun} rejected.`, action === "approve");
       fetchPayouts();
     } else {
       const body = await res.json().catch(() => ({}));
@@ -80,7 +84,7 @@ export default function PayoutsPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-[20px] font-bold text-gray-900">Payout Requests</h1>
+            <h1 className="text-[20px] font-bold text-gray-900">{noun} Requests</h1>
             {pending > 0 && (
               <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white bg-red-500">
                 {pending}
@@ -91,6 +95,25 @@ export default function PayoutsPage() {
             {pending > 0 ? `${pending} pending approval` : "All caught up"}
           </p>
         </div>
+      </div>
+
+      {/* Type toggle */}
+      <div className="flex gap-2 mb-3">
+        {(["PAYOUT", "TOPUP"] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setType(t)}
+            className="px-4 py-1.5 rounded-full text-[12px] font-semibold border transition-all"
+            style={
+              type === t
+                ? { background: "#131936", color: "white", borderColor: "#131936" }
+                : { background: "white", color: "#374151", borderColor: "#e5e7eb" }
+            }
+          >
+            {t === "PAYOUT" ? "Payouts (Send to Bank)" : "Top-ups (Add Money)"}
+          </button>
+        ))}
       </div>
 
       {/* Filter tabs */}
@@ -126,7 +149,7 @@ export default function PayoutsPage() {
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" className="mb-3">
             <rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="3" />
           </svg>
-          <p className="text-[13px] font-semibold text-gray-500">No payout requests found</p>
+          <p className="text-[13px] font-semibold text-gray-500">No {noun.toLowerCase()} requests found</p>
         </div>
       )}
 
@@ -138,7 +161,7 @@ export default function PayoutsPage() {
               <tr className="border-b border-gray-100 text-gray-400 text-[11px] uppercase tracking-wider">
                 <th className="text-left px-5 py-3 font-semibold">Driver</th>
                 <th className="text-left px-5 py-3 font-semibold">Amount</th>
-                <th className="text-left px-5 py-3 font-semibold">Banking</th>
+                <th className="text-left px-5 py-3 font-semibold">{isTopup ? "Note" : "Banking"}</th>
                 <th className="text-left px-5 py-3 font-semibold">Date</th>
                 <th className="text-left px-5 py-3 font-semibold">Status</th>
                 <th className="text-left px-5 py-3 font-semibold">Actions</th>
@@ -157,7 +180,9 @@ export default function PayoutsPage() {
                     </td>
                     <td className="px-5 py-3 font-bold text-gray-900">${p.amount.toFixed(2)}</td>
                     <td className="px-5 py-3">
-                      {p.banking ? (
+                      {isTopup ? (
+                        <span className="text-[11px] text-gray-500">{p.note ?? "—"}</span>
+                      ) : p.banking ? (
                         <div className="text-[11px] text-gray-500 leading-relaxed">
                           <p>{p.banking.institution ?? "—"}</p>
                           <p className="font-mono">{p.banking.accountNumber ?? "No account"}</p>
@@ -228,7 +253,13 @@ export default function PayoutsPage() {
                 <p className="text-[20px] font-bold text-gray-900 mb-1">${p.amount.toFixed(2)}</p>
                 <p className="text-[11px] text-gray-400 mb-3">{formatDate(p.createdAt)}</p>
 
-                {p.banking && (
+                {isTopup ? (
+                  p.note && (
+                    <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3 text-[11px] text-gray-500">
+                      <p>{p.note}</p>
+                    </div>
+                  )
+                ) : p.banking && (
                   <div className="bg-gray-50 rounded-xl px-3 py-2 mb-3 text-[11px] text-gray-500">
                     <p>{p.banking.institution ?? "Unknown bank"}</p>
                     <p className="font-mono">{p.banking.accountNumber ?? "No account on file"}</p>

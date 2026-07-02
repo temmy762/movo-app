@@ -16,10 +16,11 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const statusFilter = searchParams.get("status");
+    const typeFilter = searchParams.get("type") === "TOPUP" ? "TOPUP" : "PAYOUT";
 
     const txs = await prisma.walletTransaction.findMany({
       where: {
-        type: "PAYOUT",
+        type: typeFilter,
         ...(statusFilter ? { status: statusFilter as never } : {}),
       },
       orderBy: { createdAt: "desc" },
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
 
     const result = txs.map((t) => ({
       id: t.id,
+      type: t.type,
       driverId: t.driverId,
       driverName: `${t.driver.firstName} ${t.driver.lastName}`,
       driverEmail: t.driver.email,
@@ -95,23 +97,36 @@ export async function PATCH(req: NextRequest) {
       include: { driver: { select: { id: true, email: true, firstName: true, lastName: true } } },
     });
 
-    /* Notify driver of outcome */
+    /* Notify driver of outcome — wording depends on whether this is a payout
+       (money leaving the platform) or a top-up (money being added). */
     if (tx.driver?.email) {
-      sendNotification({
-        eventType: "CHAUFFEUR_PAYOUT_NOTIFICATION",
-        recipient: { type: "driver", id: tx.driver.id, email: tx.driver.email, firstName: tx.driver.firstName },
-        data: {
-          payoutId:      tx.id,
-          amount:        tx.amount,
-          paymentMethod: "Bank transfer",
-          processedAt:   new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
-          periodStart:   "",
-          periodEnd:     "",
-          ridesCompleted: 0,
-          status:        newStatus,
-          note:          action === "approve" ? "Your payout has been approved and is being processed." : "Your payout request was not approved. Please contact support.",
-        },
-      }).catch(() => {});
+      if (tx.type === "TOPUP") {
+        sendNotification({
+          eventType: "CHAUFFEUR_TOPUP_NOTIFICATION",
+          recipient: { type: "driver", id: tx.driver.id, email: tx.driver.email, firstName: tx.driver.firstName },
+          data: {
+            message: action === "approve"
+              ? `Your top-up of $${tx.amount.toFixed(2)} has been approved and added to your wallet.`
+              : `Your top-up request of $${tx.amount.toFixed(2)} was not approved. Please contact support.`,
+          },
+        }).catch(() => {});
+      } else {
+        sendNotification({
+          eventType: "CHAUFFEUR_PAYOUT_NOTIFICATION",
+          recipient: { type: "driver", id: tx.driver.id, email: tx.driver.email, firstName: tx.driver.firstName },
+          data: {
+            payoutId:      tx.id,
+            amount:        tx.amount,
+            paymentMethod: "Bank transfer",
+            processedAt:   new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+            periodStart:   "",
+            periodEnd:     "",
+            ridesCompleted: 0,
+            status:        newStatus,
+            note:          action === "approve" ? "Your payout has been approved and is being processed." : "Your payout request was not approved. Please contact support.",
+          },
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json(tx);

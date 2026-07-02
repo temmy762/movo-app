@@ -11,6 +11,8 @@ const SMS_TEMPLATES: Record<string, string> = {
   RIDER_PASSWORD_RESET: "Your MOVO verification code is: {{code}}. Valid for 10 minutes.",
   RIDER_EMAIL_VERIFICATION: "Your MOVO verification code is: {{code}}. Valid for 10 minutes.",
   ADMIN_CARE_DISPATCH_FAILED: "MOVO ALERT: No {{role}} chauffeur found for Care Ride booking {{bookingId}}. Manual dispatch needed.",
+  ADMIN_RIDE_DISPATCH_FAILED: "MOVO ALERT: No driver accepted booking {{bookingId}} in time. Rider has been refunded.",
+  RIDER_RIDE_UNAVAILABLE_REFUNDED: "MOVO: We couldn't find a driver for your ride. You've been fully refunded — sorry for the inconvenience.",
 };
 
 function interpolateTemplate(template: string, data: Record<string, string>): string {

@@ -495,6 +495,10 @@ export default function DriverHomePage() {
     stopAlert();
     if (activeBooking) {
       declinedIdsRef.current.add(activeBooking.id);
+      /* Release direct-to-driver bookings back to the open pool — otherwise
+         a booking assigned specifically to this driver stays stuck on them
+         forever, invisible to every other driver's pool query. */
+      fetch(`/api/bookings/${activeBooking.id}/decline`, { method: "PATCH" }).catch(() => {});
     }
     setShowDeclineModal(false);
     setActiveBooking(null);
