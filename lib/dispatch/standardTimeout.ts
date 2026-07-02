@@ -19,21 +19,28 @@
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { notifyAdmins, sendNotification } from "@/lib/notifications";
-import { dispatchBookingCancelled, dispatchBookingCreated } from "@/lib/socket/dispatcher";
-import { pushToOnlineDriversByTier } from "@/lib/webpush";
+import { dispatchBookingCancelled, dispatchBookingCreated, dispatchDriverReleased } from "@/lib/socket/dispatcher";
+import { pushToOnlineDriversByTier, pushToUser } from "@/lib/webpush";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
 });
 
-const STANDARD_DISPATCH_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+/* Keep in sync with the countdown windows on app/home/ride/tracking/page.tsx —
+   the rider-facing timer is derived from these same durations. */
+export const DIRECT_RESPONSE_TIMEOUT_MS = 3 * 60 * 1000; // pre-assigned driver must respond in 3 min
+export const POOL_SEARCH_TIMEOUT_MS     = 7 * 60 * 1000; // open pool search window before refund
 
-export function scheduleStandardDispatchTimeout(bookingId: string): void {
+export function scheduleStandardDispatchTimeout(
+  bookingId: string,
+  kind: "direct" | "pool" = "pool",
+): void {
+  const delay = kind === "direct" ? DIRECT_RESPONSE_TIMEOUT_MS : POOL_SEARCH_TIMEOUT_MS;
   setTimeout(() => {
     resolveStaleBooking(bookingId).catch((e) =>
       console.error("[standard dispatch timeout]", e)
     );
-  }, STANDARD_DISPATCH_TIMEOUT_MS);
+  }, delay);
 }
 
 async function resolveStaleBooking(bookingId: string): Promise<void> {
@@ -63,6 +70,18 @@ async function resolveStaleBooking(bookingId: string): Promise<void> {
 
     console.warn(`[standard dispatch timeout] released unresponsive driver ${booking.driverId} from booking ${bookingId}`);
 
+    /* Tell the rider what just happened — socket for the open tracking page,
+       push in case the app is backgrounded. */
+    dispatchDriverReleased({ bookingId, userId: booking.userId });
+    if (booking.userId) {
+      pushToUser(booking.userId, {
+        title: "Finding you another driver",
+        body:  "Your selected driver isn't available. We're contacting other drivers nearby — you'll be refunded in full if none accepts.",
+        tag:   `driver-released-${bookingId}`,
+        data:  { type: "driver_released", bookingId },
+      }).catch(() => {});
+    }
+
     dispatchBookingCreated({
       id: booking.id, pickup: booking.pickup, dropoff: booking.dropoff,
       carTier: booking.carTier ?? "", carName: booking.carName,
@@ -76,7 +95,7 @@ async function resolveStaleBooking(bookingId: string): Promise<void> {
       data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
     }).catch(() => {});
 
-    scheduleStandardDispatchTimeout(bookingId);
+    scheduleStandardDispatchTimeout(bookingId, "pool");
     return;
   }
 

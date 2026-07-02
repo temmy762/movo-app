@@ -16,6 +16,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
+import { dispatchDriverReleased } from "@/lib/socket/dispatcher";
+import { pushToUser } from "@/lib/webpush";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -46,7 +48,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ ok: true, released: false });
     }
 
-    scheduleStandardDispatchTimeout(id);
+    /* From the rider's perspective a decline and a silent no-response are the
+       same event — tell them we're finding someone else. */
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    dispatchDriverReleased({ bookingId: id, userId: booking?.userId });
+    if (booking?.userId) {
+      pushToUser(booking.userId, {
+        title: "Finding you another driver",
+        body:  "Your selected driver isn't available. We're contacting other drivers nearby — you'll be refunded in full if none accepts.",
+        tag:   `driver-released-${id}`,
+        data:  { type: "driver_released", bookingId: id },
+      }).catch(() => {});
+    }
+
+    scheduleStandardDispatchTimeout(id, "pool");
     return NextResponse.json({ ok: true, released: true });
   } catch (e) {
     console.error("[booking decline]", e);

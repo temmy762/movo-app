@@ -78,6 +78,17 @@ function RideTrackingContent() {
   const [cancelling,        setCancelling]        = useState(false);
   const [dispatchFailed,    setDispatchFailed]    = useState(false);
   const [noDriverRefunded,  setNoDriverRefunded]  = useState(false);
+
+  /* ── Search progress (standard rides) — mirrors lib/dispatch/standardTimeout.ts windows ──
+     "direct":     rider picked a specific driver, waiting for them to confirm (3 min)
+     "pool":       open search, any online driver can accept (7 min)
+     "reassigned": chosen driver didn't respond/declined — searching the pool (7 min) */
+  const DIRECT_WINDOW_MS = 3 * 60 * 1000;
+  const POOL_WINDOW_MS   = 7 * 60 * 1000;
+  type SearchMode = "direct" | "pool" | "reassigned";
+  const [searchMode,     setSearchMode]     = useState<SearchMode | null>(null);
+  const [searchDeadline, setSearchDeadline] = useState<number | null>(null);
+  const [nowTick,        setNowTick]        = useState(() => Date.now());
   const [showChangeDest,    setShowChangeDest]    = useState(false);
   const [newDestination,    setNewDestination]    = useState("");
   const [changingDest,      setChangingDest]      = useState(false);
@@ -231,10 +242,31 @@ function RideTrackingContent() {
       router.replace("/home");
     });
 
-    /* Booking accepted → update status */
+    /* Booking accepted → update status + driver card instantly */
     const unsubAccepted = on(SOCKET_EVENTS.BOOKING_ACCEPTED, (data) => {
+      const d = data as { bookingId: string; driverName?: string; vehicle?: string };
+      if (d.bookingId !== bookingId) return;
+      setRideStatus("CONFIRMED");
+      setSearchMode(null);
+      setSearchDeadline(null);
+      if (d.driverName) setDriverName(d.driverName);
+      if (d.vehicle)    setVehicleMakeModel(d.vehicle);
+    });
+
+    /* Chosen driver didn't respond or declined — booking released to the pool */
+    const unsubReleased = on(SOCKET_EVENTS.DRIVER_RELEASED, (data) => {
       const d = data as { bookingId: string };
-      if (d.bookingId === bookingId) setRideStatus("CONFIRMED");
+      if (d.bookingId !== bookingId) return;
+      setSearchMode("reassigned");
+      setSearchDeadline(Date.now() + POOL_WINDOW_MS);
+      setRideStatus("PENDING");
+      /* Clear the stale driver card — that driver is out of the picture */
+      setDriverName("Driver");
+      setDriverPhone(null);
+      setDriverRating(null);
+      setVehicleImg("");
+      setVehiclePlate(null);
+      setVehicleMakeModel("");
     });
 
     /* Driver arrived at pickup → show arrival banner */
@@ -305,7 +337,7 @@ function RideTrackingContent() {
     });
 
     return () => {
-      unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted(); unsubStatus(); unsubArrived();
+      unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted(); unsubStatus(); unsubArrived(); unsubReleased();
       unsubCarePrimary(); unsubCareSupport(); unsubCareStatus(); unsubCareConfirmed(); unsubCareClosed(); unsubDispatchFailed();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -358,16 +390,71 @@ function RideTrackingContent() {
           } else if (data.status) {
             setRideStatus(data.status);
           }
+
+          /* ── Search-progress countdown (standard rides only) ── */
+          if (
+            data.bookingType !== "CARE" && !data.startedAt &&
+            (data.status === "PENDING" || data.status === "CONFIRMED")
+          ) {
+            if (data.driver && !data.acceptedAt) {
+              /* Chosen driver hasn't confirmed yet — 3 min response window */
+              setSearchMode(prev => (prev === "reassigned" ? prev : "direct"));
+              setSearchDeadline(new Date(data.createdAt).getTime() + DIRECT_WINDOW_MS);
+            } else if (!data.driver) {
+              /* Open pool search — updatedAt is creation time for fresh pool
+                 bookings and release time after an unresponsive driver */
+              setSearchMode(prev => (prev === "reassigned" ? prev : "pool"));
+              setSearchDeadline(new Date(data.updatedAt).getTime() + POOL_WINDOW_MS);
+              /* Clear any stale driver card (release may have been missed by socket) */
+              setDriverName("Driver");
+              setDriverPhone(null);
+              setDriverRating(null);
+              setVehicleImg("");
+              setVehiclePlate(null);
+              setVehicleMakeModel("");
+            } else {
+              /* Driver actively accepted — search is over */
+              setSearchMode(null);
+              setSearchDeadline(null);
+            }
+          } else {
+            setSearchMode(null);
+            setSearchDeadline(null);
+          }
+
+          /* Keep the driver card fresh — a new driver can accept after a
+             reassignment, and the one-shot details fetch won't re-run */
+          if (data.driver && data.bookingType !== "CARE") {
+            const name = `${data.driver.firstName ?? ""} ${data.driver.lastName ?? ""}`.trim();
+            if (name) setDriverName(name);
+            if (data.driver.phone) setDriverPhone(data.driver.phone);
+            if (data.driver.avgRating != null) setDriverRating(data.driver.avgRating);
+            if (data.driver.vehicle?.photoUrl) setVehicleImg(data.driver.vehicle.photoUrl);
+            if (data.driver.vehicle?.plate) setVehiclePlate(data.driver.vehicle.plate);
+            const mm = [data.driver.vehicle?.year, data.driver.vehicle?.make, data.driver.vehicle?.model].filter(Boolean).join(" ");
+            if (mm) setVehicleMakeModel(mm);
+          }
         })
         .catch(() => {});
     };
 
+    checkStatus(); /* immediate — don't make the rider wait 8s for first state */
     statusPollRef.current = setInterval(checkStatus, 8000);
 
     return () => {
       if (statusPollRef.current) clearInterval(statusPollRef.current);
     };
   }, [bookingId, router]);
+
+  /* ── Search countdown: tick every second while a deadline is active ── */
+  useEffect(() => {
+    if (!searchDeadline) return;
+    const t = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [searchDeadline]);
+
+  const searchRemainingMs = searchDeadline ? Math.max(0, searchDeadline - nowTick) : 0;
+  const searchCountdown = `${Math.floor(searchRemainingMs / 60000)}:${String(Math.floor((searchRemainingMs % 60000) / 1000)).padStart(2, "0")}`;
 
   /* ── Chat: load history on open + socket for new messages ── */
   useEffect(() => {
@@ -557,12 +644,38 @@ function RideTrackingContent() {
             </div>
           )}
 
-          {/* Waiting for driver banner */}
-          {rideStatus === "PENDING" && (
+          {/* Waiting for chauffeurs banner — Care rides */}
+          {rideStatus === "PENDING" && isCareRide && (
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 mb-4">
               <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
               <p className="text-[13px] font-semibold text-amber-700">
-                {isCareRide ? "Searching for your primary and support chauffeurs…" : "Waiting for a driver to accept your ride…"}
+                Searching for your primary and support chauffeurs…
+              </p>
+            </div>
+          )}
+
+          {/* Search progress banner — standard rides, staged with live countdown */}
+          {!isCareRide && (searchMode || rideStatus === "PENDING") && (
+            <div className="px-3 py-3 rounded-xl bg-amber-50 border border-amber-200 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
+                <p className="flex-1 text-[13px] font-semibold text-amber-700">
+                  {searchMode === "direct"
+                    ? `Waiting for ${driverName !== "Driver" ? driverName : "your driver"} to confirm…`
+                    : searchMode === "reassigned"
+                    ? "Your selected driver isn't available — finding you another driver nearby…"
+                    : "Searching for a driver near you…"}
+                </p>
+                {searchDeadline != null && searchRemainingMs > 0 && (
+                  <span className="text-[12px] font-bold text-amber-700 tabular-nums bg-amber-100 rounded-full px-2 py-0.5 shrink-0">
+                    {searchCountdown}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] mt-1.5 ml-6" style={{ color: "#b45309" }}>
+                {searchMode === "direct"
+                  ? "If they don't confirm in time, we'll automatically find you another driver."
+                  : "If no driver accepts before the timer ends, you'll be automatically refunded in full."}
               </p>
             </div>
           )}
@@ -691,9 +804,16 @@ function RideTrackingContent() {
       <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100 z-[1001]">
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
           {view === "route" ? (
-            <button type="button" onClick={() => setShowCancelConfirm(true)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide" style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
-              Cancel Ride
-            </button>
+            <>
+              <button type="button" onClick={() => setShowCancelConfirm(true)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide" style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
+                Cancel Ride
+              </button>
+              {(searchMode || rideStatus === "PENDING") && (
+                <p className="text-center text-[11px] text-gray-400 mt-1.5">
+                  No driver confirmed yet — cancel anytime for a full refund.
+                </p>
+              )}
+            </>
           ) : (
             <button type="button" onClick={() => setShowEmergency(true)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide bg-red-500">
               Emergency
@@ -888,7 +1008,11 @@ function RideTrackingContent() {
               </div>
               <h3 className="text-[15px] font-bold text-gray-900">Cancel Ride?</h3>
             </div>
-            <p className="text-[12px] text-gray-500 mb-5">Are you sure you want to cancel this ride? Your driver has already been assigned.</p>
+            <p className="text-[12px] text-gray-500 mb-5">
+              {(searchMode || rideStatus === "PENDING")
+                ? "No driver has confirmed yet, so you'll receive a full refund right away."
+                : "Are you sure you want to cancel this ride? Your driver has already been assigned."}
+            </p>
             <div className="flex gap-3">
               <button
                 type="button"

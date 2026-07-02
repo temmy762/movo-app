@@ -68,6 +68,21 @@ export function dispatchBookingAccepted(payload: {
   );
 }
 
+/**
+ * Pre-assigned driver never responded — booking was released back to the
+ * open pool. Lets the rider's tracking page explain the transition instead
+ * of silently reverting to a generic "Searching" state.
+ */
+export function dispatchDriverReleased(payload: {
+  bookingId: string; userId?: string | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, ...(payload.userId ? [`user:${payload.userId}`] : [])],
+    SOCKET_EVENTS.DRIVER_RELEASED,
+    payload
+  );
+}
+
 export function dispatchBookingCancelled(payload: {
   bookingId: string; driverId?: string | null; userId?: string | null;
   cancelledBy: string; refunded: boolean;

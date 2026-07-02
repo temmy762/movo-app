@@ -149,11 +149,11 @@ export async function POST(req: NextRequest) {
     }).catch(() => {});
 
     /* If nobody claims a paid booking in time, auto-resolve it instead of
-       leaving the rider charged and stuck on "Searching..." forever. This
-       covers pool bookings (nobody accepts) AND direct-to-driver bookings
-       (the chosen driver never responds — released to the pool first). */
+       leaving the rider charged and stuck on "Searching..." forever. Direct
+       bookings give the chosen driver a short response window before being
+       released to the pool; pool bookings get the full search window. */
     if (resolvedPaymentStatus === "PAID") {
-      scheduleStandardDispatchTimeout(booking.id);
+      scheduleStandardDispatchTimeout(booking.id, driverId ? "direct" : "pool");
     }
 
     return NextResponse.json(booking, { status: 201 });

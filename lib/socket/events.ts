@@ -7,6 +7,8 @@ export const SOCKET_EVENTS = {
   BOOKING_CANCELLED: "booking.cancelled",
   BOOKING_COMPLETED: "booking.completed",
   BOOKING_STATUS:    "booking.status",
+  /* Pre-assigned driver never responded — booking released to the open pool */
+  DRIVER_RELEASED:   "booking.driver.released",
 
   /* ── Trip ── */
   TRIP_STARTED:   "trip.started",
