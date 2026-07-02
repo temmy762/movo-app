@@ -209,9 +209,13 @@ function AvailableCarsContent() {
       pickup, dropoff,
       tier:     car.tier,
       car:      `${car.make} ${car.model}`,
-      carImg:   car.img,
       driverId: car.driverId,
     });
+    /* Uploaded vehicle photos can be raw base64 data URIs — embedding one in
+       the URL blows past header/URL size limits (HTTP 431). The confirm and
+       tracking pages re-fetch the real photo from the API anyway, so this is
+       only a display fallback and safe to drop when it's a data URI. */
+    if (car.img && !car.img.startsWith("data:")) params.set("carImg", car.img);
     router.push(`/home/ride/confirm?${params.toString()}`);
   };
 
@@ -330,8 +334,8 @@ function AvailableCarsContent() {
                         <p className="text-[11px] text-gray-500">{car.etaLabel}</p>
                       </div>
                     </div>
-                    <div className="relative w-24 h-16 shrink-0">
-                      <Image src={car.img} alt={`${car.make} ${car.model}`} fill className="object-contain" unoptimized />
+                    <div className="relative w-24 h-16 shrink-0 rounded-xl bg-gray-50 overflow-hidden border border-gray-100">
+                      <Image src={car.img} alt={`${car.make} ${car.model}`} fill className="object-contain p-1.5" unoptimized />
                     </div>
                   </div>
                   <button type="button" onClick={() => handleBookCar(car)}
@@ -425,16 +429,10 @@ function AvailableCarsContent() {
             </>
           )}
 
-          {isCare ? (
+          {isCare && (
             <div className="mt-1 mb-2">
               <p className="text-[11px] text-center text-gray-400">Not looking for a Care Ride? Choose a regular category below.</p>
             </div>
-          ) : (
-            !loading && (
-              <div className="mt-1 mb-2">
-                <p className="text-[11px] text-center text-gray-400">Or choose a regular category below.</p>
-              </div>
-            )
           )}
 
           {loading ? (
@@ -500,8 +498,8 @@ function AvailableCarsContent() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="relative w-28 h-20 shrink-0">
-                        <Image src={img} alt={TIER_LABELS[t]} fill className="object-contain" unoptimized />
+                      <div className="relative w-28 h-20 shrink-0 rounded-xl bg-gray-50 overflow-hidden border border-gray-100">
+                        <Image src={img} alt={TIER_LABELS[t]} fill className="object-contain p-1.5" unoptimized />
                       </div>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5">
                         <polyline points="9 18 15 12 9 6" />

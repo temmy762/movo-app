@@ -129,38 +129,6 @@ export default function AuthSelectClient() {
           </svg>
         </button>
 
-        {/* Divider */}
-        <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t" style={{ borderColor: "#2A3055" }} />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="px-3 text-[11px]" style={{ background: "#131936", color: "#8A8F9E" }}>or</span>
-          </div>
-        </div>
-
-        {/* Admin */}
-        <button
-          onClick={() => router.push("/admin/login")}
-          className="w-full flex items-center gap-4 p-4 rounded-2xl transition-all group"
-          style={{ background: "rgba(42,48,85,0.4)", border: "1px solid #2A3055" }}
-        >
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#2A3055" }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-          </div>
-          <div className="text-left flex-1">
-            <p className="text-[15px] font-semibold" style={{ color: "#F5F5F2" }}>
-              Admin Access
-            </p>
-            <p className="text-[11px]" style={{ color: "#8A8F9E" }}>Management panel</p>
-          </div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </button>
       </div>
 
       {/* Footer */}

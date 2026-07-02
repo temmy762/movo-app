@@ -172,7 +172,7 @@ function YourRidesContent() {
             onClick={() => {
               const p: Record<string, string> = { pickup, dropoff, car: carName };
               if (tier)      p.tier      = tier;
-              if (carImg)    p.carImg    = carImg;
+              if (carImg && !carImg.startsWith("data:")) p.carImg = carImg;
               if (driverId)  p.driverId  = driverId;
               if (vehicleId) p.vehicleId = vehicleId;
               router.push(`/home/ride/confirm?${new URLSearchParams(p).toString()}`);

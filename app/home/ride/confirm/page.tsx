@@ -57,7 +57,7 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
       intentId,
     };
     if (tier)     rp.tier     = tier;
-    if (carImg)   rp.carImg   = carImg;
+    if (carImg && !carImg.startsWith("data:")) rp.carImg = carImg;
     if (driverId) rp.driverId = driverId;
     const returnUrl = `${window.location.origin}/home/ride/tracking?${new URLSearchParams(rp).toString()}`;
 
@@ -109,7 +109,7 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
     const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
     if (bookingRes?.id) tp.bookingId = bookingRes.id;
     if (tier)           tp.tier      = tier;
-    if (carImg)         tp.carImg    = carImg;
+    if (carImg && !carImg.startsWith("data:")) tp.carImg = carImg;
     if (driverId)       tp.driverId  = driverId;
     router.push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
   };
