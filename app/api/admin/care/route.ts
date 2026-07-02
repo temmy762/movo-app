@@ -5,10 +5,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { pushToDriver } from "@/lib/webpush";
 import { dispatchCareBookingClosed, dispatchCareAssignmentStatus, dispatchCarePrimaryDispatched, dispatchCareSupportDispatched } from "@/lib/socket/dispatcher";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-04-22.dahlia",
+});
 
 export async function GET(req: NextRequest) {
   try {
@@ -105,6 +110,23 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "cancel") {
+      /* Admin-forced cancellation is always a full refund if payment was collected —
+         mirrors the standard-ride cancel policy in /api/bookings/[id]/status. */
+      let refunded = false;
+      let refundError: string | undefined;
+      let refundId: string | undefined;
+
+      if (booking.stripePaymentIntentId && booking.paymentStatus === "PAID") {
+        try {
+          const refund = await stripe.refunds.create({ payment_intent: booking.stripePaymentIntentId });
+          refunded = true;
+          refundId = refund.id;
+        } catch (refundErr) {
+          console.error("[admin care cancel] Stripe refund failed:", refundErr);
+          refundError = "Refund could not be processed automatically. Please refund manually via the Stripe dashboard.";
+        }
+      }
+
       await prisma.$transaction([
         prisma.careAssignment.updateMany({
           where: { bookingId, status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"] } },
@@ -112,11 +134,14 @@ export async function PATCH(req: NextRequest) {
         }),
         prisma.booking.update({
           where: { id: bookingId },
-          data:  { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "admin" },
+          data:  {
+            status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "admin",
+            ...(refunded ? { paymentStatus: "REFUNDED", refundId } : {}),
+          },
         }),
       ]);
       dispatchCareBookingClosed({ bookingId, userId: booking.userId });
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, refunded, ...(refundError ? { refundError } : {}) });
     }
 
     if (action === "replace_driver") {

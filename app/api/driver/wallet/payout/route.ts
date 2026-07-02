@@ -15,23 +15,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
   }
 
-  const [completedBookings, walletTxs] = await Promise.all([
-    prisma.booking.findMany({
-      where: { driverId: session.driverId, status: "COMPLETED", paymentStatus: "PAID" },
-      select: { fare: true },
-    }),
-    prisma.walletTransaction.findMany({
-      where: { driverId: session.driverId },
-      select: { type: true, status: true, amount: true },
-    }),
-  ]);
+  /* Available balance = settled (>=48h old) EARNING wallet-tx + topups - completed payouts.
+     Must match GET /api/driver/wallet exactly — do NOT also sum raw booking.fare here, that
+     double-counts every trip (once as gross fare, once as the EARNING tx already created for
+     it at booking completion) and previously let drivers withdraw ~2x what they'd earned via
+     a real Stripe transfer. */
+  const SETTLEMENT_HOURS = 48;
+  const settlementCutoff = new Date(Date.now() - SETTLEMENT_HOURS * 60 * 60 * 1000);
 
-  const earned   = completedBookings.reduce((s, b) => s + b.fare, 0);
-  const topups   = walletTxs.filter(t => t.type === "TOPUP"   && t.status === "COMPLETED").reduce((s, t) => s + t.amount, 0);
-  const payouts  = walletTxs.filter(t => t.type === "PAYOUT"  && t.status === "COMPLETED").reduce((s, t) => s + t.amount, 0);
-  const earnings = walletTxs.filter(t => t.type === "EARNING" && t.status === "COMPLETED").reduce((s, t) => s + t.amount, 0);
+  const walletTxs = await prisma.walletTransaction.findMany({
+    where: { driverId: session.driverId },
+    select: { type: true, status: true, amount: true, createdAt: true },
+  });
 
-  const availableBalance = earned + topups + earnings - payouts;
+  const settledEarnings = walletTxs
+    .filter(t => t.type === "EARNING" && t.status === "COMPLETED" && t.createdAt <= settlementCutoff)
+    .reduce((s, t) => s + t.amount, 0);
+  const topups  = walletTxs.filter(t => t.type === "TOPUP"  && t.status === "COMPLETED").reduce((s, t) => s + t.amount, 0);
+  const payouts = walletTxs.filter(t => t.type === "PAYOUT" && t.status === "COMPLETED").reduce((s, t) => s + t.amount, 0);
+
+  const availableBalance = parseFloat((settledEarnings + topups - payouts).toFixed(2));
 
   if (requested > availableBalance) {
     return NextResponse.json(

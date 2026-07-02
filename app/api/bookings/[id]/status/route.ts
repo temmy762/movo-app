@@ -129,10 +129,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           const within5Min   = msElapsed < 5 * 60 * 1000;
           const noDriver     = !existing.driverId;
           const isAdminForce = caller === "admin";
+          /* Driver bailing after accepting is the driver's fault, not the rider's —
+             always a full refund regardless of how much time has elapsed. */
+          const isDriverFault = caller === "driver";
 
           let policyRefundAmount: number | undefined;
 
-          if (isAdminForce || refundAmount !== undefined) {
+          if (isAdminForce || isDriverFault || refundAmount !== undefined) {
             /* Admin-specified amount overrides policy */
             policyRefundAmount = refundAmount;
           } else if (within5Min || noDriver) {
