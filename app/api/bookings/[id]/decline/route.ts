@@ -25,12 +25,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    /* Only release if this driver is actually the one currently assigned and
-       the booking hasn't already moved past PENDING (e.g. another process
-       already confirmed/cancelled it) — avoid clobbering a real acceptance. */
+    /* Only release if this driver is the one currently assigned and hasn't
+       actually accepted (paid direct bookings auto-CONFIRM at creation, so
+       match both statuses — acceptedAt/startedAt guard a real acceptance). */
     const result = await prisma.booking.updateMany({
-      where: { id, driverId: session.driverId, status: "PENDING", bookingType: { not: "CARE" } },
-      data:  { driverId: null },
+      where: {
+        id,
+        driverId:    session.driverId,
+        status:      { in: ["PENDING", "CONFIRMED"] },
+        acceptedAt:  null,
+        startedAt:   null,
+        bookingType: { not: "CARE" },
+      },
+      data: { driverId: null },
     });
 
     if (result.count === 0) {

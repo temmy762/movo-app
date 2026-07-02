@@ -148,9 +148,11 @@ export async function POST(req: NextRequest) {
       data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
     }).catch(() => {});
 
-    /* If nobody claims a paid, unassigned booking in time, auto-cancel + refund
-       instead of leaving the rider charged and stuck on "Searching..." forever. */
-    if (resolvedPaymentStatus === "PAID" && !driverId) {
+    /* If nobody claims a paid booking in time, auto-resolve it instead of
+       leaving the rider charged and stuck on "Searching..." forever. This
+       covers pool bookings (nobody accepts) AND direct-to-driver bookings
+       (the chosen driver never responds — released to the pool first). */
+    if (resolvedPaymentStatus === "PAID") {
       scheduleStandardDispatchTimeout(booking.id);
     }
 

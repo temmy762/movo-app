@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             { status: "CONFIRMED", driverId: session.driverId },
           ],
         },
-        data:  { status: "CONFIRMED", driverId: session.driverId },
+        data:  { status: "CONFIRMED", driverId: session.driverId, acceptedAt: new Date() },
       });
 
       if (result.count === 0) {

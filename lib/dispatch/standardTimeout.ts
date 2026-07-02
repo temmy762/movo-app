@@ -7,15 +7,20 @@
  * accepted. The rider stayed charged and stuck on "Searching..." forever.
  *
  * This mirrors the fire-and-forget setTimeout pattern already proven in
- * lib/care/dispatch.ts: after a grace period, if the booking is still
- * unclaimed (driverId null) and paid, auto-cancel it, issue a full Stripe
- * refund, and notify the rider + admins.
+ * lib/care/dispatch.ts: after a grace period —
+ *   · unclaimed pool booking (driverId null)          → cancel + full refund
+ *   · pre-assigned driver who never accepted/declined → release to the open
+ *     pool, re-alert online drivers, and give it one more window before the
+ *     refund path kicks in
+ * and notify the rider + admins accordingly. A driver who actively accepted
+ * (acceptedAt set) is never touched.
  */
 
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { notifyAdmins, sendNotification } from "@/lib/notifications";
-import { dispatchBookingCancelled } from "@/lib/socket/dispatcher";
+import { dispatchBookingCancelled, dispatchBookingCreated } from "@/lib/socket/dispatcher";
+import { pushToOnlineDriversByTier } from "@/lib/webpush";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -35,10 +40,45 @@ async function resolveStaleBooking(bookingId: string): Promise<void> {
   const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
   if (!booking) return;
 
-  /* Someone already has it, or it's already terminal, or nothing was paid — nothing to do */
-  if (booking.driverId) return;
+  /* Terminal, in progress, or nothing paid — nothing to do */
   if (booking.status === "CANCELLED" || booking.status === "COMPLETED") return;
+  if (booking.startedAt) return;
   if (booking.paymentStatus !== "PAID") return;
+
+  /* Driver actively accepted — the ride is in good hands, leave it alone */
+  if (booking.driverId && booking.acceptedAt) return;
+
+  /* Pre-assigned driver never responded (no accept, no decline) — don't punish
+     the rider for the driver's inactivity. Release the booking to the open
+     pool, re-alert every online tier-matched driver, and give it one more
+     timeout window. If nobody claims it then, the refund path below runs
+     (driverId is null on the next pass). */
+  if (booking.driverId && !booking.acceptedAt) {
+    const released = await prisma.booking.updateMany({
+      /* Re-check driverId in the WHERE to avoid clobbering a concurrent accept */
+      where: { id: bookingId, driverId: booking.driverId, acceptedAt: null, startedAt: null },
+      data:  { driverId: null },
+    });
+    if (released.count === 0) return;
+
+    console.warn(`[standard dispatch timeout] released unresponsive driver ${booking.driverId} from booking ${bookingId}`);
+
+    dispatchBookingCreated({
+      id: booking.id, pickup: booking.pickup, dropoff: booking.dropoff,
+      carTier: booking.carTier ?? "", carName: booking.carName,
+      total: booking.total, status: booking.status,
+      createdAt: booking.createdAt.toISOString(),
+    });
+    pushToOnlineDriversByTier(booking.carTier ?? null, {
+      title: "🚗 New Ride Request",
+      body:  `Pickup: ${booking.pickup}`,
+      tag:   `booking-${booking.id}`,
+      data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
+    }).catch(() => {});
+
+    scheduleStandardDispatchTimeout(bookingId);
+    return;
+  }
 
   let refunded = false;
   let refundId: string | undefined;

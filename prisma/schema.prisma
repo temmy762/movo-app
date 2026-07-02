@@ -257,6 +257,7 @@ model Booking {
   stripePaymentIntentId String?
   rating                Float?
   review                String?
+  acceptedAt            DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
   cancelledAt           DateTime?

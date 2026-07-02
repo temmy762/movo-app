@@ -350,6 +350,11 @@ function RideTrackingContent() {
           } else if (data.startedAt) {
             /* Trip has started even though booking status is still CONFIRMED */
             setRideStatus("STARTED");
+          } else if (data.status === "CONFIRMED" && !data.driver && data.bookingType !== "CARE") {
+            /* Paid bookings auto-CONFIRM before any driver accepts, and an
+               unresponsive pre-assigned driver can be released mid-search —
+               either way, no driver attached means we're still searching. */
+            setRideStatus("PENDING");
           } else if (data.status) {
             setRideStatus(data.status);
           }
