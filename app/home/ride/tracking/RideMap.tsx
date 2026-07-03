@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { GoogleMap, Marker, DirectionsRenderer, useJsApiLoader } from "@react-google-maps/api";
@@ -24,6 +24,21 @@ const DEST_SVG = encodeURIComponent(
   </svg>`
 );
 
+/* Top-down car drawn pointing NORTH (heading 0°) so a rotate(heading) transform
+   aligns it with the direction of travel. */
+function carSvg(headingDeg: number): string {
+  return encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
+      <g transform="rotate(${headingDeg.toFixed(0)} 22 22)">
+        <rect x="14" y="8" width="16" height="28" rx="6" fill="#131936" stroke="#C6BFB2" stroke-width="1.5"/>
+        <rect x="16.5" y="13" width="11" height="7" rx="2" fill="#3b4a7a"/>
+        <rect x="16.5" y="26" width="11" height="5" rx="2" fill="#3b4a7a"/>
+        <polygon points="22,3 26,10 18,10" fill="#C6BFB2"/>
+      </g>
+    </svg>`
+  );
+}
+
 const DARK_STYLES: google.maps.MapTypeStyle[] = [
   { elementType: "geometry",           stylers: [{ color: "#1a1a2e" }] },
   { elementType: "labels.text.fill",   stylers: [{ color: "#8a8a9a" }] },
@@ -42,10 +57,13 @@ interface RideMapProps {
   pickup?: string;
   dropoff?: string;
   driverPosition?: { lat: number; lng: number } | null;
+  /** false/undefined: driver is heading to the PICKUP. true: trip in progress,
+      route + ETA should target the DROPOFF destination instead. */
+  tripStarted?: boolean;
   onDirectionsFetched?: (durationText: string, durationSeconds: number) => void;
 }
 
-export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsFetched }: RideMapProps) {
+export default function RideMap({ pickup, dropoff, driverPosition, tripStarted, onDirectionsFetched }: RideMapProps) {
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
@@ -55,9 +73,11 @@ export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsF
   const [directions,  setDirections]  = useState<google.maps.DirectionsResult | null>(null);
   const [pickupPos,   setPickupPos]   = useState<google.maps.LatLngLiteral>(DEFAULT_PICKUP);
   const [destPos,     setDestPos]     = useState<google.maps.LatLngLiteral>(DEFAULT_DEST);
+  const [heading,     setHeading]     = useState(0);
   const mapRef        = useRef<google.maps.Map | null>(null);
   const etaTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastEtaRef    = useRef<string>("");
+  const prevPosRef    = useRef<{ lat: number; lng: number } | null>(null);
 
   /* Resolve and cache pickup/dropoff coords on first load */
   useEffect(() => {
@@ -76,13 +96,36 @@ export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsF
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, pickup, dropoff]);
 
-  /* Re-route from driver position every time it updates (throttled 10s) */
+  /* Rotate the car marker to face the direction of travel */
+  useEffect(() => {
+    if (!isLoaded || !driverPosition) return;
+    const prev = prevPosRef.current;
+    prevPosRef.current = driverPosition;
+    if (!prev || (prev.lat === driverPosition.lat && prev.lng === driverPosition.lng)) return;
+    if (typeof google !== "undefined" && google.maps.geometry?.spherical) {
+      const h = google.maps.geometry.spherical.computeHeading(
+        new google.maps.LatLng(prev.lat, prev.lng),
+        new google.maps.LatLng(driverPosition.lat, driverPosition.lng),
+      );
+      setHeading(((h % 360) + 360) % 360);
+    }
+  }, [isLoaded, driverPosition]);
+
+  /* Phase flip (en route → trip started): force an immediate re-route to the new target */
+  useEffect(() => {
+    if (etaTimerRef.current) { clearTimeout(etaTimerRef.current); etaTimerRef.current = null; }
+    lastEtaRef.current = "";
+  }, [tripStarted]);
+
+  /* Re-route from driver position every time it updates (throttled 10s).
+     Target: pickup while the chauffeur is en route, dropoff once the trip started. */
   const recalcRoute = useCallback(() => {
     if (!isLoaded || !driverPosition) return;
     if (etaTimerRef.current) return; // already scheduled
+    const destination = tripStarted ? (dropoff || DEFAULT_DEST) : (pickup || DEFAULT_PICKUP);
     const svc = new google.maps.DirectionsService();
     svc.route(
-      { origin: driverPosition, destination: pickup || DEFAULT_PICKUP, travelMode: google.maps.TravelMode.DRIVING },
+      { origin: driverPosition, destination, travelMode: google.maps.TravelMode.DRIVING },
       (result, status) => {
         if (status === "OK" && result) {
           setDirections(result);
@@ -99,7 +142,7 @@ export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsF
     );
     /* throttle recalc to once per 10s */
     etaTimerRef.current = setTimeout(() => { etaTimerRef.current = null; }, 10000);
-  }, [isLoaded, driverPosition, pickup, onDirectionsFetched]);
+  }, [isLoaded, driverPosition, pickup, dropoff, tripStarted, onDirectionsFetched]);
 
   useEffect(() => { recalcRoute(); }, [recalcRoute]);
 
@@ -156,13 +199,13 @@ export default function RideMap({ pickup, dropoff, driverPosition, onDirectionsF
         }}
       />
 
-      {/* Car marker — live driver position (falls back to pickup if no GPS yet) */}
+      {/* Car marker — live driver position, rotated to the direction of travel */}
       <Marker
         position={driverPosition ?? mapCenter}
         icon={{
-          url: "/images/Car.png",
-          scaledSize: new google.maps.Size(52, 30),
-          anchor: new google.maps.Point(26, 15),
+          url: `data:image/svg+xml;charset=UTF-8,${carSvg(heading)}`,
+          scaledSize: new google.maps.Size(44, 44),
+          anchor: new google.maps.Point(22, 22),
         }}
       />
 

@@ -537,7 +537,7 @@ function RideTrackingContent() {
         <div className="absolute top-4 left-5 z-[999]">
           <span className="text-white text-[16px] font-semibold drop-shadow-md">Ride</span>
         </div>
-        <RideMap pickup={pickup} dropoff={dropoff} driverPosition={driverPosition} onDirectionsFetched={handleDirectionsFetched} />
+        <RideMap pickup={pickup} dropoff={dropoff} driverPosition={driverPosition} tripStarted={rideStatus === "STARTED"} onDirectionsFetched={handleDirectionsFetched} />
       </div>
 
       {/* White panel */}
@@ -552,7 +552,7 @@ function RideTrackingContent() {
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
               {rideStatus === "PENDING"    ? (isCareRide ? "Finding your chauffeurs…" : "Waiting for a driver to accept your ride…") :
                rideStatus === "CONFIRMED"  ? (isCareRide ? "Both chauffeurs are on the way" : "Driver is on the way to you") :
-               rideStatus === "STARTED"    ? "Ride in progress" :
+               rideStatus === "STARTED"    ? "Ride in progress — arriving at your destination" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
                "Ride in progress"}
             </p>

@@ -284,6 +284,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               completedAt: new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
             },
           }).catch(() => {});
+
+          /* Detailed final receipt — actual trip charges as recorded on the booking
+             (base fare + any stops/airport fees added during the ride + taxes) */
+          if (existing.paymentStatus === "PAID") {
+            const receiptItems = [
+              { label: "Ride Fare", amount: existing.fare },
+              ...(existing.additionalStopFee ? [{ label: "Additional Stops", amount: existing.additionalStopFee }] : []),
+              ...(existing.airportFee ? [{ label: "Airport Pickup Fee", amount: existing.airportFee }] : []),
+              { label: "Service Fee", amount: existing.serviceFee },
+              ...(existing.gst ? [{ label: "GST", amount: existing.gst }] : []),
+            ];
+            sendNotification({
+              eventType: "RIDER_PAYMENT_RECEIPT",
+              recipient: { type: "user", id: existing.userId, email: user.email, firstName: user.firstName },
+              data: {
+                bookingId: id,
+                paymentId: existing.stripePaymentIntentId ?? id,
+                amount: existing.total,
+                method: "Card",
+                date: new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "long", day: "numeric" }),
+                items: receiptItems,
+              },
+            }).catch(() => {});
+          }
         }
       }
 

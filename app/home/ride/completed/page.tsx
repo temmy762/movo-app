@@ -7,6 +7,14 @@ type BookingData = {
   id: string;
   total: number;
   fare: number;
+  serviceFee?: number | null;
+  gst?: number | null;
+  additionalStopFee?: number | null;
+  airportFee?: number | null;
+  pickup?: string;
+  dropoff?: string;
+  completedAt?: string | null;
+  paymentStatus?: string;
   carName: string;
   bookingType?: string;
   driver: {
@@ -176,6 +184,56 @@ function RideCompletedContent() {
               <span className="text-[12px] text-gray-400 ml-2 self-end mb-1">Total charged</span>
             </div>
           </div>
+
+          {/* Detailed receipt */}
+          {booking && amount > 0 && (
+            <div className="w-full mb-5 rounded-xl border border-gray-100 px-4 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Receipt</p>
+              {(booking.pickup || booking.dropoff) && (
+                <div className="mb-2.5 pb-2.5 border-b border-gray-100">
+                  {booking.pickup  && <p className="text-[11px] text-gray-500 truncate">From: <span className="text-gray-700">{booking.pickup}</span></p>}
+                  {booking.dropoff && <p className="text-[11px] text-gray-500 truncate mt-0.5">To: <span className="text-gray-700">{booking.dropoff}</span></p>}
+                </div>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between text-[12px]">
+                  <span className="text-gray-500">Ride Fare</span>
+                  <span className="text-gray-800 font-medium">${booking.fare.toFixed(2)}</span>
+                </div>
+                {(booking.additionalStopFee ?? 0) > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-gray-500">Additional Stops</span>
+                    <span className="text-gray-800 font-medium">${booking.additionalStopFee!.toFixed(2)}</span>
+                  </div>
+                )}
+                {(booking.airportFee ?? 0) > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-gray-500">Airport Pickup Fee</span>
+                    <span className="text-gray-800 font-medium">${booking.airportFee!.toFixed(2)}</span>
+                  </div>
+                )}
+                {(booking.serviceFee ?? 0) > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-gray-500">Service Fee</span>
+                    <span className="text-gray-800 font-medium">${booking.serviceFee!.toFixed(2)}</span>
+                  </div>
+                )}
+                {(booking.gst ?? 0) > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-gray-500">GST</span>
+                    <span className="text-gray-800 font-medium">${booking.gst!.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[13px] pt-1.5 border-t border-gray-100">
+                  <span className="font-bold text-gray-900">Total</span>
+                  <span className="font-bold text-gray-900">${amount.toFixed(2)}</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">
+                A copy of this receipt has been emailed to you. All prices in CAD.
+              </p>
+            </div>
+          )}
 
           <div className="w-full border-t border-gray-100 mb-5" />
 

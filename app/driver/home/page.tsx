@@ -599,6 +599,46 @@ export default function DriverHomePage() {
     setCarePhase("started");
   }
 
+  /* ── Swipeable bottom sheet: collapsed ↔ default ↔ expanded ── */
+  type PanelSize = "collapsed" | "default" | "expanded";
+  const [panelSize, setPanelSize] = useState<PanelSize>("default");
+  const panelTouchYRef = useRef<number | null>(null);
+  const PANEL_MAX_H: Record<PanelSize, string> = { collapsed: "132px", default: "58vh", expanded: "92vh" };
+
+  function onPanelHandleTouchStart(e: React.TouchEvent) {
+    panelTouchYRef.current = e.touches[0].clientY;
+  }
+  function onPanelHandleTouchEnd(e: React.TouchEvent) {
+    const startY = panelTouchYRef.current;
+    panelTouchYRef.current = null;
+    if (startY == null) return;
+    const delta = e.changedTouches[0].clientY - startY;
+    if (Math.abs(delta) < 30) return; /* tap, not a swipe */
+    if (delta < 0) setPanelSize(s => (s === "collapsed" ? "default" : "expanded"));
+    else           setPanelSize(s => (s === "expanded" ? "default" : "collapsed"));
+  }
+  /* Desktop fallback: clicking the handle cycles default → expanded → default */
+  function onPanelHandleClick() {
+    setPanelSize(s => (s === "expanded" ? "default" : "expanded"));
+  }
+
+  const panelHandle = (
+    <div
+      className="flex justify-center pt-0.5 pb-2.5 -mt-1 cursor-grab select-none"
+      style={{ touchAction: "none" }}
+      onTouchStart={onPanelHandleTouchStart}
+      onTouchEnd={onPanelHandleTouchEnd}
+      onClick={onPanelHandleClick}
+    >
+      <div className="w-12 h-1.5 rounded-full bg-gray-300" />
+    </div>
+  );
+
+  /* Reset to default whenever a new request comes in so CTAs are never hidden */
+  useEffect(() => {
+    if (ridePhase === "requesting" || carePhase === "requesting") setPanelSize("default");
+  }, [ridePhase, carePhase]);
+
   async function handleCareComplete() {
     if (!careAssignment) return;
     stopLocationTracking();
@@ -704,7 +744,9 @@ export default function DriverHomePage() {
 
         {/* ── Care Assignment Bottom Sheet ── */}
         {careAssignment && carePhase !== "idle" && (
-          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6">
+          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6 overflow-y-auto"
+            style={{ maxHeight: PANEL_MAX_H[panelSize], transition: "max-height 0.3s ease" }}>
+            {panelHandle}
             {/* Header banner */}
             <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-xl"
               style={{ background: "linear-gradient(90deg,#131936,#1e2a5e)" }}>
@@ -877,9 +919,11 @@ export default function DriverHomePage() {
         )}
 
 
-        {/* ── Bottom sheet — phase aware ── */}
+        {/* ── Bottom sheet — phase aware, swipe up/down to expand/collapse ── */}
         {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "arrived" || ridePhase === "started") && activeBooking && (
-          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6">
+          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6 overflow-y-auto"
+            style={{ maxHeight: PANEL_MAX_H[panelSize], transition: "max-height 0.3s ease" }}>
+            {panelHandle}
 
             {/* Rider info row — requesting + accepted + arrived */}
             {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "arrived") && (

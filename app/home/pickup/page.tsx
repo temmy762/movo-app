@@ -10,6 +10,13 @@ const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
+const todayStr = () => new Date().toISOString().split("T")[0];
+const nowTimeStr = () => {
+  const d = new Date();
+  d.setMinutes(Math.ceil(d.getMinutes() / 30) * 30, 0, 0);
+  return d.toTimeString().slice(0, 5);
+};
+
 function PickupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -24,6 +31,11 @@ function PickupContent() {
 
   const [pickup, setPickup] = useState(searchParams.get("pickup") ?? "");
   const [dropoff, setDropoff] = useState(searchParams.get("dropoff") ?? "");
+  /* Scheduling — same experience as the landing-page widget, prefilled from
+     its params when the user came from there */
+  const [date,       setDate]       = useState(() => searchParams.get("date") || todayStr());
+  const [time,       setTime]       = useState(() => searchParams.get("time") || nowTimeStr());
+  const [passengers, setPassengers] = useState(() => Math.min(8, Math.max(1, parseInt(searchParams.get("passengers") ?? "1", 10) || 1)));
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedDropoff, setSelectedDropoff] = useState<{ lat: number; lng: number } | null>(null);
   const [mapMode, setMapMode] = useState<"pickup" | "dropoff">("pickup");
@@ -93,6 +105,8 @@ function PickupContent() {
         service: "care",
         tier:    "black",
         car:     "Movo Care Ride",
+        date, time,
+        passengers: String(passengers),
       });
       if (selectedPoint) {
         params.set("pickupLat", String(selectedPoint.lat));
@@ -102,18 +116,17 @@ function PickupContent() {
       return;
     }
 
-    const params = new URLSearchParams({ tier, pickup, dropoff });
+    const params = new URLSearchParams({
+      tier, pickup, dropoff,
+      date, time,
+      passengers: String(passengers),
+    });
     if (selectedPoint) {
       params.set("pickupLat", String(selectedPoint.lat));
       params.set("pickupLng", String(selectedPoint.lng));
     }
-    /* forward landing-widget scheduling context if present */
-    const d = searchParams.get("date");
-    const t = searchParams.get("time");
-    const p = searchParams.get("passengers");
-    if (d) params.set("date", d);
-    if (t) params.set("time", t);
-    if (p) params.set("passengers", p);
+    const mode = searchParams.get("mode");
+    if (mode) params.set("mode", mode);
     router.push(`/home/pickup/available-cars?${params.toString()}`);
   };
 
@@ -211,6 +224,36 @@ function PickupContent() {
                   className="w-full bg-transparent text-gray-600 placeholder-gray-400 focus:outline-none text-[13px]"
                 />
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Schedule — date / time / passengers (same as landing widget) */}
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Date</label>
+            <div className="rounded-lg px-2.5 py-2 bg-gray-100 border border-gray-200">
+              <input type="date" value={date} min={todayStr()} onChange={e => setDate(e.target.value)}
+                className="w-full bg-transparent text-gray-800 text-[12px] focus:outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Time</label>
+            <div className="rounded-lg px-2.5 py-2 bg-gray-100 border border-gray-200">
+              <input type="time" value={time} onChange={e => setTime(e.target.value)}
+                className="w-full bg-transparent text-gray-800 text-[12px] focus:outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Passengers</label>
+            <div className="flex items-center justify-between rounded-lg px-2.5 py-2 bg-gray-100 border border-gray-200">
+              <button type="button" onClick={() => setPassengers(p => Math.max(1, p - 1))}
+                disabled={passengers <= 1}
+                className="no-hover-fx w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 text-[13px] font-bold leading-none disabled:opacity-40">−</button>
+              <span className="text-[12px] font-semibold text-gray-800">{passengers}</span>
+              <button type="button" onClick={() => setPassengers(p => Math.min(8, p + 1))}
+                disabled={passengers >= 8}
+                className="no-hover-fx w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 text-[13px] font-bold leading-none disabled:opacity-40">+</button>
             </div>
           </div>
         </div>

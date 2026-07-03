@@ -6,14 +6,21 @@ import { useMemo, useEffect, useRef, useState } from "react";
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
-const CAR_ICON_SVG = encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-    <circle cx="20" cy="20" r="20" fill="#131936" opacity="0.9"/>
-    <path d="M11 19l2-6h14l2 6M9 19h22v8H9zM13 27v2M27 27v2" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-    <circle cx="14" cy="27" r="2" fill="white"/>
-    <circle cx="26" cy="27" r="2" fill="white"/>
-  </svg>`
-);
+/* Top-down car drawn pointing NORTH (heading 0°) so a rotate(heading) transform
+   aligns it with the direction of travel. */
+function carIconSvg(headingDeg: number): string {
+  return encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="20" fill="#131936" opacity="0.9"/>
+      <g transform="rotate(${headingDeg.toFixed(0)} 20 20)">
+        <rect x="14" y="8" width="12" height="22" rx="4.5" fill="white"/>
+        <rect x="16" y="12" width="8" height="5" rx="1.5" fill="#131936"/>
+        <rect x="16" y="22" width="8" height="4" rx="1.5" fill="#131936"/>
+        <polygon points="20,4 23.5,9.5 16.5,9.5" fill="#C6BFB2"/>
+      </g>
+    </svg>`
+  );
+}
 
 const DEFAULT_CENTER = { lat: 43.6532, lng: -79.3832 }; /* Toronto */
 
@@ -57,19 +64,36 @@ export default function DriverMap({ position, pickup, dropoff, navPhase, onEta }
   });
 
   const [navDirections, setNavDirections] = useState<google.maps.DirectionsResult | null>(null);
+  const [heading,       setHeading]       = useState(0);
   const mapRef      = useRef<google.maps.Map | null>(null);
   const etaThrottle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevPosRef  = useRef<{ lat: number; lng: number } | null>(null);
 
   const center = useMemo(
     () => position ?? DEFAULT_CENTER,
     [position?.lat, position?.lng] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  /* Rotate the car marker to face the direction of travel */
+  useEffect(() => {
+    if (!isLoaded || !position) return;
+    const prev = prevPosRef.current;
+    prevPosRef.current = position;
+    if (!prev || (prev.lat === position.lat && prev.lng === position.lng)) return;
+    if (window.google?.maps?.geometry?.spherical) {
+      const h = window.google.maps.geometry.spherical.computeHeading(
+        new window.google.maps.LatLng(prev.lat, prev.lng),
+        new window.google.maps.LatLng(position.lat, position.lng),
+      );
+      setHeading(((h % 360) + 360) % 360);
+    }
+  }, [isLoaded, position]);
+
   const carIcon = useMemo(() => ({
-    url: `data:image/svg+xml,${CAR_ICON_SVG}`,
+    url: `data:image/svg+xml;charset=UTF-8,${carIconSvg(heading)}`,
     scaledSize: isLoaded ? new window.google.maps.Size(40, 40) : undefined,
     anchor:     isLoaded ? new window.google.maps.Point(20, 20) : undefined,
-  }), [isLoaded]);
+  }), [isLoaded, heading]);
 
   const pickupIcon = useMemo(() => isLoaded ? {
     url: `data:image/svg+xml;charset=UTF-8,${PICKUP_PIN}`,

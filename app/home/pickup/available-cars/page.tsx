@@ -91,12 +91,42 @@ function AvailableCarsContent() {
   const pickup    = searchParams.get("pickup")  ?? "";
   const dropoff   = searchParams.get("dropoff") ?? "";
   const service   = searchParams.get("service") ?? "";
+  const mode      = searchParams.get("mode")    ?? "";
   const isCare    = service === "care";
 
+  type TierEstimate = { total: number; fare: number; distanceKm: number | null; durationMin: number | null; estimateBasis: string };
   const [tierInfos,    setTierInfos]    = useState<Record<string, TierInfo>>({});
   const [carsByTier,   setCarsByTier]   = useState<Record<string, CarCard[]>>({});
   const [loading,      setLoading]      = useState(true);
   const [minFares,     setMinFares]     = useState<Record<string, number>>(FALLBACK_MIN_FARES);
+  const [tierEstimates, setTierEstimates] = useState<Record<string, TierEstimate>>({});
+
+  /* Instant fare estimates — one per tier as soon as pickup + dropoff are known
+     (or hourly mode, which needs no destination). Uses admin-configured rates. */
+  useEffect(() => {
+    if (!pickup || (!dropoff && mode !== "hourly")) return;
+    let stale = false;
+    Promise.all(
+      TIERS.map(t => {
+        const p = new URLSearchParams({ pickup, dropoff, tier: t });
+        if (mode === "hourly") p.set("mode", "hourly");
+        return fetch(`/api/bookings/estimate?${p.toString()}`)
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => (d?.total != null ? ([t, d] as const) : null))
+          .catch(() => null);
+      })
+    ).then(results => {
+      if (stale) return;
+      const next: Record<string, TierEstimate> = {};
+      for (const r of results) {
+        if (r) next[r[0]] = { total: r[1].total, fare: r[1].fare, distanceKm: r[1].distanceKm, durationMin: r[1].durationMin, estimateBasis: r[1].estimateBasis };
+      }
+      setTierEstimates(next);
+    });
+    return () => { stale = true; };
+  }, [pickup, dropoff, mode]);
+
+  const anyEstimate = tierEstimates.classic ?? tierEstimates.premium ?? tierEstimates.black;
   const [selectedTier,    setSelectedTier]    = useState<string | null>(
     TIERS.includes(tierParam as typeof TIERS[number]) ? tierParam : null
   );
@@ -258,7 +288,9 @@ function AvailableCarsContent() {
               <h1 className="text-[22px] font-bold text-gray-900">{TIER_LABELS[selectedTier]}</h1>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
                 style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
-                From ${minFares[selectedTier]}
+                {tierEstimates[selectedTier]
+                  ? `~$${tierEstimates[selectedTier].total.toFixed(2)} est.`
+                  : `From $${minFares[selectedTier]}`}
               </span>
             </div>
             {loading ? (
@@ -380,6 +412,16 @@ function AvailableCarsContent() {
               )}
             </p>
           )}
+          {anyEstimate?.distanceKm != null && (
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2.5">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+              </svg>
+              <p className="text-[12px] font-semibold text-gray-600">
+                {anyEstimate.distanceKm} km · ~{anyEstimate.durationMin} min trip
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -490,7 +532,14 @@ function AvailableCarsContent() {
                             <line x1="12" y1="1" x2="12" y2="23"/>
                             <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
                           </svg>
-                          <span className="text-[11px] text-gray-600 font-medium">From ${minFares[t]}</span>
+                          {tierEstimates[t] ? (
+                            <span className="text-[12px] text-gray-900 font-bold">
+                              ~${tierEstimates[t].total.toFixed(2)}
+                              <span className="text-[10px] text-gray-400 font-medium ml-1">est. total</span>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-gray-600 font-medium">From ${minFares[t]}</span>
+                          )}
                         </div>
                         {(info?.totalCount ?? 0) > 0 && (
                           <span className="text-[10px] text-gray-400">{info!.totalCount} vehicle{info!.totalCount !== 1 ? "s" : ""} in fleet</span>
