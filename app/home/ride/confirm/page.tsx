@@ -33,13 +33,131 @@ type CheckoutFormProps = {
   isCare?: boolean;
 };
 
+type SavedCard = { id: string; brand: string; last4: string; expMonth: number; expYear: number };
+
+/* Shared post-payment step: create the booking (Care or standard) and hand the
+   rider to the tracking page. Used by both the new-card (PaymentElement) and
+   saved-card checkout paths. */
+async function createBookingAfterPayment(opts: {
+  isCare: boolean; pickup: string; dropoff: string; carName: string;
+  tier: string; carImg: string; driverId: string; clientName: string;
+  intentId: string; estimate: FareEstimate;
+  push: (url: string) => void;
+}) {
+  const { isCare, pickup, dropoff, carName, tier, carImg, driverId, clientName, intentId, estimate, push } = opts;
+  const { fare, serviceFee, gst, additionalStopFee, airportFee, total } = estimate;
+  const resolvedTier = isCare ? "care" : (tier || carTierMap[carName] || "classic");
+
+  if (isCare) {
+    const careRes = await fetch("/api/bookings/care", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientName, pickup, dropoff,
+        fare, serviceFee, gst, total,
+        paymentStatus: "PAID",
+        stripePaymentIntentId: intentId,
+      }),
+    }).then(r => r.json()).catch(() => null);
+
+    const cp: Record<string, string> = { pickup, dropoff, car: "Movo Care Ride", tier: "black", paid: "1", service: "care" };
+    if (careRes?.bookingId) cp.bookingId = careRes.bookingId;
+    push(`/home/ride/tracking?${new URLSearchParams(cp).toString()}`);
+    return;
+  }
+
+  const bookingRes = await fetch("/api/bookings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      clientName, pickup, dropoff,
+      carTier: resolvedTier, carName,
+      fare, serviceFee, gst, additionalStopFee, airportFee, total,
+      paymentStatus: "PAID",
+      stripePaymentIntentId: intentId,
+      ...(driverId ? { driverId } : {}),
+    }),
+  }).then(r => r.json()).catch(() => null);
+
+  const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
+  if (bookingRes?.id) tp.bookingId = bookingRes.id;
+  if (tier)           tp.tier      = tier;
+  if (carImg && !carImg.startsWith("data:")) tp.carImg = carImg;
+  if (driverId)       tp.driverId  = driverId;
+  push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
+}
+
+/* ── Pay with a saved card (on-session; 3DS handled inline) ── */
+function SavedCardPay({ cards, amount, onPaid }: {
+  cards: SavedCard[];
+  amount: number;
+  onPaid: (intentId: string) => Promise<void>;
+}) {
+  const [selected, setSelected] = useState(cards[0]?.id ?? "");
+  const [paying,   setPaying]   = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+
+  const pay = async () => {
+    if (!selected || paying) return;
+    setPaying(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/charge-saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, paymentMethodId: selected }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Payment failed");
+
+      if (data.status === "requires_action" && data.clientSecret) {
+        const stripe = await stripePromise;
+        if (!stripe) throw new Error("Payment system unavailable");
+        const { error: cErr, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret);
+        if (cErr) throw new Error(cErr.message ?? "Card authentication failed");
+        if (paymentIntent?.status !== "succeeded") throw new Error("Payment not completed");
+      } else if (data.status !== "succeeded") {
+        throw new Error("Payment not completed. Please try another card.");
+      }
+
+      await onPaid(data.id);
+      /* keep spinner on — we're navigating away */
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Payment failed. Please try again.");
+      setPaying(false);
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <div className="flex flex-col gap-2 mb-3">
+        {cards.map(c => (
+          <label key={c.id}
+            className="flex items-center gap-3 rounded-xl border px-3.5 py-3 cursor-pointer"
+            style={{ borderColor: selected === c.id ? "#131936" : "#e5e7eb", background: selected === c.id ? "#f8f8f6" : "white" }}>
+            <input type="radio" name="savedCard" checked={selected === c.id} onChange={() => setSelected(c.id)} className="accent-[#131936]" />
+            <span className="text-[13px] font-semibold text-gray-900 capitalize">{c.brand}</span>
+            <span className="text-[13px] text-gray-600 font-mono">•••• {c.last4}</span>
+            <span className="text-[11px] text-gray-400 ml-auto">{String(c.expMonth).padStart(2, "0")}/{String(c.expYear).slice(-2)}</span>
+          </label>
+        ))}
+      </div>
+      {error && <p className="text-[12px] text-red-500 mb-3">{error}</p>}
+      <button type="button" onClick={pay} disabled={paying || !selected}
+        className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide"
+        style={{ background: paying || !selected ? "#9ca3af" : "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
+        {paying ? "Processing…" : `Pay $${amount.toFixed(2)} with saved card`}
+      </button>
+    </div>
+  );
+}
+
 function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, clientName, intentId, estimate, isCare }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const resolvedTier = tier || carTierMap[carName] || "classic";
 
   const handleConfirm = async () => {
     if (!stripe || !elements) return;
@@ -73,45 +191,11 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
       return;
     }
 
-    if (isCare) {
-      /* ── Movo Care Ride ── POST /api/bookings/care */
-      const careRes = await fetch("/api/bookings/care", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientName, pickup, dropoff,
-          fare, serviceFee, gst, total,
-          paymentStatus: "PAID",
-          stripePaymentIntentId: intentId,
-        }),
-      }).then(r => r.json()).catch(() => null);
-
-      const cp: Record<string, string> = { pickup, dropoff, car: "Movo Care Ride", tier: "black", paid: "1", service: "care" };
-      if (careRes?.bookingId) cp.bookingId = careRes.bookingId;
-      router.push(`/home/ride/tracking?${new URLSearchParams(cp).toString()}`);
-      return;
-    }
-
-    /* ── Standard booking ── POST /api/bookings */
-    const bookingRes = await fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientName, pickup, dropoff,
-        carTier: resolvedTier, carName,
-        fare, serviceFee, gst, additionalStopFee, airportFee, total,
-        paymentStatus: "PAID",
-        stripePaymentIntentId: intentId,
-        ...(driverId ? { driverId } : {}),
-      }),
-    }).then(r => r.json()).catch(() => null);
-
-    const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
-    if (bookingRes?.id) tp.bookingId = bookingRes.id;
-    if (tier)           tp.tier      = tier;
-    if (carImg && !carImg.startsWith("data:")) tp.carImg = carImg;
-    if (driverId)       tp.driverId  = driverId;
-    router.push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
+    await createBookingAfterPayment({
+      isCare: !!isCare, pickup, dropoff, carName, tier, carImg, driverId,
+      clientName, intentId, estimate,
+      push: (url) => router.push(url),
+    });
   };
 
   return (
@@ -161,6 +245,8 @@ function ConfirmPayContent() {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
+  const [savedCards,   setSavedCards]   = useState<SavedCard[]>([]);
+  const [useNewCard,   setUseNewCard]   = useState(false);
   const [estimate, setEstimate] = useState<FareEstimate | null>(null);
   const [estimateError, setEstimateError] = useState<string | null>(null);
   const [estimating, setEstimating] = useState(true);
@@ -177,6 +263,15 @@ function ConfirmPayContent() {
   useEffect(() => {
     if (isAirportLocation(pickup) || isAirportLocation(dropoff)) setAirportPickup(true);
   }, [pickup, dropoff]);
+
+  /* Load saved cards so returning riders can pay in one tap */
+  useEffect(() => {
+    if (userLoading || !user) return;
+    fetch("/api/stripe/payment-methods")
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (Array.isArray(d?.paymentMethods)) setSavedCards(d.paymentMethods); })
+      .catch(() => {});
+  }, [userLoading, user]);
 
   /* Step 1 — Fetch fare estimate (re-runs when stops or airportPickup changes) */
   useEffect(() => {
@@ -345,23 +440,55 @@ function ConfirmPayContent() {
             )}
 
             {/* Loading state */}
-            {!clientSecret && !intentError && !estimateError && STRIPE_KEY && user && (
+            {!clientSecret && !intentError && !estimateError && STRIPE_KEY && user && (savedCards.length === 0 || useNewCard) && (
               <div className="flex items-center gap-2 text-[13px] text-gray-400 py-4">
                 <span className="w-4 h-4 border-2 border-gray-300 border-t-[#131936] rounded-full animate-spin shrink-0" />
                 {userLoading ? "Loading profile…" : estimating ? "Calculating fare…" : "Loading payment…"}
               </div>
             )}
 
-            {/* Stripe form */}
-            {clientSecret && estimate && intentId && (
-              <Elements stripe={stripePromise} options={{ clientSecret }}>
-                <CheckoutForm
-                  pickup={pickup} dropoff={dropoff} carName={carName}
-                  tier={tier} carImg={carImg} driverId={driverId}
-                  clientName={clientName} intentId={intentId} estimate={estimate}
-                  isCare={isCare}
+            {/* Saved cards — one-tap checkout for returning riders */}
+            {savedCards.length > 0 && !useNewCard && estimate && !estimating && user && (
+              <>
+                <SavedCardPay
+                  cards={savedCards}
+                  amount={estimate.total}
+                  onPaid={(paidIntentId) =>
+                    createBookingAfterPayment({
+                      isCare: !!isCare, pickup, dropoff, carName, tier, carImg, driverId,
+                      clientName, intentId: paidIntentId, estimate,
+                      push: (url) => router.push(url),
+                    })
+                  }
                 />
-              </Elements>
+                <button type="button" onClick={() => setUseNewCard(true)}
+                  className="no-hover-fx text-[12px] font-semibold text-gray-500 underline mb-2">
+                  Use a different card
+                </button>
+              </>
+            )}
+
+            {/* Stripe form — new card */}
+            {(savedCards.length === 0 || useNewCard) && clientSecret && estimate && intentId && (
+              <>
+                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                  <CheckoutForm
+                    pickup={pickup} dropoff={dropoff} carName={carName}
+                    tier={tier} carImg={carImg} driverId={driverId}
+                    clientName={clientName} intentId={intentId} estimate={estimate}
+                    isCare={isCare}
+                  />
+                </Elements>
+                <p className="text-[10px] text-gray-400 mt-2">
+                  Your card will be securely saved to your account for faster future bookings and in-ride charges (e.g. added stops). You can remove it anytime in Payment settings.
+                </p>
+                {savedCards.length > 0 && (
+                  <button type="button" onClick={() => setUseNewCard(false)}
+                    className="no-hover-fx text-[12px] font-semibold text-gray-500 underline mt-2">
+                    ← Back to saved cards
+                  </button>
+                )}
+              </>
             )}
             {clientSecret && estimating && (
               <p className="text-[11px] text-gray-400 mt-2 flex items-center gap-1.5">

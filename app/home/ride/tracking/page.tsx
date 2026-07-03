@@ -95,6 +95,42 @@ function RideTrackingContent() {
   const [currentDropoff,    setCurrentDropoff]    = useState(dropoff);
   const [addingStop,        setAddingStop]        = useState(false);
   const [stopFeeAmount,     setStopFeeAmount]     = useState<number | null>(null);
+  const [stopError,         setStopError]         = useState<string | null>(null);
+
+  /* Add a stop mid-ride — charges the fee difference to the rider's card
+     (on-session, so a 3DS challenge can pop right here if the bank asks). */
+  const handleAddStop = async () => {
+    if (!bookingId) return;
+    setAddingStop(true);
+    setStopError(null);
+    try {
+      let res = await fetch(`/api/bookings/${bookingId}/add-stop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      let data = await res.json();
+
+      if (res.ok && data.requiresAction && data.clientSecret) {
+        const { loadStripe } = await import("@stripe/stripe-js");
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
+        if (!stripe) throw new Error("Payment system unavailable");
+        const { error: confirmErr } = await stripe.confirmCardPayment(data.clientSecret);
+        if (confirmErr) throw new Error(confirmErr.message ?? "Card authentication failed");
+        res = await fetch(`/api/bookings/${bookingId}/add-stop`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmedIntentId: data.intentId }),
+        });
+        data = await res.json();
+      }
+
+      if (!res.ok) throw new Error(data?.error ?? "Failed to add stop");
+      setStopFeeAmount(data.charged ?? null);
+      setShowAddStop(false);
+      setStopAddress("");
+    } catch (e) {
+      setStopError(e instanceof Error ? e.message : "Failed to add stop. Please try again.");
+    } finally {
+      setAddingStop(false);
+    }
+  };
 
   const TIER_IMAGES: Record<string, string> = {
     classic:  "/images/movo classic.png",
@@ -882,8 +918,14 @@ function RideTrackingContent() {
         <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50">
           <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg">
             <h3 className="text-[15px] font-bold text-gray-900 mb-1">Add a Stop</h3>
+            <p className="text-[12px] text-gray-500 mb-1">
+              The additional stop fee (plus tax) will be charged to your card on file.
+            </p>
             {stopFeeAmount != null && (
-              <p className="text-[12px] text-gray-500 mb-3">An additional stop fee of <strong>${stopFeeAmount.toFixed(2)}</strong> will be added to your total.</p>
+              <p className="text-[12px] font-semibold text-green-600 mb-2">✓ ${stopFeeAmount.toFixed(2)} charged for your last stop.</p>
+            )}
+            {stopError && (
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-2">{stopError}</p>
             )}
             <input
               type="text"
@@ -894,38 +936,14 @@ function RideTrackingContent() {
             />
             <div className="flex gap-2 mt-3">
               <button
-                onClick={() => { setShowAddStop(false); setStopAddress(""); }}
+                onClick={() => { setShowAddStop(false); setStopAddress(""); setStopError(null); }}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600"
               >
                 Cancel
               </button>
               <button
                 disabled={!stopAddress.trim() || addingStop}
-                onClick={async () => {
-                  if (!bookingId || !stopAddress.trim()) return;
-                  setAddingStop(true);
-                  try {
-                    const priceRes = await fetch("/api/admin/pricing");
-                    const priceData = await priceRes.json();
-                    const stopFee: number = priceData?.additionalStopFee ?? 5;
-                    const bookingRes = await fetch(`/api/bookings/${bookingId}`);
-                    const bookingData = await bookingRes.json();
-                    const currentStopFee: number = bookingData?.additionalStopFee ?? 0;
-                    const currentTotal: number = bookingData?.total ?? 0;
-                    const newStopFee = currentStopFee + stopFee;
-                    const newTotal = currentTotal + stopFee;
-                    await fetch(`/api/bookings/${bookingId}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ additionalStopFee: newStopFee, total: newTotal }),
-                    });
-                    setStopFeeAmount(stopFee);
-                  } catch { /* ignore */ } finally {
-                    setAddingStop(false);
-                    setShowAddStop(false);
-                    setStopAddress("");
-                  }
-                }}
+                onClick={handleAddStop}
                 className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-50"
                 style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}
               >

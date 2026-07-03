@@ -50,7 +50,10 @@ export async function POST(req: NextRequest) {
         amount: Math.round(amount * 100),
         currency: "cad",
         automatic_payment_methods: { enabled: true },
-        ...(customerId ? { customer: customerId } : {}),
+        /* Save the card to the customer for future bookings + mid-ride charges
+           (additional stops). Without this, cards were never attached and the
+           "saved payment methods" list stayed empty forever. */
+        ...(customerId ? { customer: customerId, setup_future_usage: "off_session" } : {}),
       },
       createOptions
     );
