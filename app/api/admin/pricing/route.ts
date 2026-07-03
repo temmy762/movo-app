@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 const TIER_SEEDS = [
-  { tier: "classic", name: "Movo Classic", image: "/images/movo classic.png", baseFare: 4.00, ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00, hourlyRate: 55.00, hourlyMinHours: 2 },
-  { tier: "premium", name: "Movo Premium", image: "/images/movo premium.png", baseFare: 6.00, ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00, hourlyRate: 75.00, hourlyMinHours: 2 },
-  { tier: "black",   name: "Movo Black",   image: "/images/prive black.png",  baseFare: 8.00, ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00, hourlyRate: 95.00, hourlyMinHours: 2 },
+  { tier: "classic", name: "Movo Classic",   image: "/images/movo classic.png", baseFare: 4.00,  ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00,  hourlyRate: 55.00,  hourlyMinHours: 2 },
+  { tier: "premium", name: "Movo Premium",   image: "/images/movo premium.png", baseFare: 6.00,  ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00,  hourlyRate: 75.00,  hourlyMinHours: 2 },
+  { tier: "black",   name: "Movo Black",     image: "/images/prive black.png",  baseFare: 8.00,  ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00,  hourlyRate: 95.00,  hourlyMinHours: 2 },
+  /* Movo Safe Ride — dual-chauffeur service priced independently of vehicle tiers */
+  { tier: "care",    name: "Movo Safe Ride", image: "/images/prive black.png",  baseFare: 15.00, ratePerKm: 2.75, ratePerMin: 0.55, minFare: 129.00, hourlyRate: 120.00, hourlyMinHours: 2 },
 ];
 
 export async function GET() {

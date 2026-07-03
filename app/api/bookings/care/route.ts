@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         pickupLng:  coordinates?.pickupLng  ?? null,
         dropoffLat: coordinates?.dropoffLat ?? null,
         dropoffLng: coordinates?.dropoffLng ?? null,
-        carTier:    "black",
+        carTier:    "care",
         carName:    customerVehicle ?? "Customer vehicle",
         fare:       Number(fare),
         serviceFee: Number(serviceFee),
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     /* ── Socket: notify admin dashboard ONLY (never the driver tier room) ── */
     dispatchCareBookingCreated({
-      id: booking.id, pickup, dropoff, carTier: "black",
+      id: booking.id, pickup, dropoff, carTier: "care",
       carName: "Movo Care Ride",
       total: Number(total), status: resolvedStatus,
       createdAt: booking.createdAt.toISOString(),
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
             email: user.email, firstName: user.firstName,
             phone: user.phone ?? undefined,
           },
-          data: { bookingId: booking.id, pickup, dropoff, carTier: "black", fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total), message: "Your Movo Care Ride is confirmed. We are now finding your chauffeurs." },
+          data: { bookingId: booking.id, pickup, dropoff, carTier: "care", fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total), message: "Your Movo Care Ride is confirmed. We are now finding your chauffeurs." },
         }).catch(() => {});
       }
     }

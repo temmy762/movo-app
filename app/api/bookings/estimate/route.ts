@@ -10,9 +10,10 @@ const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_SERVER_API_KEY || process.env.NEX
 
 /* Official pricing defaults (used when DB rows don't exist yet) */
 const TIER_DEFAULTS: Record<string, { baseFare: number; ratePerKm: number; ratePerMin: number; minFare: number; hourlyRate: number; hourlyMinHours: number }> = {
-  classic: { baseFare: 4.00, ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00, hourlyRate: 55.00, hourlyMinHours: 2 },
-  premium: { baseFare: 6.00, ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00, hourlyRate: 75.00, hourlyMinHours: 2 },
-  black:   { baseFare: 8.00, ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00, hourlyRate: 95.00, hourlyMinHours: 2 },
+  classic: { baseFare: 4.00,  ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00,  hourlyRate: 55.00,  hourlyMinHours: 2 },
+  premium: { baseFare: 6.00,  ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00,  hourlyRate: 75.00,  hourlyMinHours: 2 },
+  black:   { baseFare: 8.00,  ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00,  hourlyRate: 95.00,  hourlyMinHours: 2 },
+  care:    { baseFare: 15.00, ratePerKm: 2.75, ratePerMin: 0.55, minFare: 129.00, hourlyRate: 120.00, hourlyMinHours: 2 },
 };
 
 const DEFAULT_SERVICE_FEE_RATE       = 0.12;

@@ -190,6 +190,57 @@ export async function PATCH(
           data:  { status: "COMPLETED", completedAt: new Date() },
         });
         dispatchCareBookingClosed({ bookingId: booking.id, userId });
+
+        /* ── Credit chauffeur earnings — Safe Ride previously never credited
+           anyone. Commission comes from the dedicated "care" pricing config;
+           the net is split evenly between PRIMARY and SUPPORT (adjust
+           CARE_PRIMARY_SHARE if the business wants a different split). */
+        const CARE_PRIMARY_SHARE = 0.5;
+        if (booking.paymentStatus === "PAID" && booking.fare > 0) {
+          const alreadyCredited = await prisma.walletTransaction.findFirst({
+            where: { type: "EARNING", note: { contains: `Care Ride — booking ${booking.id}` } },
+            select: { id: true },
+          });
+          if (!alreadyCredited) {
+            const careConfig = await prisma.vehicleTierConfig.findFirst({
+              where: { tier: { equals: "care", mode: "insensitive" } },
+              select: { commissionRate: true },
+            }).catch(() => null);
+            const commission = careConfig?.commissionRate ?? 0.20;
+            const net = booking.fare * (1 - commission);
+
+            const completedAssignments = [updated, ...siblings].filter(
+              (a) => a.status === "COMPLETED" && a.driverId,
+            );
+            const primaryDone = completedAssignments.find((a) => a.role === "PRIMARY");
+            const supportDone = completedAssignments.find((a) => a.role === "SUPPORT");
+
+            const credits: { driverId: string; amount: number; role: string }[] = [];
+            if (primaryDone?.driverId && supportDone?.driverId) {
+              credits.push(
+                { driverId: primaryDone.driverId, amount: net * CARE_PRIMARY_SHARE, role: "PRIMARY" },
+                { driverId: supportDone.driverId, amount: net * (1 - CARE_PRIMARY_SHARE), role: "SUPPORT" },
+              );
+            } else if (primaryDone?.driverId) {
+              /* Support role cancelled/never filled — primary keeps the full net */
+              credits.push({ driverId: primaryDone.driverId, amount: net, role: "PRIMARY" });
+            }
+
+            await Promise.all(
+              credits.map((c) =>
+                prisma.walletTransaction.create({
+                  data: {
+                    driverId: c.driverId,
+                    type:     "EARNING",
+                    status:   "COMPLETED",
+                    amount:   parseFloat(c.amount.toFixed(2)),
+                    note:     `${c.role} earning, Care Ride — booking ${booking.id} (${Math.round(commission * 100)}% platform fee)`,
+                  },
+                }),
+              ),
+            ).catch((e) => console.error("[care earnings credit]", e));
+          }
+        }
       }
     }
 

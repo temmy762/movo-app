@@ -90,6 +90,12 @@ export function haversineKm(
 
 /* ── Find nearest available drivers ────────────────────────────────────── */
 
+/* Safe Ride chauffeur tier priority: prefer Black, fall back to Premium, then
+   Classic when no higher-tier chauffeur is available. Pricing is unaffected —
+   Safe Ride fares always use the dedicated "care" pricing config regardless of
+   which tier chauffeur accepts. */
+const CARE_TIER_PRIORITY = ["black", "premium", "classic"] as const;
+
 async function findNearbyDrivers(
   lat: number | null,
   lng: number | null,
@@ -101,30 +107,43 @@ async function findNearbyDrivers(
     where: {
       status:   "ACTIVE",
       isOnline: true,
-      vehicle:  { tier: "black" },
+      vehicle:  { tier: { in: [...CARE_TIER_PRIORITY], mode: "insensitive" } },
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,
     },
-    select: { id: true, firstName: true, lastName: true, lat: true, lng: true },
+    select: { id: true, firstName: true, lastName: true, lat: true, lng: true, vehicle: { select: { tier: true } } },
   });
 
-  /* When geocoding failed (no pickup coords), dispatch to all online black-tier drivers */
-  if (lat === null || lng === null) {
-    return candidates
-      .slice(0, limit)
-      .map((d) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
+  /* Walk the tier priority list — only fall back to a lower tier when the
+     higher tier has NO eligible chauffeur in range. */
+  for (const tier of CARE_TIER_PRIORITY) {
+    const tierCandidates = candidates.filter(
+      (d) => d.vehicle?.tier?.toLowerCase() === tier,
+    );
+    if (tierCandidates.length === 0) continue;
+
+    /* When geocoding failed (no coords), dispatch to any online drivers of this tier */
+    if (lat === null || lng === null) {
+      return tierCandidates
+        .slice(0, limit)
+        .map((d) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
+    }
+
+    const inRange = tierCandidates
+      .filter((d) => d.lat !== null && d.lng !== null)
+      .map((d) => ({
+        id:        d.id,
+        firstName: d.firstName,
+        lastName:  d.lastName,
+        distKm:    haversineKm(lat, lng, d.lat!, d.lng!),
+      }))
+      .filter((d) => d.distKm <= radiusKm)
+      .sort((a, b) => a.distKm - b.distKm)
+      .slice(0, limit);
+
+    if (inRange.length > 0) return inRange;
   }
 
-  return candidates
-    .filter((d) => d.lat !== null && d.lng !== null)
-    .map((d) => ({
-      id:        d.id,
-      firstName: d.firstName,
-      lastName:  d.lastName,
-      distKm:    haversineKm(lat, lng, d.lat!, d.lng!),
-    }))
-    .filter((d) => d.distKm <= radiusKm)
-    .sort((a, b) => a.distKm - b.distKm)
-    .slice(0, limit);
+  return [];
 }
 
 /* ── Dispatch PRIMARY drivers (batch, first-accept wins) ────────────────── */

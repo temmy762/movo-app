@@ -39,10 +39,10 @@ function Field({ label, value, onChange, step = "0.01", prefix = "$", suffix = "
 }
 
 const TIER_COLORS: Record<string, string> = {
-  classic: "#64748b", premium: "#16a34a", black: "#1e2d45",
+  classic: "#64748b", premium: "#16a34a", black: "#1e2d45", care: "#b45309",
 };
 const TIER_BG: Record<string, string> = {
-  classic: "#f1f5f9", premium: "#f0fdf4", black: "#1e2d45",
+  classic: "#f1f5f9", premium: "#f0fdf4", black: "#1e2d45", care: "#fffbeb",
 };
 
 export default function PricingPage() {

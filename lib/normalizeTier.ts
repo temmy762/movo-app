@@ -1,4 +1,4 @@
-export type PlatformTier = "classic" | "premium" | "black";
+export type PlatformTier = "classic" | "premium" | "black" | "care";
 
 const MAP: Record<string, PlatformTier> = {
   economy:                         "classic",
@@ -16,6 +16,12 @@ const MAP: Record<string, PlatformTier> = {
   classic:                         "classic",
   premium:                         "premium",
   black:                           "black",
+  /* Movo Safe Ride (Care Ride) — its own pricing tier, independent of vehicle tiers */
+  care:                            "care",
+  "safe ride":                     "care",
+  "movo safe ride":                "care",
+  "movo care ride":                "care",
+  saferide:                        "care",
 };
 
 export function normalizeTier(raw: string | null | undefined): PlatformTier {

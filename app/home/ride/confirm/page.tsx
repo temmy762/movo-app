@@ -169,7 +169,9 @@ function ConfirmPayContent() {
   const [airportPickup, setAirportPickup] = useState(false);
   const { user, loading: userLoading } = useCurrentUser();
   const clientName = user ? `${user.firstName} ${user.lastName}`.trim() : "Guest";
-  const resolvedTier = isCare ? "black" : (tier || carTierMap[carName] || "classic");
+  /* Safe Ride has its own admin-configurable pricing tier ("care") — never
+     priced off the vehicle tier that happens to accept the job. */
+  const resolvedTier = isCare ? "care" : (tier || carTierMap[carName] || "classic");
 
   /* Auto-detect airport on mount */
   useEffect(() => {
