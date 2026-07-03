@@ -113,9 +113,16 @@ function RideCompletedContent() {
 
   const isCare = booking?.bookingType === "CARE";
 
+  /* Low ratings (≤3★) require written feedback so admin can review issues */
+  const normalNeedsFeedback = !isCare && rating > 0 && rating <= 3 && !review.trim();
+  const careNeedsFeedback = isCare && careAssignments.some(
+    (a) => (ratings[a.id] ?? 0) > 0 && (ratings[a.id] ?? 0) <= 3 && !(reviews[a.id] ?? "").trim(),
+  );
+
   const handleSubmitRating = async () => {
     if (!bookingId || submitting || submitted) return;
     if (!isCare && rating === 0) return;
+    if (normalNeedsFeedback || careNeedsFeedback) return;
     setSubmitting(true);
     try {
       if (isCare) {
@@ -272,13 +279,16 @@ function RideCompletedContent() {
                   </div>
                 );
               })}
+              {careNeedsFeedback && (
+                <p className="text-[11px] text-amber-600 mb-2">Please add feedback for any rating of 3 stars or lower.</p>
+              )}
               {Object.values(ratings).some((r) => r > 0) && (
                 <button
                   type="button"
                   onClick={handleSubmitRating}
-                  disabled={submitting}
+                  disabled={submitting || careNeedsFeedback}
                   className="w-full py-2.5 rounded-xl text-white font-bold text-[13px]"
-                  style={{ background: submitting ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
+                  style={{ background: submitting || careNeedsFeedback ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
                 >
                   {submitting ? "Submitting…" : "Submit Ratings"}
                 </button>
@@ -302,13 +312,16 @@ function RideCompletedContent() {
                 className="w-full rounded-xl px-4 py-3 text-[13px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none mb-4"
                 style={{ border: "1.5px solid #c4b5fd" }}
               />
+              {normalNeedsFeedback && (
+                <p className="text-[11px] text-amber-600 mb-2 w-full">Please tell us what went wrong — feedback is required for ratings of 3 stars or lower.</p>
+              )}
               {rating > 0 && (
                 <button
                   type="button"
                   onClick={handleSubmitRating}
-                  disabled={submitting}
+                  disabled={submitting || normalNeedsFeedback}
                   className="w-full py-2.5 rounded-xl text-white font-bold text-[13px] mb-2"
-                  style={{ background: submitting ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
+                  style={{ background: submitting || normalNeedsFeedback ? "#9ca3af" : "linear-gradient(90deg,#131936,#C6BFB2)" }}
                 >
                   {submitting ? "Submitting…" : "Submit Rating"}
                 </button>

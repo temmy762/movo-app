@@ -61,6 +61,9 @@ export default function DriverHomePage() {
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [showTripComplete, setShowTripComplete] = useState(false);
   const [tripRating, setTripRating] = useState(4);
+  const [tripFeedback, setTripFeedback] = useState("");
+  /* Feedback is mandatory for low ratings (≤3★) so admin can review issues */
+  const lowRatingNeedsFeedback = tripRating > 0 && tripRating <= 3 && !tripFeedback.trim();
   const [actionLoading, setActionLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [stats, setStats] = useState<{ totalEarned: number; preBooked: number }>({ totalEarned: 0, preBooked: 0 });
@@ -1209,16 +1212,28 @@ export default function DriverHomePage() {
                 </button>
               ))}
             </div>
-            <p className="text-[12px] text-gray-500 text-center mb-5">
-              Trip completed — review your trip now.
+            <p className="text-[12px] text-gray-500 text-center mb-3">
+              Trip completed — rate your rider.
             </p>
+            <textarea
+              value={tripFeedback}
+              onChange={(e) => setTripFeedback(e.target.value)}
+              placeholder={tripRating <= 3 ? "Required: what went wrong with this rider?" : "Notes about this rider (optional)…"}
+              rows={2}
+              className="w-full rounded-xl px-3 py-2 text-[12px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none mb-2"
+              style={{ border: lowRatingNeedsFeedback ? "1.5px solid #f59e0b" : "1.5px solid #e5e7eb" }}
+            />
+            {lowRatingNeedsFeedback && (
+              <p className="text-[11px] text-amber-600 mb-3 w-full">Feedback is required for ratings of 3 stars or lower.</p>
+            )}
             <button type="button"
+              disabled={lowRatingNeedsFeedback}
               onClick={async () => {
                 if (activeBooking) {
                   await fetch(`/api/bookings/${activeBooking.id}/rating`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ rating: tripRating }),
+                    body: JSON.stringify({ rating: tripRating, feedback: tripFeedback.trim() || null }),
                   });
                 }
                 setShowTripComplete(false);
@@ -1226,10 +1241,11 @@ export default function DriverHomePage() {
                 setIsOnline(false);
                 localStorage.setItem("driverOnline", "false");
                 setActiveBooking(null);
+                setTripFeedback("");
                 router.push("/driver/home/finish");
               }}
-              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px] disabled:opacity-50"
+              style={{ background: lowRatingNeedsFeedback ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
               Ok
             </button>
           </div>
@@ -1260,28 +1276,41 @@ export default function DriverHomePage() {
                 </button>
               ))}
             </div>
-            <p className="text-[12px] text-gray-500 text-center mb-5">
+            <p className="text-[12px] text-gray-500 text-center mb-3">
               Rate your experience for this Care assignment.
             </p>
+            <textarea
+              value={tripFeedback}
+              onChange={(e) => setTripFeedback(e.target.value)}
+              placeholder={tripRating > 0 && tripRating <= 3 ? "Required: what went wrong?" : "Notes about this assignment (optional)…"}
+              rows={2}
+              className="w-full rounded-xl px-3 py-2 text-[12px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none mb-2"
+              style={{ border: lowRatingNeedsFeedback ? "1.5px solid #f59e0b" : "1.5px solid #e5e7eb" }}
+            />
+            {lowRatingNeedsFeedback && (
+              <p className="text-[11px] text-amber-600 mb-3 w-full">Feedback is required for ratings of 3 stars or lower.</p>
+            )}
             <button type="button"
+              disabled={lowRatingNeedsFeedback}
               onClick={async () => {
                 const bookingIdForRating = careAssignment?.booking?.id;
                 if (bookingIdForRating && tripRating > 0) {
                   await fetch(`/api/bookings/${bookingIdForRating}/rating`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ rating: tripRating }),
+                    body: JSON.stringify({ rating: tripRating, feedback: tripFeedback.trim() || null }),
                   }).catch(() => {});
                 }
                 setShowCareComplete(false);
                 setCareAssignment(null);
                 setCarePhase("idle");
                 setTripRating(0);
+                setTripFeedback("");
                 /* Driver stays online — Care assignment ended, not the whole shift */
                 router.push("/driver/home/finish");
               }}
-              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
-              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px] disabled:opacity-50"
+              style={{ background: lowRatingNeedsFeedback ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
               Done
             </button>
           </div>

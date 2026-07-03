@@ -257,6 +257,8 @@ model Booking {
   stripePaymentIntentId String?
   rating                Float?
   review                String?
+  driverRating          Float?
+  driverFeedback        String?
   acceptedAt            DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
