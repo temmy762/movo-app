@@ -769,7 +769,7 @@ export default function LandingPage() {
 
       {/* ── FOOTER ── */}
       <footer style={{ background: DARK }}>
-        <div className="max-w-7xl mx-auto px-5 md:px-10 py-16 grid grid-cols-2 md:grid-cols-4 gap-8 border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-5 md:px-10 py-16 grid grid-cols-2 md:grid-cols-5 gap-8 border-b border-white/10">
           <div className="col-span-2 md:col-span-1">
             <div className="mb-4">
               <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo Privé" width={100} height={30} unoptimized />
@@ -782,7 +782,7 @@ export default function LandingPage() {
               <Link href="/home/pickup?tier=classic" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">In-City Rides</Link>
               <Link href="/home/pickup?tier=all&mode=airport" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Airport Transfer</Link>
               <Link href="/home/pickup?tier=all&mode=hourly" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Hourly Chauffeur</Link>
-              <Link href="/home/care-ride" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Movo Care Ride</Link>
+              <Link href="/home/care-ride" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Movo Safe Ride</Link>
             </div>
           </div>
           <div>
@@ -791,14 +791,24 @@ export default function LandingPage() {
               <a href="#why-movo" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">About Us</a>
               <a href="#services" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Business</a>
               <Link href="/auth/select" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Chauffeurs</Link>
+              <Link href="/contact" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Contact Us</Link>
             </div>
           </div>
           <div>
             <p className="text-white font-semibold text-[13px] mb-4">Support</p>
             <div className="flex flex-col gap-2">
               <Link href="/user/login" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Book Now</Link>
+              <Link href="/complaints-policy" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Complaints Policy</Link>
+              <Link href="/lost-found-policy" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Lost &amp; Found</Link>
+            </div>
+          </div>
+          <div>
+            <p className="text-white font-semibold text-[13px] mb-4">Legal</p>
+            <div className="flex flex-col gap-2">
               <Link href="/privacy-policy" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Terms of Service</Link>
+              <Link href="/terms" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Terms &amp; Conditions</Link>
+              <Link href="/chauffeur-agreement" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Chauffeur Agreement</Link>
+              <Link href="/data-security" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Data Security Policy</Link>
             </div>
           </div>
         </div>

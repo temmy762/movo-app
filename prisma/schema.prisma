@@ -51,6 +51,7 @@ enum SupportCategory {
   RIDE_ISSUE
   PAYMENT_HELP
   CHAT_SUPPORT
+  GENERAL_INQUIRY
 }
 
 enum SupportStatus {
