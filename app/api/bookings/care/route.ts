@@ -30,12 +30,15 @@ export async function POST(req: NextRequest) {
       clientName, pickup, dropoff,
       fare, serviceFee, gst, total,
       paymentStatus, stripePaymentIntentId,
-      customerVehicle,
+      customerVehicle, scheduledAt,
     } = body;
 
     if (!clientName || !pickup || !dropoff) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+    const isValidSchedule = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime());
 
     const coordinates = await geocodeAddresses(pickup, dropoff).catch(() => null);
 
@@ -64,6 +67,7 @@ export async function POST(req: NextRequest) {
         bookingType:   "CARE",
         stripePaymentIntentId: stripePaymentIntentId ?? null,
         ...(userId ? { userId } : {}),
+        ...(isValidSchedule ? { scheduledAt: parsedScheduledAt } : {}),
       },
     });
 

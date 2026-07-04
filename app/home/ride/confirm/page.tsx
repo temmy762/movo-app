@@ -27,24 +27,26 @@ type FareEstimate = {
 
 type CheckoutFormProps = {
   pickup: string; dropoff: string; carName: string;
-  tier: string; carImg: string; driverId: string;
+  tier: string; carImg: string;
   clientName: string; intentId: string;
   estimate: FareEstimate;
   isCare?: boolean;
+  scheduledAt?: string | null;
 };
 
 type SavedCard = { id: string; brand: string; last4: string; expMonth: number; expYear: number };
 
 /* Shared post-payment step: create the booking (Care or standard) and hand the
    rider to the tracking page. Used by both the new-card (PaymentElement) and
-   saved-card checkout paths. */
+   saved-card checkout paths. No direct-to-driver assignment — every ride is
+   routed automatically to whichever eligible chauffeur accepts first. */
 async function createBookingAfterPayment(opts: {
   isCare: boolean; pickup: string; dropoff: string; carName: string;
-  tier: string; carImg: string; driverId: string; clientName: string;
-  intentId: string; estimate: FareEstimate;
+  tier: string; carImg: string; clientName: string;
+  intentId: string; estimate: FareEstimate; scheduledAt?: string | null;
   push: (url: string) => void;
 }) {
-  const { isCare, pickup, dropoff, carName, tier, carImg, driverId, clientName, intentId, estimate, push } = opts;
+  const { isCare, pickup, dropoff, carName, tier, carImg, clientName, intentId, estimate, scheduledAt, push } = opts;
   const { fare, serviceFee, gst, additionalStopFee, airportFee, total } = estimate;
   const resolvedTier = isCare ? "care" : (tier || carTierMap[carName] || "classic");
 
@@ -57,10 +59,11 @@ async function createBookingAfterPayment(opts: {
         fare, serviceFee, gst, total,
         paymentStatus: "PAID",
         stripePaymentIntentId: intentId,
+        ...(scheduledAt ? { scheduledAt } : {}),
       }),
     }).then(r => r.json()).catch(() => null);
 
-    const cp: Record<string, string> = { pickup, dropoff, car: "Movo Care Ride", tier: "black", paid: "1", service: "care" };
+    const cp: Record<string, string> = { pickup, dropoff, car: "Movo Safe Ride", tier: "care", paid: "1", service: "care" };
     if (careRes?.bookingId) cp.bookingId = careRes.bookingId;
     push(`/home/ride/tracking?${new URLSearchParams(cp).toString()}`);
     return;
@@ -75,7 +78,7 @@ async function createBookingAfterPayment(opts: {
       fare, serviceFee, gst, additionalStopFee, airportFee, total,
       paymentStatus: "PAID",
       stripePaymentIntentId: intentId,
-      ...(driverId ? { driverId } : {}),
+      ...(scheduledAt ? { scheduledAt } : {}),
     }),
   }).then(r => r.json()).catch(() => null);
 
@@ -83,7 +86,6 @@ async function createBookingAfterPayment(opts: {
   if (bookingRes?.id) tp.bookingId = bookingRes.id;
   if (tier)           tp.tier      = tier;
   if (carImg && !carImg.startsWith("data:")) tp.carImg = carImg;
-  if (driverId)       tp.driverId  = driverId;
   push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
 }
 
@@ -152,7 +154,7 @@ function SavedCardPay({ cards, amount, onPaid }: {
   );
 }
 
-function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, clientName, intentId, estimate, isCare }: CheckoutFormProps) {
+function CheckoutForm({ pickup, dropoff, carName, tier, carImg, clientName, intentId, estimate, isCare, scheduledAt }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
@@ -174,9 +176,9 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
       airportFee: airportFee.toString(), total: total.toString(),
       intentId,
     };
-    if (tier)     rp.tier     = tier;
+    if (tier)        rp.tier        = tier;
     if (carImg && !carImg.startsWith("data:")) rp.carImg = carImg;
-    if (driverId) rp.driverId = driverId;
+    if (scheduledAt) rp.scheduledAt = scheduledAt;
     const returnUrl = `${window.location.origin}/home/ride/tracking?${new URLSearchParams(rp).toString()}`;
 
     const { error: stripeError } = await stripe.confirmPayment({
@@ -192,8 +194,8 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, driverId, client
     }
 
     await createBookingAfterPayment({
-      isCare: !!isCare, pickup, dropoff, carName, tier, carImg, driverId,
-      clientName, intentId, estimate,
+      isCare: !!isCare, pickup, dropoff, carName, tier, carImg,
+      clientName, intentId, estimate, scheduledAt,
       push: (url) => router.push(url),
     });
   };
@@ -239,8 +241,17 @@ function ConfirmPayContent() {
   const carName   = searchParams.get("car")      || "Standard Ride";
   const tier      = searchParams.get("tier")     || "";
   const carImg    = searchParams.get("carImg")   || "";
-  const driverId  = searchParams.get("driverId") || "";
   const isCare    = searchParams.get("service")  === "care";
+
+  /* Scheduling — carried from the pickup widget's date/time pickers */
+  const dateParam = searchParams.get("date") || "";
+  const timeParam = searchParams.get("time") || "";
+  const scheduledAt = (() => {
+    if (!dateParam || !timeParam) return null;
+    const d = new Date(`${dateParam}T${timeParam}:00`);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  })();
+  const isScheduled = !!scheduledAt && new Date(scheduledAt).getTime() - Date.now() > 25 * 60 * 1000;
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
@@ -455,8 +466,8 @@ function ConfirmPayContent() {
                   amount={estimate.total}
                   onPaid={(paidIntentId) =>
                     createBookingAfterPayment({
-                      isCare: !!isCare, pickup, dropoff, carName, tier, carImg, driverId,
-                      clientName, intentId: paidIntentId, estimate,
+                      isCare: !!isCare, pickup, dropoff, carName, tier, carImg,
+                      clientName, intentId: paidIntentId, estimate, scheduledAt,
                       push: (url) => router.push(url),
                     })
                   }
@@ -474,7 +485,7 @@ function ConfirmPayContent() {
                 <Elements stripe={stripePromise} options={{ clientSecret }}>
                   <CheckoutForm
                     pickup={pickup} dropoff={dropoff} carName={carName}
-                    tier={tier} carImg={carImg} driverId={driverId}
+                    tier={tier} carImg={carImg} scheduledAt={scheduledAt}
                     clientName={clientName} intentId={intentId} estimate={estimate}
                     isCare={isCare}
                   />

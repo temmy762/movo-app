@@ -63,3 +63,22 @@ export async function pushToOnlineDriversByTier(tier: string | null, payload: Pu
   });
   await Promise.allSettled(subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)));
 }
+
+/** Send to ALL approved drivers with a matching tier — including OFFLINE ones.
+    Used for scheduled rides so off-shift chauffeurs can open the app and claim
+    the request in advance. */
+export async function pushToAllDriversByTier(tier: string | null, payload: PushPayload) {
+  const drivers = await prisma.driver.findMany({
+    where: {
+      status: DriverStatus.APPROVED,
+      ...(tier ? { vehicle: { is: { tier } } } : {}),
+    },
+    select: { id: true },
+  });
+  const driverIds = drivers.map(d => d.id);
+  if (!driverIds.length) return;
+  const subs = await prisma.pushSubscription.findMany({
+    where: { driverId: { in: driverIds } },
+  });
+  await Promise.allSettled(subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)));
+}

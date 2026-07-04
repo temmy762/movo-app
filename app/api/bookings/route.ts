@@ -4,7 +4,7 @@ import { getSession } from "@/lib/session";
 import { geocodeAddresses } from "@/lib/geocoding";
 import { PaymentStatus } from "@prisma/client";
 import { sendNotification } from "@/lib/notifications";
-import { pushToOnlineDriversByTier } from "@/lib/webpush";
+import { pushToOnlineDriversByTier, pushToAllDriversByTier } from "@/lib/webpush";
 import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
 import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
 
@@ -61,10 +61,15 @@ export async function GET(req: NextRequest) {
 
 const VALID_PAYMENT_STATUSES: PaymentStatus[] = ["UNPAID", "PAID", "FAILED", "REFUNDED"];
 
+/* A ride whose requested time is further out than this is treated as
+   "scheduled" rather than ASAP — offline drivers get pushed too, and the
+   no-driver refund timeout anchors to the pickup time instead of now. */
+const SCHEDULED_THRESHOLD_MS = 25 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, gst, additionalStopFee, airportFee, total, paymentStatus, stripePaymentIntentId, driverId } = body;
+    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, gst, additionalStopFee, airportFee, total, paymentStatus, stripePaymentIntentId, scheduledAt } = body;
 
     if (!clientName || !pickup || !dropoff || !carTier || !carName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -84,6 +89,12 @@ export async function POST(req: NextRequest) {
     const session = await getSession(req);
     const userId = session?.userId ?? null;
 
+    const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+    const isValidSchedule = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime());
+    const isScheduled = isValidSchedule && parsedScheduledAt!.getTime() - Date.now() > SCHEDULED_THRESHOLD_MS;
+
+    /* No direct-to-driver assignment — every ride is routed automatically to
+       whichever eligible chauffeur accepts first. */
     const booking = await prisma.booking.create({
       data: {
         clientName,
@@ -104,8 +115,8 @@ export async function POST(req: NextRequest) {
         paymentStatus: resolvedPaymentStatus,
         status: resolvedStatus,
         stripePaymentIntentId: stripePaymentIntentId ?? null,
-        ...(userId    ? { userId }    : {}),
-        ...(driverId  ? { driverId }  : {}),
+        ...(userId ? { userId } : {}),
+        ...(isValidSchedule ? { scheduledAt: parsedScheduledAt } : {}),
       },
     });
 
@@ -140,20 +151,30 @@ export async function POST(req: NextRequest) {
       createdAt: booking.createdAt.toISOString(),
     });
 
-    /* Push ride-request alert to all matching online drivers */
+    /* Push ride-request alert to matching online drivers, always */
     pushToOnlineDriversByTier(carTier ?? null, {
-      title: "🚗 New Ride Request",
-      body:  `Pickup: ${pickup}`,
+      title: isScheduled ? "📅 New Scheduled Ride" : "🚗 New Ride Request",
+      body:  `Pickup: ${pickup}${isScheduled ? ` at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : ""}`,
       tag:   `booking-${booking.id}`,
       data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
     }).catch(() => {});
 
+    /* Scheduled rides also reach OFFLINE drivers — they can open the app and
+       claim a future request in advance without being on shift right now. */
+    if (isScheduled) {
+      pushToAllDriversByTier(carTier ?? null, {
+        title: "📅 New Scheduled Ride",
+        body:  `Pickup: ${pickup} at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Open the app to accept.`,
+        tag:   `booking-${booking.id}`,
+        data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
+      }).catch(() => {});
+    }
+
     /* If nobody claims a paid booking in time, auto-resolve it instead of
-       leaving the rider charged and stuck on "Searching..." forever. Direct
-       bookings give the chosen driver a short response window before being
-       released to the pool; pool bookings get the full search window. */
+       leaving the rider charged and stuck on "Searching..." forever. Scheduled
+       rides anchor the window to the requested pickup time, not to now. */
     if (resolvedPaymentStatus === "PAID") {
-      scheduleStandardDispatchTimeout(booking.id, driverId ? "direct" : "pool");
+      scheduleStandardDispatchTimeout(booking.id, "pool", isScheduled ? parsedScheduledAt! : undefined);
     }
 
     return NextResponse.json(booking, { status: 201 });

@@ -31,7 +31,7 @@ function RideTrackingContent() {
   const farePm         = searchParams.get("fare");
   const serviceFeePm   = searchParams.get("serviceFee");
   const totalPm        = searchParams.get("total");
-  const driverIdPm     = searchParams.get("driverId") || "";
+  const scheduledAtPm  = searchParams.get("scheduledAt") || "";
 
   const [bookingId, setBookingId] = useState<string | null>(bookingIdParam);
 
@@ -78,6 +78,7 @@ function RideTrackingContent() {
   const [cancelling,        setCancelling]        = useState(false);
   const [dispatchFailed,    setDispatchFailed]    = useState(false);
   const [noDriverRefunded,  setNoDriverRefunded]  = useState(false);
+  const [scheduledForLabel, setScheduledForLabel] = useState<string | null>(null);
 
   /* ── Search progress (standard rides) — mirrors lib/dispatch/standardTimeout.ts windows ──
      "direct":     rider picked a specific driver, waiting for them to confirm (3 min)
@@ -165,7 +166,7 @@ function RideTrackingContent() {
         total: parseFloat(totalPm),
         paymentStatus: "PAID",
         stripePaymentIntentId: intentId,
-        ...(driverIdPm ? { driverId: driverIdPm } : {}),
+        ...(scheduledAtPm ? { scheduledAt: scheduledAtPm } : {}),
       }),
     })
       .then(r => r.json())
@@ -405,6 +406,19 @@ function RideTrackingContent() {
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (!data) return;
+
+          /* Scheduled-ride banner — only while still searching for a driver */
+          if (data.scheduledAt && (data.status === "PENDING" || (data.status === "CONFIRMED" && !data.driver))) {
+            const when = new Date(data.scheduledAt);
+            if (!isNaN(when.getTime()) && when.getTime() > Date.now()) {
+              setScheduledForLabel(when.toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
+            } else {
+              setScheduledForLabel(null);
+            }
+          } else {
+            setScheduledForLabel(null);
+          }
+
           /* Derive effective ride status from booking status + startedAt */
           if (data.status === "COMPLETED") {
             setRideStatus("COMPLETED");
@@ -582,12 +596,12 @@ function RideTrackingContent() {
 
           {/* ETA + Status stages */}
           <div className="mb-3">
-            <p className="text-[30px] md:text-[34px] font-extrabold text-gray-900 leading-none">
-              {rideStatus === "PENDING" ? "Searching" : etaText}
+            <p className="text-[26px] md:text-[30px] font-extrabold text-gray-900 leading-tight">
+              {rideStatus === "PENDING" ? "Finding Your Chauffeur" : etaText}
             </p>
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
-              {rideStatus === "PENDING"    ? (isCareRide ? "Finding your chauffeurs…" : "Waiting for a driver to accept your ride…") :
-               rideStatus === "CONFIRMED"  ? (isCareRide ? "Both chauffeurs are on the way" : "Driver is on the way to you") :
+              {rideStatus === "PENDING"    ? (isCareRide ? "Finding your chauffeurs…" : "We're contacting nearby chauffeurs — hang tight.") :
+               rideStatus === "CONFIRMED"  ? (isCareRide ? "Both chauffeurs are on the way" : "Your chauffeur is on the way to you") :
                rideStatus === "STARTED"    ? "Ride in progress — arriving at your destination" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
                "Ride in progress"}
@@ -677,6 +691,14 @@ function RideTrackingContent() {
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-50 border border-green-200 mb-4">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
               <p className="text-[13px] font-semibold text-green-700">Your driver has arrived at the pickup location</p>
+            </div>
+          )}
+
+          {/* Scheduled-ride banner */}
+          {scheduledForLabel && (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 border border-indigo-200 mb-4">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <p className="text-[12px] font-semibold text-indigo-700">Scheduled for {scheduledForLabel} — we'll line up your chauffeur in advance.</p>
             </div>
           )}
 

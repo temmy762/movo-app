@@ -31,11 +31,20 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export const DIRECT_RESPONSE_TIMEOUT_MS = 3 * 60 * 1000; // pre-assigned driver must respond in 3 min
 export const POOL_SEARCH_TIMEOUT_MS     = 7 * 60 * 1000; // open pool search window before refund
 
+/**
+ * @param anchor For scheduled rides, the requested pickup time — the window
+ *   counts down from THAT moment, not from booking creation, so a ride booked
+ *   today for tomorrow morning isn't refunded 7 minutes after checkout. For
+ *   immediate (ASAP) rides, omit it — the window starts now, same as before.
+ */
 export function scheduleStandardDispatchTimeout(
   bookingId: string,
   kind: "direct" | "pool" = "pool",
+  anchor?: Date,
 ): void {
-  const delay = kind === "direct" ? DIRECT_RESPONSE_TIMEOUT_MS : POOL_SEARCH_TIMEOUT_MS;
+  const windowMs = kind === "direct" ? DIRECT_RESPONSE_TIMEOUT_MS : POOL_SEARCH_TIMEOUT_MS;
+  const anchorMs = anchor ? anchor.getTime() : Date.now();
+  const delay = Math.max(0, anchorMs + windowMs - Date.now());
   setTimeout(() => {
     resolveStaleBooking(bookingId).catch((e) =>
       console.error("[standard dispatch timeout]", e)

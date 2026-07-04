@@ -259,6 +259,7 @@ model Booking {
   review                String?
   driverRating          Float?
   driverFeedback        String?
+  scheduledAt           DateTime?
   acceptedAt            DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
