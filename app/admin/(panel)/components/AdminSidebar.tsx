@@ -223,8 +223,9 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
         <Image src="/images/logo/logo-horizontal-ivory.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
       </div>
 
-      {/* Nav */}
-      <nav className="flex flex-col gap-0.5 px-3 flex-1">
+      {/* Nav — scrolls vertically when the item list is taller than the viewport
+          (min-h-0 lets this flex child actually shrink so overflow-y works) */}
+      <nav className="flex flex-col gap-0.5 px-3 flex-1 min-h-0 overflow-y-auto">
         {navItems.map((entry) => {
           if (entry.kind === "group") {
             const groupActive = entry.groupMatch(pathname);
