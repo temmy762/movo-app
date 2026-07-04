@@ -163,6 +163,23 @@ const navItems: NavEntry[] = [
       </svg>
     ),
   },
+  {
+    kind: "group",
+    label: "Compliance",
+    groupMatch: (p) => p.startsWith("/admin/compliance"),
+    icon: (a) => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
+        <path d="M9 12l2 2 4-4" /><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.85 0 3.57.56 5 1.52" />
+      </svg>
+    ),
+    children: [
+      { label: "Complaints",       href: "/admin/compliance/complaints" },
+      { label: "Lost & Found",     href: "/admin/compliance/lost-found" },
+      { label: "Consent Records",  href: "/admin/compliance/consent-records" },
+      { label: "Audit Log",        href: "/admin/compliance/audit-log" },
+      { label: "Incident Reports", href: "/admin/incidents" },
+    ],
+  },
 ];
 
 export default function AdminSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {

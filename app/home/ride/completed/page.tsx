@@ -82,6 +82,7 @@ function RideCompletedContent() {
   /* Legacy single-driver rating for normal rides */
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
+  const [showReportIssue, setShowReportIssue] = useState(false);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -347,7 +348,7 @@ function RideCompletedContent() {
           <button
             type="button"
             onClick={() => router.push("/home")}
-            className="w-full py-3.5 rounded-xl font-bold text-[14px] border-2 border-gray-200 text-gray-700 flex items-center justify-center gap-2"
+            className="w-full py-3.5 rounded-xl font-bold text-[14px] border-2 border-gray-200 text-gray-700 flex items-center justify-center gap-2 mb-3"
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" /><path d="M9 21V12h6v9" />
@@ -355,7 +356,125 @@ function RideCompletedContent() {
             Go Home
           </button>
 
+          <button
+            type="button"
+            onClick={() => setShowReportIssue(true)}
+            className="w-full py-3 rounded-xl font-semibold text-[13px] text-gray-500 flex items-center justify-center gap-2"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Report an Issue
+          </button>
+
         </div>
+      </div>
+
+      {showReportIssue && bookingId && (
+        <ReportIssueModal bookingId={bookingId} onClose={() => setShowReportIssue(false)} />
+      )}
+    </div>
+  );
+}
+
+const COMPLAINT_CATEGORIES: { value: string; label: string }[] = [
+  { value: "CHAUFFEUR", label: "Chauffeur complaint" },
+  { value: "VEHICLE", label: "Vehicle complaint" },
+  { value: "BILLING", label: "Billing issue" },
+  { value: "SAFETY", label: "Safety concern" },
+  { value: "LOST_PROPERTY", label: "Lost property" },
+  { value: "GENERAL", label: "General feedback" },
+];
+
+function ReportIssueModal({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+  const [category, setCategory] = useState("GENERAL");
+  const [description, setDescription] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).slice(0, 5 - photos.length);
+    files.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") setPhotos(p => [...p, reader.result as string].slice(0, 5));
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  };
+
+  const submit = async () => {
+    if (!description.trim() || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/complaints", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, category, description, photos }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.error ?? "Failed to submit");
+      setSubmitted(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50 px-4" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {submitted ? (
+          <div className="text-center py-6">
+            <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <p className="text-[15px] font-bold text-gray-900 mb-1">Thanks for letting us know</p>
+            <p className="text-[13px] text-gray-500 mb-5">Our team will review this and follow up if needed.</p>
+            <button type="button" onClick={onClose} className="w-full py-3 rounded-xl text-white font-bold text-[14px]" style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>Done</button>
+          </div>
+        ) : (
+          <>
+            <h3 className="text-[15px] font-bold text-gray-900 mb-3">Report an Issue</h3>
+            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">Category</label>
+            <select value={category} onChange={e => setCategory(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936] mb-3">
+              {COMPLAINT_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">Details</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4}
+              placeholder="Tell us what happened…"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936] resize-none mb-3" />
+            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">Photos (optional)</label>
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              {photos.map((p, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={p} alt="" className="w-14 h-14 rounded-lg object-cover border border-gray-200" />
+              ))}
+              {photos.length < 5 && (
+                <label className="w-14 h-14 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer text-gray-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoChange} />
+                </label>
+              )}
+            </div>
+            {error && <p className="text-[12px] text-red-500 mb-3">{error}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-600">Cancel</button>
+              <button type="button" onClick={submit} disabled={!description.trim() || submitting}
+                className="flex-1 py-3 rounded-xl text-white text-[13px] font-bold disabled:opacity-50"
+                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
+                {submitting ? "Submitting…" : "Submit"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

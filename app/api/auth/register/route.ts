@@ -5,10 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { createSession, buildSetCookieHeader } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
 import { toE164 } from "@/lib/sms";
+import { recordConsent } from "@/lib/legalConsent";
 
 export async function POST(req: NextRequest) {
   try {
-    const { firstName, lastName, email, phone, password } = await req.json();
+    const { firstName, lastName, email, phone, password, agreedToTerms } = await req.json();
 
     const missing: string[] = [];
     if (!firstName) missing.push("First name");
@@ -18,6 +19,13 @@ export async function POST(req: NextRequest) {
     if (missing.length > 0) {
       return NextResponse.json(
         { error: `Please fill in: ${missing.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    if (!agreedToTerms) {
+      return NextResponse.json(
+        { error: "Please accept the Privacy Policy and Terms & Conditions to continue." },
         { status: 400 }
       );
     }
@@ -58,6 +66,9 @@ export async function POST(req: NextRequest) {
     });
 
     const token = await createSession("USER", user.id);
+
+    recordConsent(req, { userId: user.id, documentTypes: ["PRIVACY_POLICY", "TERMS"] })
+      .catch((e) => console.error("[register] consent record failed:", e));
 
     // Fire welcome email (non-blocking — don't let it delay the response)
     sendNotification({

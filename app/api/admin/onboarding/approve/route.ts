@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
+import { logAudit } from "@/lib/auditLog";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,6 +50,11 @@ export async function POST(req: NextRequest) {
         }).catch(() => {});
       }
 
+      logAudit({
+        action: "driver.onboarding_rejected", entityType: "Driver", entityId: onboarding.driver.id,
+        actorType: "ADMIN", actorId: session.userId ?? null, detail: { adminNote },
+      }).catch(() => {});
+
       return NextResponse.json({ success: true, message: "Onboarding rejected" });
     }
 
@@ -60,6 +66,11 @@ export async function POST(req: NextRequest) {
       where: { id: driver.id },
       data: { status: "ACTIVE" },
     });
+
+    logAudit({
+      action: "driver.onboarding_approved", entityType: "Driver", entityId: driver.id,
+      actorType: "ADMIN", actorId: session.userId ?? null,
+    }).catch(() => {});
 
     // Check if driver already has a vehicle (idempotent re-approval)
     const existingVehicle = await prisma.vehicle.findUnique({

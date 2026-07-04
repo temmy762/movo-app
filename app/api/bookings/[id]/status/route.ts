@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { BookingStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { sendNotification } from "@/lib/notifications";
+import { logAudit } from "@/lib/auditLog";
 import {
   dispatchBookingAccepted,
   dispatchBookingCancelled,
@@ -162,6 +163,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               refundId: refund.id,
             },
           });
+          logAudit({ action: "booking.cancelled", entityType: "Booking", entityId: id, actorType: caller === "admin" ? "ADMIN" : caller === "driver" ? "DRIVER" : "USER", actorId: session?.userId ?? session?.driverId ?? null, detail: { cancelledBy: caller, refunded: true, partialRefund: isPartial } }).catch(() => {});
           return NextResponse.json({ ...booking, refunded: true, partialRefund: isPartial });
         } catch (refundErr) {
           console.error("[Stripe] Refund failed:", refundErr);
@@ -190,6 +192,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         cancelledBy: caller,
         refunded: false,
       });
+      logAudit({ action: "booking.cancelled", entityType: "Booking", entityId: id, actorType: caller === "admin" ? "ADMIN" : caller === "driver" ? "DRIVER" : caller === "system_timeout" ? "SYSTEM" : "USER", actorId: session?.userId ?? session?.driverId ?? null, detail: { cancelledBy: caller, refunded: false } }).catch(() => {});
       return NextResponse.json({ ...booking, refunded: false });
     }
 
@@ -318,6 +321,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         userId:    existing.userId,
         total:     existing.total,
       });
+
+      logAudit({ action: "booking.completed", entityType: "Booking", entityId: id, actorType: session?.driverId ? "DRIVER" : "SYSTEM", actorId: session?.driverId ?? null, detail: { total: existing.total } }).catch(() => {});
 
       return NextResponse.json(booking);
     }

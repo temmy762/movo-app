@@ -39,6 +39,7 @@ function RegisterContent() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -56,12 +57,13 @@ function RegisterContent() {
     if (password.length < 8) { setError("Password must be at least 8 characters long."); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) { setError("Please enter a valid email address."); return; }
+    if (!agreedToTerms) { setError("Please accept the Privacy Policy and Terms & Conditions to continue."); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email, phone: phone || undefined, password }),
+        body: JSON.stringify({ firstName, lastName, email, phone: phone || undefined, password, agreedToTerms }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -161,6 +163,22 @@ function RegisterContent() {
             </button>
           </div>
 
+          {/* Terms acceptance */}
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-[#131936] shrink-0"
+            />
+            <span className="text-[12px] text-gray-500 leading-snug">
+              I agree to Movo's{" "}
+              <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="underline text-gray-700">Privacy Policy</a>
+              {" "}and{" "}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline text-gray-700">Terms &amp; Conditions</a>.
+            </span>
+          </label>
+
           {/* Error */}
           {error && <p className="text-[12px] text-red-500 text-center">{error}</p>}
 
@@ -168,7 +186,7 @@ function RegisterContent() {
           <button
             type="button"
             onClick={handleRegister}
-            disabled={loading}
+            disabled={loading || !agreedToTerms}
             className="w-full py-2.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-60"
             style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >

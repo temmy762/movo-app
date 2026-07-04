@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
 import { toE164 } from "@/lib/sms";
+import { recordConsent } from "@/lib/legalConsent";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -115,6 +116,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Record consent acceptances (timestamp + IP) for the admin compliance log —
+    // driverOnboarding tracks its own *At fields for the onboarding workflow, but
+    // this is the queryable, IP-attributed record the City licence review asks for.
+    const acceptedNow: ("PRIVACY_POLICY" | "TERMS" | "CHAUFFEUR_AGREEMENT")[] = [];
+    if (privacyPolicy)  acceptedNow.push("PRIVACY_POLICY");
+    if (termsAccepted)  acceptedNow.push("TERMS");
+    if (contractSigned && signature) acceptedNow.push("CHAUFFEUR_AGREEMENT");
+    if (acceptedNow.length > 0) {
+      recordConsent(req, { driverId: session.driverId, documentTypes: acceptedNow })
+        .catch((e) => console.error("[driver onboarding] consent record failed:", e));
+    }
+
     // Send submission confirmation email when driver submits their application
     if (submit && driver) {
       sendNotification({
@@ -205,6 +218,18 @@ export async function PATCH(req: NextRequest) {
         where: { id: session.driverId },
         data:  { onboardingType: type },
       });
+    }
+
+    // Record consent acceptances (timestamp + IP) for the admin compliance log —
+    // driverOnboarding tracks its own *At fields for the onboarding workflow, but
+    // this is the queryable, IP-attributed record the City licence review asks for.
+    const acceptedNow: ("PRIVACY_POLICY" | "TERMS" | "CHAUFFEUR_AGREEMENT")[] = [];
+    if (privacyPolicy)  acceptedNow.push("PRIVACY_POLICY");
+    if (termsAccepted)  acceptedNow.push("TERMS");
+    if (contractSigned && signature) acceptedNow.push("CHAUFFEUR_AGREEMENT");
+    if (acceptedNow.length > 0) {
+      recordConsent(req, { driverId: session.driverId, documentTypes: acceptedNow })
+        .catch((e) => console.error("[driver onboarding] consent record failed:", e));
     }
 
     // Send submission confirmation email when driver submits their application
