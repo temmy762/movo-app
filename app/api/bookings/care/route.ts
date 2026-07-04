@@ -19,6 +19,14 @@ import { geocodeAddresses } from "@/lib/geocoding";
 import { sendNotification } from "@/lib/notifications";
 import { dispatchCareBookingCreated } from "@/lib/socket/dispatcher";
 import { dispatchPrimary } from "@/lib/care/dispatch";
+import { scheduleCareDispatch } from "@/lib/care/scheduledDispatch";
+import { pushToAllDriversByTier } from "@/lib/webpush";
+
+/* A Safe Ride whose pickup is further out than this is "scheduled" rather than
+   ASAP — chauffeurs get an advance heads-up now and the real targeted dispatch
+   fires a lead-time before pickup. Kept in sync with the standard-ride
+   threshold in app/api/bookings/route.ts. */
+const SCHEDULED_THRESHOLD_MS = 25 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +47,7 @@ export async function POST(req: NextRequest) {
 
     const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
     const isValidSchedule = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime());
+    const isScheduled = isValidSchedule && parsedScheduledAt!.getTime() - Date.now() > SCHEDULED_THRESHOLD_MS;
 
     const coordinates = await geocodeAddresses(pickup, dropoff).catch(() => null);
 
@@ -93,20 +102,40 @@ export async function POST(req: NextRequest) {
             email: user.email, firstName: user.firstName,
             phone: user.phone ?? undefined,
           },
-          data: { bookingId: booking.id, pickup, dropoff, carTier: "care", fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total), message: "Your Movo Care Ride is confirmed. We are now finding your chauffeurs." },
+          data: {
+            bookingId: booking.id, pickup, dropoff, carTier: "care",
+            fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total),
+            message: isScheduled
+              ? `Your Movo Safe Ride is booked for ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. We'll line up your chauffeurs ahead of your pickup time.`
+              : "Your Movo Safe Ride is confirmed. We are now finding your chauffeurs.",
+          },
         }).catch(() => {});
       }
     }
 
-    /* ── Trigger PRIMARY dispatch whenever payment is captured (fire-and-forget) ── */
-    /* Pass null coords if geocoding failed — dispatch.ts handles no-coordinate fallback */
+    /* ── Dispatch ──
+       Immediate ride  → fire PRIMARY dispatch now (targeted, nearest-first).
+       Scheduled ride  → push every eligible chauffeur an advance heads-up now,
+                         then fire the real PRIMARY dispatch a lead-time before
+                         the scheduled pickup. Pass null coords if geocoding
+                         failed — dispatch.ts handles the no-coordinate fallback. */
     if (resolvedPaymentStatus === "PAID") {
-      dispatchPrimary(
-        booking.id,
-        coordinates?.pickupLat  ?? null,
-        coordinates?.pickupLng  ?? null,
-        userId,
-      ).catch((e) => console.error("[care dispatch primary]", e));
+      if (isScheduled) {
+        pushToAllDriversByTier(null, {
+          title: "🌟 New Scheduled Safe Ride",
+          body:  `Pickup: ${pickup} at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Open the app to be ready.`,
+          tag:   `care-scheduled-${booking.id}`,
+          data:  { type: "care_scheduled", bookingId: booking.id },
+        }).catch(() => {});
+        scheduleCareDispatch(booking.id, parsedScheduledAt!);
+      } else {
+        dispatchPrimary(
+          booking.id,
+          coordinates?.pickupLat  ?? null,
+          coordinates?.pickupLng  ?? null,
+          userId,
+        ).catch((e) => console.error("[care dispatch primary]", e));
+      }
     }
 
     return NextResponse.json({ bookingId: booking.id }, { status: 201 });

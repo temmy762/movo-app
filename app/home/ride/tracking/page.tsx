@@ -597,10 +597,10 @@ function RideTrackingContent() {
           {/* ETA + Status stages */}
           <div className="mb-3">
             <p className="text-[26px] md:text-[30px] font-extrabold text-gray-900 leading-tight">
-              {rideStatus === "PENDING" ? "Finding Your Chauffeur" : etaText}
+              {rideStatus === "PENDING" ? (scheduledForLabel ? "Ride Scheduled" : "Finding Your Chauffeur") : etaText}
             </p>
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
-              {rideStatus === "PENDING"    ? (isCareRide ? "Finding your chauffeurs…" : "We're contacting nearby chauffeurs — hang tight.") :
+              {rideStatus === "PENDING"    ? (scheduledForLabel ? "We'll line up your chauffeur ahead of pickup." : isCareRide ? "Finding your chauffeurs…" : "We're contacting nearby chauffeurs — hang tight.") :
                rideStatus === "CONFIRMED"  ? (isCareRide ? "Both chauffeurs are on the way" : "Your chauffeur is on the way to you") :
                rideStatus === "STARTED"    ? "Ride in progress — arriving at your destination" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
@@ -702,8 +702,9 @@ function RideTrackingContent() {
             </div>
           )}
 
-          {/* Waiting for chauffeurs banner — Care rides */}
-          {rideStatus === "PENDING" && isCareRide && (
+          {/* Waiting for chauffeurs banner — Care rides (hidden while a future
+              scheduled pickup is still ahead; dispatch hasn't started yet) */}
+          {rideStatus === "PENDING" && isCareRide && !scheduledForLabel && (
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 mb-4">
               <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
               <p className="text-[13px] font-semibold text-amber-700">
