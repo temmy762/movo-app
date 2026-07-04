@@ -68,6 +68,9 @@ enum IncidentType {
   VEHICLE_ISSUE
   ROUTE_DEVIATION
   OTHER
+  CUSTOMER_MISCONDUCT
+  MEDICAL_EMERGENCY
+  SAFETY_CONCERN
 }
 
 enum ReviewStatus {
@@ -169,6 +172,9 @@ model User {
   supportTickets   SupportTicket[]
   incidentReports  IncidentReport[]
   notifications    Notification[] @relation(name: "UserNotifications")
+  consentRecords   ConsentRecord[]
+  complaints       Complaint[]
+  lostFoundItems   LostFoundItem[]
 }
 
 
@@ -204,6 +210,9 @@ model Driver {
   onboarding       DriverOnboarding?
   notifications    Notification[] @relation(name: "DriverNotifications")
   careAssignments  CareAssignment[]
+  consentRecords   ConsentRecord[]
+  complaints       Complaint[]
+  lostFoundItems   LostFoundItem[]
 }
 
 model Vehicle {
@@ -285,6 +294,8 @@ model Booking {
   incidentReports IncidentReport[]
   messages        BookingMessage[]
   careAssignments CareAssignment[]
+  complaints      Complaint[]
+  lostFoundItems  LostFoundItem[]
 }
 
 // ─── Care Ride Assignments ────────────────────────────────────────────────────
@@ -476,6 +487,9 @@ model IncidentReport {
   reviewStatus        ReviewStatus @default(PENDING)
   reviewNote          String?
   reviewedAt          DateTime?
+  photoUrls           String[]     @default([])
+  gpsLat              Float?
+  gpsLng              Float?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
@@ -702,4 +716,109 @@ model PricingConfig {
   waitingRatePerMin   Float    @default(0.75)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+// ─── Compliance ───────────────────────────────────────────────────────────────
+
+// Records acceptance of a versioned legal document by a rider or chauffeur,
+// with timestamp + IP for auditability (City licence review requirement).
+model ConsentRecord {
+  id           String   @id @default(cuid())
+  documentType String   // "PRIVACY_POLICY" | "TERMS" | "CHAUFFEUR_AGREEMENT"
+  version      String
+  acceptedAt   DateTime @default(now())
+  ipAddress    String?
+
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id])
+  driverId String?
+  driver   Driver? @relation(fields: [driverId], references: [id])
+
+  @@index([userId])
+  @@index([driverId])
+}
+
+enum ComplaintCategory {
+  CHAUFFEUR
+  VEHICLE
+  BILLING
+  SAFETY
+  LOST_PROPERTY
+  GENERAL
+}
+
+enum ComplaintStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+model Complaint {
+  id            String            @id @default(cuid())
+  category      ComplaintCategory
+  status        ComplaintStatus   @default(OPEN)
+  description   String
+  photoUrls     String[]          @default([])
+  internalNotes String?
+  resolution    String?
+
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  driverId  String?
+  driver    Driver?  @relation(fields: [driverId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+enum LostFoundStatus {
+  REPORTED
+  MATCHED
+  RETURNED
+  CLOSED
+}
+
+model LostFoundItem {
+  id              String          @id @default(cuid())
+  status          LostFoundStatus @default(REPORTED)
+  itemDescription String
+  reportedBy      String          // "CUSTOMER" | "DRIVER"
+  contactInfo     String?
+  collectionNotes String?
+  returnedAt      DateTime?
+
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  driverId  String?
+  driver    Driver?  @relation(fields: [driverId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// Lightweight system-of-record for admin/compliance-relevant actions —
+// booking status changes, complaint actions, user/driver changes, driver
+// approvals, admin actions, and policy acceptance records.
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String?
+  entityId   String?
+  actorType  String   // "ADMIN" | "USER" | "DRIVER" | "SYSTEM"
+  actorId    String?
+  detail     Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorType, actorId])
+  @@index([createdAt])
 }
