@@ -1,5 +1,6 @@
-// Use server-side key for geocoding (NEXT_PUBLIC_ key may have browser referrer restrictions)
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_SERVER_KEY || process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+// Shared server-side key resolver — Geocoding rejects referrer-restricted keys.
+import { GOOGLE_MAPS_SERVER_KEY } from "@/lib/googleMapsKey";
+const GOOGLE_MAPS_API_KEY = GOOGLE_MAPS_SERVER_KEY;
 
 export interface GeocodeResult {
   lat: number;

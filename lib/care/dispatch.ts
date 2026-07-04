@@ -103,11 +103,15 @@ async function findNearbyDrivers(
   excludeIds: string[] = [],
   limit = 1,
 ): Promise<Array<{ id: string; firstName: string; lastName: string; distKm: number }>> {
+  /* Fetch all ACTIVE + online drivers who have a vehicle; the tier priority is
+     applied in JS below (case-insensitively). Filtering tier at the DB level
+     with `{ in: [...], mode: "insensitive" }` is unsupported for `in` and was
+     both fragile (case-sensitive in practice) and a silent-throw risk. */
   const candidates = await prisma.driver.findMany({
     where: {
       status:   "ACTIVE",
       isOnline: true,
-      vehicle:  { tier: { in: [...CARE_TIER_PRIORITY], mode: "insensitive" } },
+      vehicle:  { isNot: null },
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,
     },
     select: { id: true, firstName: true, lastName: true, lat: true, lng: true, vehicle: { select: { tier: true } } },

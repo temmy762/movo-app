@@ -6,7 +6,8 @@ import { normalizeTier } from "@/lib/normalizeTier";
    restricted for the browser, which makes server-side Distance Matrix calls
    fail silently (REQUEST_DENIED) and every fare fall back to the flat
    10 km / 15 min estimate — i.e. "pricing config not applied". */
-const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_SERVER_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+import { GOOGLE_MAPS_SERVER_KEY } from "@/lib/googleMapsKey";
+const GOOGLE_API_KEY = GOOGLE_MAPS_SERVER_KEY;
 
 /* Official pricing defaults (used when DB rows don't exist yet) */
 const TIER_DEFAULTS: Record<string, { baseFare: number; ratePerKm: number; ratePerMin: number; minFare: number; hourlyRate: number; hourlyMinHours: number }> = {

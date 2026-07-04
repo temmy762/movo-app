@@ -51,7 +51,7 @@ export async function pushToOnlineDriversByTier(tier: string | null, payload: Pu
   const drivers = await prisma.driver.findMany({
     where: {
       isOnline: true,
-      status: DriverStatus.APPROVED,
+      status: DriverStatus.ACTIVE,
       ...(tier ? { vehicle: { is: { tier } } } : {}),
     },
     select: { id: true },
@@ -70,7 +70,7 @@ export async function pushToOnlineDriversByTier(tier: string | null, payload: Pu
 export async function pushToAllDriversByTier(tier: string | null, payload: PushPayload) {
   const drivers = await prisma.driver.findMany({
     where: {
-      status: DriverStatus.APPROVED,
+      status: DriverStatus.ACTIVE,
       ...(tier ? { vehicle: { is: { tier } } } : {}),
     },
     select: { id: true },
