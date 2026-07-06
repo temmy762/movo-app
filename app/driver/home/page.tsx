@@ -548,6 +548,24 @@ export default function DriverHomePage() {
     setShowTripComplete(true);
   }
 
+  /* Open external Google Maps turn-by-turn to the given destination address.
+     On mobile this launches the Google Maps app with live navigation. */
+  function openExternalNav(destination: string) {
+    if (!destination) return;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+    window.open(url, "_blank", "noopener");
+  }
+
+  const NavigateButton = ({ destination }: { destination: string }) => (
+    <button type="button" title="Navigate with Google Maps"
+      onClick={() => openExternalNav(destination)}
+      className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2">
+        <polygon points="3 11 22 2 13 21 11 13 3 11" />
+      </svg>
+    </button>
+  );
+
   /* ── Care assignment handlers ─────────────────────────────────────────── */
 
   async function handleCareAccept() {
@@ -880,6 +898,7 @@ export default function DriverHomePage() {
                   className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </button>
+                <NavigateButton destination={careAssignment.role === "PRIMARY" ? careAssignment.booking.pickup : careAssignment.booking.dropoff} />
                 <button onClick={handleCareArrived} disabled={careLoading}
                   className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
                   style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
@@ -1070,6 +1089,7 @@ export default function DriverHomePage() {
                   className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </button>
+                <NavigateButton destination={activeBooking.pickup} />
                 <button type="button" onClick={handleArrived}
                   className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
                   style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
@@ -1090,6 +1110,7 @@ export default function DriverHomePage() {
                     className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   </button>
+                  <NavigateButton destination={activeBooking.pickup} />
                   <button type="button" onClick={handleStartRide}
                     disabled={actionLoading}
                     className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
@@ -1108,6 +1129,7 @@ export default function DriverHomePage() {
                     className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                   </button>
+                  <NavigateButton destination={activeBooking.dropoff} />
                   <button type="button" onClick={handleEndRide}
                     disabled={actionLoading}
                     className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"

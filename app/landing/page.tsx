@@ -129,10 +129,36 @@ export default function LandingPage() {
     libraries: GMAPS_LIBS,
   });
 
+  const currentLocRef = useRef<{ lat: number; lng: number } | null>(null);
+
   useEffect(() => {
     const draft = getBookingDraft();
     if (draft) setDraftBanner("show");
   }, []);
+
+  /* Capture the visitor's current location so pickup suggestions default to
+     nearby places. */
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        currentLocRef.current = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        biasPickupToCurrent();
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const biasPickupToCurrent = () => {
+    const loc = currentLocRef.current;
+    if (!mapsLoaded || !loc || typeof google === "undefined" || !pickupAutoRef.current) return;
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(new google.maps.LatLng(loc.lat - 0.35, loc.lng - 0.35));
+    bounds.extend(new google.maps.LatLng(loc.lat + 0.35, loc.lng + 0.35));
+    pickupAutoRef.current.setBounds(bounds);
+  };
 
   const restoreDraft = () => {
     const draft = getBookingDraft();
@@ -324,7 +350,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
                   {mapsLoaded ? (
-                    <GPlacesAuto onLoad={a => { pickupAutoRef.current = a; }} onPlaceChanged={onPickupPlaceChanged}>
+                    <GPlacesAuto onLoad={a => { pickupAutoRef.current = a; biasPickupToCurrent(); }} onPlaceChanged={onPickupPlaceChanged}>
                       <input value={pickup} onChange={e => setPickup(e.target.value)}
                         placeholder="Enter pickup location"
                         className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none w-full" />

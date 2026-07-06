@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState, Suspense } from "react";
+import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 
 const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
@@ -44,6 +44,47 @@ function PickupContent() {
 
   const pickupAutoRef = useRef<google.maps.places.Autocomplete | null>(null);
   const dropoffAutoRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [currentLoc, setCurrentLoc] = useState<{ lat: number; lng: number } | null>(null);
+
+  /* Ask for the rider's current location on mount so pickup suggestions default
+     to nearby places (and prefill the pickup field when empty). */
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setCurrentLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+    );
+  }, []);
+
+  /* Bias the pickup Autocomplete toward the current location so its dropdown
+     suggestions are the nearest places first. */
+  const biasPickupToCurrent = useCallback(() => {
+    if (!isLoaded || !currentLoc || typeof google === "undefined" || !pickupAutoRef.current) return;
+    const c = new google.maps.LatLng(currentLoc.lat, currentLoc.lng);
+    const bounds = new google.maps.LatLngBounds();
+    /* ~±0.35° ≈ a metro-area box around the rider */
+    bounds.extend(new google.maps.LatLng(currentLoc.lat - 0.35, currentLoc.lng - 0.35));
+    bounds.extend(new google.maps.LatLng(currentLoc.lat + 0.35, currentLoc.lng + 0.35));
+    pickupAutoRef.current.setBounds(bounds);
+    void c;
+  }, [isLoaded, currentLoc]);
+
+  useEffect(() => {
+    biasPickupToCurrent();
+    /* If the rider hasn't typed/selected a pickup yet, prefill it with their
+       current address so the default pickup IS their current location. */
+    if (isLoaded && currentLoc && !pickup && typeof google !== "undefined") {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ location: currentLoc }, (results, status) => {
+        if (status === "OK" && results?.[0]?.formatted_address) {
+          setPickup(results[0].formatted_address);
+          setSelectedPoint(currentLoc);
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, currentLoc, biasPickupToCurrent]);
 
   const reverseGeocode = (lat: number, lng: number): Promise<string> => {
     return new Promise((resolve) => {
@@ -175,7 +216,7 @@ function PickupContent() {
             <div className="flex-1 rounded-lg px-3 py-2.5 border-[1.5px]" style={{ borderColor: "#131936" }}>
               {isLoaded ? (
                 <Autocomplete
-                  onLoad={(ref) => { pickupAutoRef.current = ref; }}
+                  onLoad={(ref) => { pickupAutoRef.current = ref; biasPickupToCurrent(); }}
                   onPlaceChanged={onPickupPlaceChanged}
                 >
                   <input
