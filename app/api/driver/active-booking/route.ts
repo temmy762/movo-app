@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { computeDriverEarning } from "@/lib/earnings";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -19,14 +20,24 @@ export async function GET(req: NextRequest) {
       clientName: true,
       pickup: true,
       dropoff: true,
+      carTier: true,
       carName: true,
       total: true,
       fare: true,
       paymentStatus: true,
       status: true,
       startedAt: true,
+      scheduledAt: true,
     },
   });
 
-  return NextResponse.json({ booking: booking ?? null });
+  if (!booking) return NextResponse.json({ booking: null });
+
+  const driver = await prisma.driver.findUnique({
+    where: { id: session.driverId },
+    select: { fleetDriverSplit: true },
+  });
+  const earning = await computeDriverEarning(booking.fare, booking.carTier, driver);
+
+  return NextResponse.json({ booking: { ...booking, earning } });
 }

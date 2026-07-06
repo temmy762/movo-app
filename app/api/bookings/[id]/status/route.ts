@@ -61,19 +61,40 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         },
       });
 
-      /* Notify rider that a driver has accepted */
+      /* Notify rider that a chauffeur has accepted.
+         Immediate ride → "your chauffeur is on the way" (email + SMS + in-app).
+         Scheduled ride → "reservation confirmed for <time>" (in-app only). We do
+         NOT send the "on the way" SMS days ahead — that fires when the chauffeur
+         actually starts heading to pickup on the scheduled date (start route). */
+      const isScheduledAccept = booking?.scheduledAt
+        && new Date(booking.scheduledAt).getTime() > Date.now() + 25 * 60 * 1000;
       if (booking?.user?.email && booking.driver) {
-        sendNotification({
-          eventType: "RIDER_DRIVER_ASSIGNED",
-          recipient: { type: "user", id: booking.user.id, email: booking.user.email, firstName: booking.user.firstName, phone: booking.user.phone ?? undefined },
-          data: {
-            bookingId: id,
-            driverName: `${booking.driver.firstName} ${booking.driver.lastName}`,
-            vehicle: booking.driver.vehicle ? `${booking.driver.vehicle.make} ${booking.driver.vehicle.model} (${booking.driver.vehicle.plate})` : "N/A",
-            pickup: booking.pickup,
-            dropoff: booking.dropoff,
-          },
-        }).catch(() => {});
+        const driverName = `${booking.driver.firstName} ${booking.driver.lastName}`;
+        const vehicle = booking.driver.vehicle ? `${booking.driver.vehicle.make} ${booking.driver.vehicle.model} (${booking.driver.vehicle.plate})` : "N/A";
+        if (isScheduledAccept) {
+          const whenLabel = new Date(booking.scheduledAt!).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+          sendNotification({
+            eventType: "RIDER_DRIVER_ASSIGNED",
+            channels: ["IN_APP"],
+            recipient: { type: "user", id: booking.user.id, email: booking.user.email, firstName: booking.user.firstName, phone: booking.user.phone ?? undefined },
+            data: {
+              bookingId: id,
+              title: "Reservation confirmed",
+              message: `${driverName} is confirmed for your ride on ${whenLabel}. You'll be notified when they set off.`,
+              driverName, vehicle, pickup: booking.pickup, dropoff: booking.dropoff,
+            },
+          }).catch(() => {});
+        } else {
+          sendNotification({
+            eventType: "RIDER_DRIVER_ASSIGNED",
+            recipient: { type: "user", id: booking.user.id, email: booking.user.email, firstName: booking.user.firstName, phone: booking.user.phone ?? undefined },
+            data: {
+              bookingId: id,
+              driverName, vehicle,
+              pickup: booking.pickup, dropoff: booking.dropoff,
+            },
+          }).catch(() => {});
+        }
       }
 
       /* Notify driver of their new assignment */

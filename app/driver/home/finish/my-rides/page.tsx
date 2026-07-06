@@ -8,6 +8,7 @@ type Ride = {
   clientName: string;
   carName: string;
   fare: number;
+  earning?: number;
   pickup: string;
   dropoff: string;
   status: string;
@@ -75,7 +76,7 @@ function RideCard({
         </div>
         <div className="flex flex-col items-end gap-1">
           <span className="text-[14px] font-bold" style={{ color: "#131936" }}>
-            £{ride.fare.toFixed(2)}
+            ${(ride.earning ?? 0).toFixed(2)}
           </span>
           {isUpcoming && <StatusBadge status={ride.status} />}
         </div>

@@ -17,6 +17,7 @@ type Booking = {
   dropoff: string;
   carName: string;
   total: number;
+  earning?: number;
   paymentStatus: string;
   status: string;
 };
@@ -79,6 +80,7 @@ export default function DriverHomePage() {
   const [navEta,        setNavEta]        = useState<string | null>(null);
   const [careAssignment,   setCareAssignment]   = useState<CareAssignment | null>(null);
   const [coDriver,         setCoDriver]         = useState<CoDriver | null>(null);
+  const [careEarning,      setCareEarning]      = useState<number>(0);
   type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started";
   const [carePhase,        setCarePhase]        = useState<CarePhase>("idle");
   const [careLoading,      setCareLoading]      = useState(false);
@@ -181,15 +183,15 @@ export default function DriverHomePage() {
       })
       .catch(() => {});
 
-    /* New booking arrived → trigger request alert exactly like polling would */
+    /* New booking arrived → pull the enriched pool record (includes this
+       driver's payout) rather than trusting the lean socket payload, so the
+       offer card shows earnings, not the customer total. */
     const unsubCreated = on(SOCKET_EVENTS.BOOKING_CREATED, (data) => {
       if (ridePhase !== "searching") return;
-      const b = data as { id: string; pickup: string; dropoff: string; carTier: string; carName: string; total: number; status: string };
-      /* Skip bookings this driver already declined */
+      const b = data as { id: string; status: string };
       if (declinedIdsRef.current.has(b.id)) return;
       if (b.status === "PENDING" || b.status === "CONFIRMED") {
-        setActiveBooking(b as Booking);
-        setRidePhase("requesting");
+        fetchNextPending();
       }
     });
 
@@ -212,10 +214,11 @@ export default function DriverHomePage() {
       if (carePhase !== "idle") return;
       fetch("/api/care/driver")
         .then(r => r.json())
-        .then(({ assignment, coDriver: co }) => {
+        .then(({ assignment, coDriver: co, earning }) => {
           if (assignment && assignment.id === d.assignmentId) {
             setCareAssignment(assignment as CareAssignment);
             setCoDriver(co ?? null);
+            setCareEarning(earning ?? 0);
             setCarePhase("requesting");
             playRequestAlert();
             startCountdown(() => {
@@ -235,10 +238,11 @@ export default function DriverHomePage() {
       if (carePhase !== "idle") return;
       fetch("/api/care/driver")
         .then(r => r.json())
-        .then(({ assignment, coDriver: co }) => {
+        .then(({ assignment, coDriver: co, earning }) => {
           if (assignment?.booking?.id === d.bookingId) {
             setCareAssignment(assignment as CareAssignment);
             setCoDriver(co ?? null);
+            setCareEarning(earning ?? 0);
             setCarePhase("requesting");
             playRequestAlert();
             startCountdown(() => {
@@ -273,10 +277,11 @@ export default function DriverHomePage() {
   useEffect(() => {
     fetch("/api/care/driver")
       .then(r => r.json())
-      .then(({ assignment, coDriver: co }) => {
+      .then(({ assignment, coDriver: co, earning }) => {
         if (assignment) {
           setCareAssignment(assignment as CareAssignment);
           setCoDriver(co ?? null);
+          setCareEarning(earning ?? 0);
           const s = assignment.status;
           if (s === "PENDING")  setCarePhase("requesting");
           if (s === "ACCEPTED") setCarePhase("accepted");
@@ -844,12 +849,15 @@ export default function DriverHomePage() {
                 </>
               )}
             </div>
-            {/* Client + fare */}
+            {/* Client + chauffeur earnings */}
             <div className="flex items-center justify-between mb-3 bg-gray-50 rounded-xl px-3 py-2">
               <p className="text-[13px] font-semibold text-gray-800">{careAssignment.booking.clientName}</p>
-              <p className="text-[13px] font-bold" style={{ color: "#C6BFB2" }}>
-                ${careAssignment.booking.total.toFixed(2)}
-              </p>
+              <div className="text-right">
+                <p className="text-[9px] text-gray-400 leading-none mb-0.5">Your earnings</p>
+                <p className="text-[13px] font-bold leading-none" style={{ color: "#C6BFB2" }}>
+                  ${careEarning.toFixed(2)}
+                </p>
+              </div>
             </div>
             {/* CTA */}
             {carePhase === "requesting" && (
@@ -1014,8 +1022,10 @@ export default function DriverHomePage() {
             {ridePhase === "requesting" && (
               <>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-[12px] font-semibold text-gray-700">Payment</p>
-                  <p className="text-[13px] font-bold" style={{ color: "#C6BFB2" }}>${activeBooking.total.toFixed(2)}</p>
+                  <p className="text-[12px] font-semibold text-gray-700">Your earnings</p>
+                  <p className="text-[13px] font-bold" style={{ color: "#C6BFB2" }}>
+                    ${(activeBooking.earning ?? 0).toFixed(2)}
+                  </p>
                 </div>
                 <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 mb-4">
                   <div className="flex items-center gap-2">

@@ -8,10 +8,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [earned, preBooked] = await Promise.all([
-    prisma.booking.aggregate({
-      where: { driverId: session.driverId, status: "COMPLETED", paymentStatus: "PAID" },
-      _sum: { fare: true },
+  /* Total earned = the chauffeur's actual credited payouts (EARNING wallet
+     transactions, already net of commission + fleet split), NOT the raw
+     customer fare — matches the wallet and what they're actually paid. */
+  const [earnings, preBooked] = await Promise.all([
+    prisma.walletTransaction.aggregate({
+      where: { driverId: session.driverId, type: "EARNING", status: "COMPLETED" },
+      _sum: { amount: true },
     }),
     prisma.booking.count({
       where: {
@@ -22,7 +25,7 @@ export async function GET(req: NextRequest) {
   ]);
 
   return NextResponse.json({
-    totalEarned: earned._sum.fare ?? 0,
+    totalEarned: parseFloat((earnings._sum.amount ?? 0).toFixed(2)),
     preBooked,
   });
 }

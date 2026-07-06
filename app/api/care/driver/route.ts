@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { computeCareEarning } from "@/lib/earnings";
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,6 +33,7 @@ export async function GET(req: NextRequest) {
             dropoffLat: true,
             dropoffLng: true,
             carName: true,
+            fare: true,
             total: true,
             paymentStatus: true,
             status: true,
@@ -86,7 +88,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ assignment: assignment ?? null, coDriver });
+    /* Per-chauffeur Safe Ride payout (net after care commission, split 50/50) */
+    const earning = assignment?.booking
+      ? await computeCareEarning(assignment.booking.fare)
+      : 0;
+
+    return NextResponse.json({ assignment: assignment ?? null, coDriver, earning });
   } catch (e) {
     console.error("[care driver GET]", e);
     return NextResponse.json({ error: "Failed to fetch assignment" }, { status: 500 });

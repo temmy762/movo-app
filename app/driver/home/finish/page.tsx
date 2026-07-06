@@ -12,6 +12,7 @@ type Ride = {
   carName: string;
   fare: number;
   total: number;
+  earning?: number;
   paymentStatus: string;
   createdAt: string;
 };
@@ -153,7 +154,7 @@ export default function FinishPage() {
               </div>
               <div className="text-right">
                 <p className="text-[11px] text-gray-400">Earnings</p>
-                <p className="text-[15px] font-bold" style={{ color: "#131936" }}>${ride.fare.toFixed(2)}</p>
+                <p className="text-[15px] font-bold" style={{ color: "#131936" }}>${(ride.earning ?? 0).toFixed(2)}</p>
               </div>
             </div>
           </div>

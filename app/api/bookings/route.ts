@@ -7,6 +7,7 @@ import { sendNotification } from "@/lib/notifications";
 import { pushToOnlineDriversByTier, pushToAllDriversByTier } from "@/lib/webpush";
 import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
 import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
+import { computeDriverEarning } from "@/lib/earnings";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     if (session?.driverId && status === "PENDING") {
       const driver = await prisma.driver.findUnique({
         where: { id: session.driverId },
-        select: { vehicle: { select: { tier: true } } },
+        select: { vehicle: { select: { tier: true } }, fleetDriverSplit: true },
       });
       const tier = driver?.vehicle?.tier ?? null;
 
@@ -45,7 +46,16 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: "asc" },
       });
-      return NextResponse.json(bookings);
+
+      /* Attach each booking's chauffeur payout (net of commission + split) so
+         the offer card shows the driver's earnings, not the customer total. */
+      const enriched = await Promise.all(
+        bookings.map(async (b) => ({
+          ...b,
+          earning: await computeDriverEarning(b.fare, b.carTier, driver),
+        })),
+      );
+      return NextResponse.json(enriched);
     }
 
     /* ── Admin / general query ── */
@@ -120,8 +130,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    /* Notify rider when booking auto-confirms on payment */
-    if (resolvedStatus === "CONFIRMED" && userId) {
+    /* Notify rider that their PAYMENT was received and we're finding a chauffeur.
+       This is NOT "Ride Confirmed" — that only fires once a chauffeur actually
+       accepts (RIDER_DRIVER_ASSIGNED in the status route). In-app only, so we
+       don't send a premature "confirmed" email/SMS. */
+    if (resolvedPaymentStatus === "PAID" && userId) {
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { email: true, firstName: true, lastName: true, phone: true },
@@ -129,15 +142,16 @@ export async function POST(req: NextRequest) {
       if (user?.email) {
         sendNotification({
           eventType: "RIDER_BOOKING_CONFIRMED",
+          channels: ["IN_APP"],
           recipient: { type: "user", id: userId, email: user.email, firstName: user.firstName, phone: user.phone ?? undefined },
           data: {
             bookingId: booking.id,
-            pickup,
-            dropoff,
-            carTier,
-            fare: Number(fare),
-            serviceFee: Number(serviceFee),
-            total: Number(total),
+            title: "Booking received",
+            message: isScheduled
+              ? "Payment received — we'll line up your chauffeur ahead of your scheduled time."
+              : "Payment received — we're finding your chauffeur now.",
+            pickup, dropoff, carTier,
+            fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total),
           },
         }).catch(() => {});
       }
