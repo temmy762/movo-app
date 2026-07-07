@@ -57,7 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id },
         include: {
           user:   { select: { id: true, email: true, firstName: true, phone: true } },
-          driver: { select: { id: true, phone: true, firstName: true, lastName: true, vehicle: { select: { make: true, model: true, plate: true } } } },
+          driver: { select: { id: true, email: true, phone: true, firstName: true, lastName: true, vehicle: { select: { make: true, model: true, plate: true } } } },
         },
       });
 
@@ -97,13 +97,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         }
       }
 
-      /* Notify driver of their new assignment */
+      /* Notify the accepting chauffeur. For a scheduled reservation, email them
+         (real address) prompting them to log in and review it in Reserved Rides
+         — the previous code passed email:"" so no email ever went out. */
       if (booking?.driver?.id) {
-        sendNotification({
-          eventType: "CHAUFFEUR_BOOKING_ASSIGNED",
-          recipient: { type: "driver", id: booking.driver.id, email: "", firstName: booking.driver.firstName, phone: booking.driver.phone ?? undefined },
-          data: { bookingId: id, pickup: booking?.pickup, dropoff: booking?.dropoff },
-        }).catch(() => {});
+        const driverName = `${booking.driver.firstName} ${booking.driver.lastName}`;
+        if (isScheduledAccept) {
+          const whenLabel = new Date(booking.scheduledAt!).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+          sendNotification({
+            eventType: "CHAUFFEUR_BOOKING_ASSIGNED",
+            channels: ["EMAIL", "IN_APP"],
+            recipient: { type: "driver", id: booking.driver.id, email: booking.driver.email ?? "", firstName: booking.driver.firstName, phone: booking.driver.phone ?? undefined },
+            data: {
+              bookingId: id,
+              title: "New reservation confirmed",
+              message: `You have a reserved ride on ${whenLabel} — pickup ${booking.pickup}. Log in to review it in Reserved Rides and set off on the day.`,
+              driverName, pickup: booking.pickup, dropoff: booking.dropoff, scheduledAt: whenLabel,
+            },
+          }).catch(() => {});
+        } else {
+          sendNotification({
+            eventType: "CHAUFFEUR_BOOKING_ASSIGNED",
+            recipient: { type: "driver", id: booking.driver.id, email: booking.driver.email ?? "", firstName: booking.driver.firstName, phone: booking.driver.phone ?? undefined },
+            data: { bookingId: id, pickup: booking?.pickup, dropoff: booking?.dropoff },
+          }).catch(() => {});
+        }
       }
 
       /* Socket: instant update to rider + admin */

@@ -29,20 +29,16 @@ export async function GET(req: NextRequest) {
              they are dispatched exclusively via CareAssignment (dispatchPrimary/
              dispatchSupport), which targets specific drivers individually. */
           bookingType: { not: "CARE" },
-          OR: [
-            // Pool bookings: paid, unassigned, tier-matched (PENDING or CONFIRMED-without-driver)
-            {
-              driverId: null,
-              paymentStatus: "PAID",
-              status: { in: ["PENDING", "CONFIRMED"] },
-              ...(tier ? { carTier: tier } : {}),
-            },
-            // Direct bookings: rider picked this specific driver (any payment status)
-            {
-              driverId: session.driverId,
-              status: { in: ["PENDING", "CONFIRMED"] },
-            },
-          ],
+          /* Only unclaimed, paid, tier-matched bookings. Every ride is now
+             broadcast (no rider-picks-a-driver "direct" bookings since the
+             funnel overhaul), so once a chauffeur accepts, driverId is set and
+             the ride drops out of the pool — it must NOT resurface as a new
+             incoming request (that's what pulled just-accepted reserved and
+             active rides back into the offer feed). */
+          driverId: null,
+          paymentStatus: "PAID",
+          status: { in: ["PENDING", "CONFIRMED"] },
+          ...(tier ? { carTier: tier } : {}),
         },
         orderBy: { createdAt: "asc" },
       });

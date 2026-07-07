@@ -18,6 +18,7 @@ type Booking = {
   carName: string;
   total: number;
   earning?: number;
+  scheduledAt?: string | null;
   paymentStatus: string;
   status: string;
 };
@@ -81,6 +82,7 @@ export default function DriverHomePage() {
   const [careAssignment,   setCareAssignment]   = useState<CareAssignment | null>(null);
   const [coDriver,         setCoDriver]         = useState<CoDriver | null>(null);
   const [careEarning,      setCareEarning]      = useState<number>(0);
+  const [reservationConfirmed, setReservationConfirmed] = useState(false);
   type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started";
   const [carePhase,        setCarePhase]        = useState<CarePhase>("idle");
   const [careLoading,      setCareLoading]      = useState(false);
@@ -494,8 +496,22 @@ export default function DriverHomePage() {
       startPolling(fetchNextPending);
       return;
     }
-    setRidePhase("accepted");
     declinedIdsRef.current.clear();
+
+    /* Scheduled ride → this is a RESERVATION, not a drive-now job. Confirm it,
+       drop it into Reserved Rides (Planned), and keep the driver searching for
+       immediate work. They'll activate it from Planned on the scheduled date. */
+    const isScheduledAccept = activeBooking.scheduledAt
+      && new Date(activeBooking.scheduledAt).getTime() > Date.now() + 25 * 60 * 1000;
+    if (isScheduledAccept) {
+      setActiveBooking(null);
+      setReservationConfirmed(true);
+      setRidePhase("searching");
+      startPolling(fetchNextPending);
+      return;
+    }
+
+    setRidePhase("accepted");
   }
 
   async function handleDecline() {
@@ -1191,6 +1207,33 @@ export default function DriverHomePage() {
               ))}
             </nav>
           </aside>
+        </div>
+      )}
+
+      {/* Reservation confirmed modal (scheduled ride accepted) */}
+      {reservationConfirmed && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
+            <div className="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center mb-3">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg>
+            </div>
+            <p className="text-[16px] font-bold text-gray-900 mb-1">Reservation confirmed</p>
+            <p className="text-[13px] text-gray-500 text-center mb-5">
+              This scheduled ride is now in your Reserved Rides. Head there on the day to start the trip.
+            </p>
+            <div className="flex gap-3 w-full">
+              <button type="button" onClick={() => setReservationConfirmed(false)}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl border border-gray-300 text-[14px] font-semibold text-gray-700">
+                Keep driving
+              </button>
+              <button type="button" onClick={() => { setReservationConfirmed(false); router.push("/driver/home/planned"); }}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[14px]"
+                style={{ background: "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                View Reserved
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

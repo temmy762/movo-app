@@ -271,6 +271,7 @@ model Booking {
   driverFeedback        String?
   scheduledAt           DateTime?
   acceptedAt            DateTime?
+  enRouteAt             DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
   cancelledAt           DateTime?

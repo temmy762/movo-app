@@ -13,6 +13,17 @@ export async function GET(req: NextRequest) {
     where: {
       driverId: session.driverId,
       status: "CONFIRMED",
+      /* Exclude future reserved rides — a scheduled ride the chauffeur accepted
+         but hasn't set off for yet lives in Reserved Rides, not the active flow.
+         It becomes "active" once enRouteAt/startedAt is set, or once its
+         scheduled time has arrived. */
+      NOT: {
+        AND: [
+          { scheduledAt: { gt: new Date() } },
+          { enRouteAt: null },
+          { startedAt: null },
+        ],
+      },
     },
     orderBy: { createdAt: "desc" },
     select: {
