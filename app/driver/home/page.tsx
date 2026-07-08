@@ -68,7 +68,8 @@ export default function DriverHomePage() {
   const lowRatingNeedsFeedback = tripRating > 0 && tripRating <= 3 && !tripFeedback.trim();
   const [actionLoading, setActionLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [stats, setStats] = useState<{ totalEarned: number; preBooked: number }>({ totalEarned: 0, preBooked: 0 });
+  const [stats, setStats] = useState<{ totalEarned: number; todayEarned: number; preBooked: number; tripsCompleted: number; tripsToday: number }>({ totalEarned: 0, todayEarned: 0, preBooked: 0, tripsCompleted: 0, tripsToday: 0 });
+  const [driverName, setDriverName] = useState<string>("");
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const geoWatchRef     = useRef<number | null>(null);
@@ -149,10 +150,19 @@ export default function DriverHomePage() {
 
   useEffect(() => {
     fetch("/api/driver/stats")
-      .then((r) => r.ok ? r.json() : { totalEarned: 0, preBooked: 0 })
-      .then((d) => setStats(d))
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setStats(s => ({ ...s, ...d })); })
+      .catch(() => {});
+    fetch("/api/driver/profile")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.firstName) setDriverName(d.firstName); })
       .catch(() => {});
   }, []);
+
+  const greeting = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  })();
 
   useEffect(() => {
     return () => {
@@ -720,23 +730,28 @@ export default function DriverHomePage() {
 
       <div className="relative z-10 flex flex-col h-full">
 
-        {/* Header */}
+        {/* Header — greeting + status + quick actions */}
         <header className="flex items-center justify-between px-4 pt-4 pb-2">
-          <button className="no-hover-fx md:hidden w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow" onClick={() => setShowMenu(true)}>
+          <button className="no-hover-fx md:hidden shrink-0 mr-2 w-9 h-9 bg-white rounded-lg flex items-center justify-center shadow" onClick={() => setShowMenu(true)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-bold text-white leading-tight truncate" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
+              {greeting}{driverName ? `, ${driverName}` : ""}
+            </p>
+            <p className="text-[11px] font-semibold leading-tight" style={{ color: isOnline ? "#4ade80" : "rgba(255,255,255,0.75)", textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}>
+              {isOnline ? "You're online" : "You're offline"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <button
               className="no-hover-fx w-8 h-8 bg-white rounded-full flex items-center justify-center shadow"
               onClick={() => router.push("/driver/home/profile")}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
               </svg>
             </button>
             <button
@@ -746,38 +761,31 @@ export default function DriverHomePage() {
                 ? { background: "linear-gradient(90deg,#131936,#C6BFB2)", color: "white" }
                 : { background: "white", color: "#374151" }}
             >
-              {isOnline ? "Online 🇬🇧" : "Offline"}
+              {isOnline ? "Online" : "Offline"}
             </button>
           </div>
         </header>
 
-        {/* Stat chips — offline only */}
+        {/* Stat tiles — offline only: Today's Earnings + Trips Completed */}
         {!isOnline && (
-          <div className="flex gap-3 px-4 mt-3">
-            <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm">
-              <div className="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-              </div>
+          <div className="grid grid-cols-2 gap-3 px-4 mt-3">
+            <div className="flex items-center justify-between bg-white rounded-2xl px-3.5 py-3 shadow-sm">
               <div>
-                <p className="text-[10px] text-gray-400 leading-none">Pre Booked</p>
-                <p className="text-[13px] font-bold text-gray-800">{stats.preBooked}</p>
+                <p className="text-[11px] text-gray-400 leading-none mb-1">Today&apos;s Earnings</p>
+                <p className="text-[17px] font-extrabold text-gray-900 leading-none">${stats.todayEarned.toFixed(2)}</p>
               </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f8cff" strokeWidth="2">
+                <line x1="6" y1="20" x2="6" y2="14" /><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" />
+              </svg>
             </div>
-            <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm">
-              <div className="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                  <rect x="2" y="6" width="20" height="12" rx="2" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </div>
+            <div className="flex items-center justify-between bg-white rounded-2xl px-3.5 py-3 shadow-sm">
               <div>
-                <p className="text-[10px] text-gray-400 leading-none">Total Earned</p>
-                <p className="text-[13px] font-bold text-gray-800">${stats.totalEarned.toFixed(2)}</p>
+                <p className="text-[11px] text-gray-400 leading-none mb-1">Trips Completed</p>
+                <p className="text-[17px] font-extrabold text-gray-900 leading-none">{stats.tripsToday}</p>
               </div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" /><polyline points="9 12 11.5 14.5 16 9.5" />
+              </svg>
             </div>
           </div>
         )}
@@ -1189,9 +1197,10 @@ export default function DriverHomePage() {
             <nav className="flex flex-col gap-1">
               {([
                 { label: "Home",    href: "/driver/home",         icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg> },
-                { label: "Offers",  href: "/driver/home/offers",  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7" strokeLinecap="round" strokeWidth="2.5"/></svg> },
-                { label: "Planned", href: "/driver/home/planned", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" strokeWidth="3"/><line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" strokeWidth="3"/><line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" strokeWidth="3"/></svg> },
-                { label: "Finish",  href: "/driver/home/finish",  icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg> },
+                { label: "Reserved Rides", href: "/driver/home/planned", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
+                { label: "Today's Rides", href: "/driver/home/finish/my-rides", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg> },
+                { label: "Earnings", href: "/driver/home/wallet", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.3a2.6 2.6 0 0 0-2.5-1.6c-1.4 0-2.5.9-2.5 2s1.1 1.7 2.5 2 2.5.9 2.5 2-1.1 2-2.5 2a2.6 2.6 0 0 1-2.5-1.6"/><line x1="12" y1="6" x2="12" y2="7.7"/><line x1="12" y1="16.3" x2="12" y2="18"/></svg> },
+                { label: "Inbox",   href: "/driver/home/news",    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg> },
                 { label: "Report Found Item", href: "/driver/home/report-found-item", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
                 { label: "Profile", href: "/driver/home/profile", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> },
               ] as { label: string; href: string; icon: React.ReactNode }[]).map(item => (
