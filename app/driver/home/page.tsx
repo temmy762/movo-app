@@ -70,6 +70,9 @@ export default function DriverHomePage() {
   const [showMenu, setShowMenu] = useState(false);
   const [stats, setStats] = useState<{ totalEarned: number; todayEarned: number; preBooked: number; tripsCompleted: number; tripsToday: number }>({ totalEarned: 0, todayEarned: 0, preBooked: 0, tripsCompleted: 0, tripsToday: 0 });
   const [driverName, setDriverName] = useState<string>("");
+  type ReservedRide = { id: string; clientName: string; pickup: string; dropoff: string; carName: string; scheduledAt: string | null; earning: number };
+  const [reserved, setReserved] = useState<ReservedRide[]>([]);
+  const [mapExpanded, setMapExpanded] = useState(false);
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const geoWatchRef     = useRef<number | null>(null);
@@ -157,6 +160,10 @@ export default function DriverHomePage() {
     fetch("/api/driver/profile")
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.firstName) setDriverName(d.firstName); })
+      .catch(() => {});
+    fetch("/api/driver/reserved")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (Array.isArray(d)) setReserved(d); })
       .catch(() => {});
   }, []);
 
@@ -728,15 +735,267 @@ export default function DriverHomePage() {
     setShowCareComplete(true);
   }
 
+  /* Active trip (standard accepted/arrived/started, or any Care assignment) keeps
+     the fullscreen map + white bottom-sheet pattern; everything else renders the
+     dark scrolling dashboard. */
+  const inTrip =
+    carePhase !== "idle" ||
+    ridePhase === "accepted" || ridePhase === "arrived" || ridePhase === "started";
+
+  const darkCard: React.CSSProperties = { background: "#14141C", border: "1px solid rgba(255,255,255,0.08)" };
+
   return (
-    <div className="relative h-full flex flex-col overflow-hidden" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="relative h-full flex flex-col overflow-hidden" style={{ fontFamily: "var(--font-body)", background: "#0A0A0F" }}>
+
+      {/* ── Dark dashboard — idle / searching / incoming request ── */}
+      {!inTrip && (
+        <div className="relative z-10 h-full overflow-y-auto">
+          <div className="max-w-lg mx-auto px-4 pt-4 pb-8 flex flex-col gap-4">
+
+            {/* Header — greeting + bell + settings */}
+            <header className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <button className="no-hover-fx md:hidden shrink-0 w-9 h-9 rounded-xl flex items-center justify-center" style={darkCard} onClick={() => setShowMenu(true)}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+                  </svg>
+                </button>
+                <div className="min-w-0">
+                  <p className="text-[16px] font-bold text-white leading-tight truncate">
+                    {greeting}{driverName ? `, ${driverName}` : ""}
+                  </p>
+                  <p className="text-[11px] font-semibold leading-tight" style={{ color: isOnline ? "#4ade80" : "rgba(255,255,255,0.5)" }}>
+                    {isOnline ? "You're online" : "You're offline"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button className="no-hover-fx w-9 h-9 rounded-full flex items-center justify-center" style={darkCard}
+                  onClick={() => router.push("/driver/home/news")}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </button>
+                <button className="no-hover-fx w-9 h-9 rounded-full flex items-center justify-center" style={darkCard}
+                  onClick={() => router.push("/driver/home/profile")}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                    <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                  </svg>
+                </button>
+              </div>
+            </header>
+
+            {/* Online / offline toggle card */}
+            <div className="flex items-center justify-between rounded-2xl px-4 py-4"
+              style={isOnline
+                ? { background: "linear-gradient(135deg,#131936,#1e2a5e)", border: "1px solid rgba(198,191,178,0.35)" }
+                : darkCard}>
+              <div className="min-w-0 pr-3">
+                <p className="text-[14px] font-bold text-white leading-tight">
+                  {isOnline ? "You're online" : "You're offline"}
+                </p>
+                <p className="text-[11px] leading-tight mt-0.5" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {isOnline ? "Receiving ride requests" : "Go online to start receiving rides"}
+                </p>
+              </div>
+              <button onClick={handleToggleOnline}
+                className="no-hover-fx shrink-0 w-[52px] h-[30px] rounded-full relative transition-colors duration-300"
+                style={{ background: isOnline ? "#C6BFB2" : "rgba(255,255,255,0.15)" }}>
+                <span className="absolute top-[3px] w-6 h-6 rounded-full bg-white transition-all duration-300 shadow"
+                  style={{ left: isOnline ? "23px" : "3px" }} />
+              </button>
+            </div>
+
+            {/* Map card — expandable */}
+            <div className="relative rounded-2xl overflow-hidden" style={{ height: mapExpanded ? "58vh" : "180px", transition: "height 0.3s ease", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <DriverMap position={driverPos} navPhase={ridePhase} darkTheme />
+              <button className="no-hover-fx absolute top-2 right-2 z-10 w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: "rgba(10,10,15,0.75)", border: "1px solid rgba(255,255,255,0.15)" }}
+                onClick={() => setMapExpanded(v => !v)}>
+                {mapExpanded ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                )}
+              </button>
+            </div>
+
+            {/* Incoming Ride Requests */}
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-[13px] font-bold text-white">Incoming Ride Requests</h2>
+                {ridePhase === "requesting" && activeBooking && (
+                  <span className="text-[12px] font-bold px-2.5 py-1 rounded-full"
+                    style={{ background: timeLeft <= 10 ? "#ef4444" : "rgba(255,255,255,0.12)", color: "white" }}>
+                    {timeLeft}s
+                  </span>
+                )}
+              </div>
+
+              {ridePhase === "requesting" && activeBooking ? (
+                <div className="rounded-2xl p-4" style={{ background: "#14141C", border: "1px solid rgba(198,191,178,0.45)" }}>
+                  {/* Chips row */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                    </span>
+                    <p className="text-[13px] font-bold text-white">New Ride Request</p>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: "rgba(198,191,178,0.15)", color: "#C6BFB2" }}>
+                      {activeBooking.scheduledAt ? "Scheduled" : "Standard"}
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-white/10 text-white/70">
+                      {activeBooking.carName}
+                    </span>
+                  </div>
+                  {activeBooking.scheduledAt && (
+                    <p className="text-[11px] font-semibold mb-2" style={{ color: "#C6BFB2" }}>
+                      {new Date(activeBooking.scheduledAt).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    </p>
+                  )}
+                  {/* Rider */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5">
+                          <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-white">{activeBooking.clientName}</p>
+                        <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>Booking #{activeBooking.id.slice(0, 8)}</p>
+                      </div>
+                    </div>
+                    {activeBooking.paymentStatus === "PAID" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80" }}>
+                        Paid
+                      </span>
+                    )}
+                  </div>
+                  {/* Route */}
+                  <div className="flex flex-col gap-1.5 mb-3">
+                    <div className="flex items-start gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ background: "#C6BFB2" }} />
+                      <p className="text-[12px] leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>{activeBooking.pickup}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-1" />
+                      <p className="text-[12px] leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>{activeBooking.dropoff}</p>
+                    </div>
+                  </div>
+                  {/* Earnings */}
+                  <div className="flex items-center justify-between rounded-xl px-3 py-2.5 mb-4" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <p className="text-[12px] font-semibold" style={{ color: "rgba(255,255,255,0.6)" }}>Est. Fare (your earnings)</p>
+                    <p className="text-[15px] font-extrabold" style={{ color: "#C6BFB2" }}>${(activeBooking.earning ?? 0).toFixed(2)}</p>
+                  </div>
+                  {/* CTA */}
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setShowDeclineModal(true)} disabled={actionLoading}
+                      className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px]"
+                      style={{ border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.8)" }}>
+                      Decline
+                    </button>
+                    <button type="button" onClick={handleAccept} disabled={actionLoading}
+                      className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
+                      style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+                      {actionLoading ? "…" : "Accept"}
+                    </button>
+                  </div>
+                </div>
+              ) : isOnline ? (
+                <div className="rounded-2xl px-4 py-5 flex flex-col items-center gap-2" style={darkCard}>
+                  <div className="w-7 h-7 border-[3px] rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.12)", borderTopColor: "#C6BFB2" }} />
+                  <p className="text-[13px] font-semibold text-white">Looking for ride requests…</p>
+                  <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.45)" }}>New requests will appear automatically</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl px-4 py-5 flex flex-col items-center gap-1.5" style={darkCard}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5">
+                    <path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/>
+                  </svg>
+                  <p className="text-[13px] font-semibold text-white">No incoming requests</p>
+                  <p className="text-[11px] text-center" style={{ color: "rgba(255,255,255,0.45)" }}>Go online to start receiving ride requests.</p>
+                </div>
+              )}
+            </section>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                { label: "Today's Earnings", value: `$${stats.todayEarned.toFixed(2)}` },
+                { label: "Trips Today",      value: `${stats.tripsToday}` },
+                { label: "Total Earned",     value: `$${stats.totalEarned.toFixed(2)}` },
+                { label: "Trips Completed",  value: `${stats.tripsCompleted}` },
+              ] as { label: string; value: string }[]).map(t => (
+                <div key={t.label} className="rounded-2xl px-3.5 py-3" style={darkCard}>
+                  <p className="text-[11px] leading-none mb-1.5" style={{ color: "rgba(255,255,255,0.45)" }}>{t.label}</p>
+                  <p className="text-[17px] font-extrabold text-white leading-none">{t.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Upcoming Reserved Rides */}
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-[13px] font-bold text-white">Upcoming Reserved Rides</h2>
+                <button className="no-hover-fx text-[11px] font-semibold" style={{ color: "#C6BFB2" }}
+                  onClick={() => router.push("/driver/home/planned")}>
+                  View all
+                </button>
+              </div>
+              {reserved.length === 0 ? (
+                <div className="rounded-2xl px-4 py-4" style={darkCard}>
+                  <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.45)" }}>No reserved rides yet. Accepted scheduled rides will appear here.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {reserved.slice(0, 2).map(r => (
+                    <button key={r.id} className="no-hover-fx rounded-2xl px-4 py-3 text-left w-full" style={darkCard}
+                      onClick={() => router.push("/driver/home/planned")}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                          <p className="text-[12px] font-bold text-white">
+                            {r.scheduledAt ? new Date(r.scheduledAt).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Scheduled"}
+                          </p>
+                        </div>
+                        <p className="text-[13px] font-extrabold" style={{ color: "#C6BFB2" }}>${(r.earning ?? 0).toFixed(2)}</p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-start gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ background: "#C6BFB2" }} />
+                          <p className="text-[11px] leading-tight truncate" style={{ color: "rgba(255,255,255,0.65)" }}>{r.pickup}</p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />
+                          <p className="text-[11px] leading-tight truncate" style={{ color: "rgba(255,255,255,0.65)" }}>{r.dropoff}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Active trip — fullscreen map + bottom sheets ── */}
+      {inTrip && (<>
 
       <DriverMap
         position={driverPos}
-        pickup={activeBooking?.pickup}
-        dropoff={activeBooking?.dropoff}
-        navPhase={ridePhase}
+        pickup={careAssignment
+          ? (careAssignment.role === "PRIMARY" ? careAssignment.booking.pickup : careAssignment.booking.dropoff)
+          : activeBooking?.pickup}
+        dropoff={careAssignment ? careAssignment.booking.dropoff : activeBooking?.dropoff}
+        navPhase={carePhase !== "idle" ? carePhase : ridePhase}
         onEta={setNavEta}
+        darkTheme
       />
 
       {/* Nav ETA overlay — shown during active ride phases */}
@@ -788,30 +1047,6 @@ export default function DriverHomePage() {
             </button>
           </div>
         </header>
-
-        {/* Stat tiles — offline only: Today's Earnings + Trips Completed */}
-        {!isOnline && (
-          <div className="grid grid-cols-2 gap-3 px-4 mt-3">
-            <div className="flex items-center justify-between bg-white rounded-2xl px-3.5 py-3 shadow-sm">
-              <div>
-                <p className="text-[11px] text-gray-400 leading-none mb-1">Today&apos;s Earnings</p>
-                <p className="text-[17px] font-extrabold text-gray-900 leading-none">${stats.todayEarned.toFixed(2)}</p>
-              </div>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f8cff" strokeWidth="2">
-                <line x1="6" y1="20" x2="6" y2="14" /><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" />
-              </svg>
-            </div>
-            <div className="flex items-center justify-between bg-white rounded-2xl px-3.5 py-3 shadow-sm">
-              <div>
-                <p className="text-[11px] text-gray-400 leading-none mb-1">Trips Completed</p>
-                <p className="text-[17px] font-extrabold text-gray-900 leading-none">{stats.tripsToday}</p>
-              </div>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" /><polyline points="9 12 11.5 14.5 16 9.5" />
-              </svg>
-            </div>
-          </div>
-        )}
 
         <div className="flex-1" />
 
@@ -991,55 +1226,15 @@ export default function DriverHomePage() {
           </div>
         )}
 
-        {/* Searching / waiting */}
-        {!careAssignment && ridePhase === "searching" && (
-          <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-5 pb-6 flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-gray-200 border-t-[#131936] rounded-full animate-spin" />
-            <p className="text-[14px] font-semibold text-gray-700">Looking for ride requests…</p>
-            <p className="text-[11px] text-gray-400">New requests will appear automatically</p>
-          </div>
-        )}
-
-
         {/* ── Bottom sheet — phase aware, swipe up/down to expand/collapse ── */}
-        {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "arrived" || ridePhase === "started") && activeBooking && (
+        {(ridePhase === "accepted" || ridePhase === "arrived" || ridePhase === "started") && activeBooking && (
           <div className="bg-white rounded-t-3xl shadow-2xl px-4 pt-4 pb-6 overflow-y-auto"
             style={{ maxHeight: PANEL_MAX_H[panelSize], transition: "max-height 0.3s ease" }}>
             {panelHandle}
 
-            {/* Rider info row — requesting + accepted + arrived */}
-            {(ridePhase === "requesting" || ridePhase === "accepted" || ridePhase === "arrived") && (
+            {/* Rider info row — accepted + arrived */}
+            {(ridePhase === "accepted" || ridePhase === "arrived") && (
               <>
-                {/* Incoming request banner */}
-                {ridePhase === "requesting" && (
-                  <div className="flex items-center justify-between mb-3 px-3 py-2 rounded-xl"
-                    style={{ background: "linear-gradient(90deg,#131936,#1e2a5e)" }}>
-                    <div className="flex items-center gap-2">
-                      {/* Pulsing dot */}
-                      <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
-                      </span>
-                      <p className="text-[13px] font-bold text-white tracking-wide">New Ride Request!</p>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-white/15 text-white/80">Standard</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-white/20 text-white">
-                        {activeBooking.carName}
-                      </span>
-                      <span
-                        className="text-[13px] font-bold w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{
-                          background: timeLeft <= 10 ? "#ef4444" : "rgba(255,255,255,0.15)",
-                          color: "white",
-                        }}
-                      >
-                        {timeLeft}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
                 {/* Accepted / arrived header */}
                 {(ridePhase === "accepted" || ridePhase === "arrived") && (
                 <div className="flex items-center justify-between mb-3">
@@ -1088,51 +1283,6 @@ export default function DriverHomePage() {
                 <p className="text-[12px] text-gray-600 leading-tight">{activeBooking.dropoff}</p>
               </div>
             </div>
-
-            {/* Payment — requesting only */}
-            {ridePhase === "requesting" && (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[12px] font-semibold text-gray-700">Your earnings</p>
-                  <p className="text-[13px] font-bold" style={{ color: "#C6BFB2" }}>
-                    ${(activeBooking.earning ?? 0).toFixed(2)}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex">
-                      <div className="w-5 h-5 rounded-full bg-green-500" />
-                      <div className="w-5 h-5 rounded-full bg-yellow-400 -ml-2" />
-                    </div>
-                    <p className="text-[13px] font-medium text-gray-700">
-                      {activeBooking.paymentStatus === "PAID" ? "Paid via Stripe" : "Pending Payment"}
-                    </p>
-                  </div>
-                  {activeBooking.paymentStatus === "PAID" && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* CTA buttons */}
-            {ridePhase === "requesting" && (
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setShowDeclineModal(true)}
-                  disabled={actionLoading}
-                  className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-700">
-                  Decline
-                </button>
-                <button type="button" onClick={handleAccept}
-                  disabled={actionLoading}
-                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
-                  style={{ background: actionLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
-                  {actionLoading ? "…" : "Accept"}
-                </button>
-              </div>
-            )}
 
             {ridePhase === "accepted" && (
               <div className="flex gap-3">
@@ -1200,6 +1350,8 @@ export default function DriverHomePage() {
           </div>
         )}
       </div>
+
+      </>)}
 
       {/* ── Slide-in nav drawer ── */}
       {showMenu && (

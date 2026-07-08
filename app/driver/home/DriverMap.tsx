@@ -29,6 +29,22 @@ const MAP_STYLES = [
   { featureType: "transit", elementType: "labels", stylers: [{ visibility: "off" }] },
 ];
 
+/* Night-mode styling matching the dark chauffeur dashboard (same palette as the
+   rider tracking map). */
+const DARK_STYLES = [
+  { elementType: "geometry",           stylers: [{ color: "#1a1a2e" }] },
+  { elementType: "labels.text.fill",   stylers: [{ color: "#8a8a9a" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
+  { featureType: "road",              elementType: "geometry",         stylers: [{ color: "#2c2c44" }] },
+  { featureType: "road",              elementType: "geometry.stroke",  stylers: [{ color: "#12121f" }] },
+  { featureType: "road",              elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
+  { featureType: "road.highway",      elementType: "geometry",         stylers: [{ color: "#3a3a58" }] },
+  { featureType: "road.highway",      elementType: "geometry.stroke",  stylers: [{ color: "#1a1a2e" }] },
+  { featureType: "water",             elementType: "geometry",         stylers: [{ color: "#0e1a2e" }] },
+  { featureType: "poi",               stylers: [{ visibility: "off" }] },
+  { featureType: "transit",           stylers: [{ visibility: "off" }] },
+];
+
 interface Props {
   position:  { lat: number; lng: number } | null;
   /** pickup address — show route driver→pickup when provided */
@@ -39,6 +55,8 @@ interface Props {
   navPhase?: "accepted" | "arrived" | "started" | string;
   /** called with live ETA text whenever directions are refreshed */
   onEta?:    (text: string) => void;
+  /** night-mode map styling to match the dark dashboard */
+  darkTheme?: boolean;
 }
 
 const PICKUP_PIN = encodeURIComponent(
@@ -56,7 +74,7 @@ const DEST_PIN = encodeURIComponent(
   </svg>`
 );
 
-export default function DriverMap({ position, pickup, dropoff, navPhase, onEta }: Props) {
+export default function DriverMap({ position, pickup, dropoff, navPhase, onEta, darkTheme }: Props) {
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
@@ -157,7 +175,7 @@ export default function DriverMap({ position, pickup, dropoff, navPhase, onEta }
         options={{
           disableDefaultUI: true,
           zoomControl: false,
-          styles: MAP_STYLES,
+          styles: darkTheme ? DARK_STYLES : MAP_STYLES,
           clickableIcons: false,
         }}
       >
