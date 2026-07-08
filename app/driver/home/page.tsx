@@ -92,6 +92,7 @@ export default function DriverHomePage() {
   const [careLoading,      setCareLoading]      = useState(false);
   const [careError,        setCareError]        = useState<string | null>(null);
   const [showCareComplete, setShowCareComplete] = useState(false);
+  const [cancelNotice,     setCancelNotice]     = useState<string | null>(null);
   usePushSubscription();
   const { join, on } = useSocket();
   /* Keep ridePhaseRef in sync so async callbacks can read current phase without stale closure */
@@ -217,9 +218,20 @@ export default function DriverHomePage() {
 
     /* Booking cancelled while driver had it active */
     const unsubCancelled = on(SOCKET_EVENTS.BOOKING_CANCELLED, (data) => {
-      const d = data as { bookingId: string };
+      const d = data as { bookingId: string; cancelledBy?: string };
       setActiveBooking(prev => {
         if (prev?.id === d.bookingId) {
+          stopCountdown();
+          stopAlert();
+          /* Tell the chauffeur WHY the ride vanished — previously it silently
+             flipped back to searching with no explanation. */
+          if (d.cancelledBy !== "driver") {
+            setCancelNotice(
+              d.cancelledBy === "admin"
+                ? "This ride was cancelled by Movo support. You're back in the queue for new requests."
+                : "The rider cancelled this ride. You're back in the queue for new requests."
+            );
+          }
           setRidePhase("searching");
           startPolling(fetchNextPending);
           return null;
@@ -735,11 +747,11 @@ export default function DriverHomePage() {
     setShowCareComplete(true);
   }
 
-  /* Active trip (standard accepted/arrived/started, or any Care assignment) keeps
-     the fullscreen map + white bottom-sheet pattern; everything else renders the
-     dark scrolling dashboard. */
+  /* Active trip (standard or Care accepted/arrived/started) keeps the fullscreen
+     map + white bottom-sheet pattern; everything else — including INCOMING
+     requests, standard and Care alike — renders inside the dark dashboard. */
   const inTrip =
-    carePhase !== "idle" ||
+    (carePhase !== "idle" && carePhase !== "requesting") ||
     ridePhase === "accepted" || ridePhase === "arrived" || ridePhase === "started";
 
   const darkCard: React.CSSProperties = { background: "#14141C", border: "1px solid rgba(255,255,255,0.08)" };
@@ -824,7 +836,7 @@ export default function DriverHomePage() {
             <section>
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-[13px] font-bold text-white">Incoming Ride Requests</h2>
-                {ridePhase === "requesting" && activeBooking && (
+                {((ridePhase === "requesting" && activeBooking) || (carePhase === "requesting" && careAssignment)) && (
                   <span className="text-[12px] font-bold px-2.5 py-1 rounded-full"
                     style={{ background: timeLeft <= 10 ? "#ef4444" : "rgba(255,255,255,0.12)", color: "white" }}>
                     {timeLeft}s
@@ -832,7 +844,77 @@ export default function DriverHomePage() {
                 )}
               </div>
 
-              {ridePhase === "requesting" && activeBooking ? (
+              {carePhase === "requesting" && careAssignment ? (
+                <div className="rounded-2xl p-4" style={{ background: "#14141C", border: "1px solid rgba(198,191,178,0.45)" }}>
+                  {/* Chips row */}
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="text-[14px]">🌟</span>
+                    <p className="text-[13px] font-bold text-white">Movo Care Ride</p>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                      style={{ background: "rgba(198,191,178,0.15)", color: "#C6BFB2" }}>
+                      {careAssignment.role === "PRIMARY" ? "Primary Chauffeur" : "Support Chauffeur"}
+                    </span>
+                  </div>
+                  {/* Client */}
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5">
+                        <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-white">{careAssignment.booking.clientName}</p>
+                      <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>Booking #{careAssignment.booking.id.slice(0, 8)}</p>
+                    </div>
+                  </div>
+                  {/* Route */}
+                  <div className="flex flex-col gap-1.5 mb-3">
+                    {careAssignment.role === "PRIMARY" ? (
+                      <>
+                        <div className="flex items-start gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ background: "#C6BFB2" }} />
+                          <p className="text-[12px] leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>{careAssignment.booking.pickup}</p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-1" />
+                          <p className="text-[12px] leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>{careAssignment.booking.dropoff}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[11px] font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>Rendezvous at destination</p>
+                        <div className="flex items-start gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ background: "#C6BFB2" }} />
+                          <p className="text-[12px] leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>{careAssignment.booking.dropoff}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {/* Earnings */}
+                  <div className="flex items-center justify-between rounded-xl px-3 py-2.5 mb-4" style={{ background: "rgba(255,255,255,0.05)" }}>
+                    <p className="text-[12px] font-semibold" style={{ color: "rgba(255,255,255,0.6)" }}>Est. Fare (your earnings)</p>
+                    <p className="text-[15px] font-extrabold" style={{ color: "#C6BFB2" }}>${careEarning.toFixed(2)}</p>
+                  </div>
+                  {careError && (
+                    <div className="mb-3 rounded-xl px-3 py-2" style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)" }}>
+                      <p className="text-[12px] font-semibold" style={{ color: "#f87171" }}>{careError}</p>
+                    </div>
+                  )}
+                  {/* CTA */}
+                  <div className="flex gap-3">
+                    <button type="button" onClick={handleCareDecline} disabled={careLoading}
+                      className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px]"
+                      style={{ border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.8)" }}>
+                      Decline
+                    </button>
+                    <button type="button" onClick={handleCareAccept} disabled={careLoading}
+                      className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
+                      style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+                      {careLoading ? "…" : "Accept"}
+                    </button>
+                  </div>
+                </div>
+              ) : ridePhase === "requesting" && activeBooking ? (
                 <div className="rounded-2xl p-4" style={{ background: "#14141C", border: "1px solid rgba(198,191,178,0.45)" }}>
                   {/* Chips row */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -1070,12 +1152,6 @@ export default function DriverHomePage() {
                   </p>
                 </div>
               </div>
-              {carePhase === "requesting" && (
-                <span className="text-[13px] font-bold w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: timeLeft <= 10 ? "#ef4444" : "rgba(255,255,255,0.15)", color: "white" }}>
-                  {timeLeft}
-                </span>
-              )}
             </div>
             {/* Co-driver status card */}
             {coDriver && (
@@ -1163,19 +1239,6 @@ export default function DriverHomePage() {
             {careError && (
               <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
                 <p className="text-[12px] font-semibold text-red-600">{careError}</p>
-              </div>
-            )}
-            {carePhase === "requesting" && (
-              <div className="flex gap-3">
-                <button onClick={handleCareDecline} disabled={careLoading}
-                  className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[14px] border border-gray-300 text-gray-700">
-                  Decline
-                </button>
-                <button onClick={handleCareAccept} disabled={careLoading}
-                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[14px]"
-                  style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                  {careLoading ? "…" : "Accept"}
-                </button>
               </div>
             )}
             {carePhase === "accepted" && (
@@ -1352,6 +1415,27 @@ export default function DriverHomePage() {
       </div>
 
       </>)}
+
+      {/* Ride cancelled notice — rendered in both dashboard and trip modes */}
+      {cancelNotice && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
+            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-3">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            </div>
+            <p className="text-[16px] font-bold text-gray-900 mb-1">Ride Cancelled</p>
+            <p className="text-[13px] text-gray-500 text-center mb-5">{cancelNotice}</p>
+            <button type="button" onClick={() => setCancelNotice(null)}
+              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Slide-in nav drawer ── */}
       {showMenu && (

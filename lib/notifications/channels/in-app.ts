@@ -19,6 +19,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   RIDER_INCIDENT_SUBMITTED: "Incident report submitted",
   RIDER_INCIDENT_RESOLVED: "Incident resolved",
   RIDER_RIDE_UNAVAILABLE_REFUNDED: "Ride cancelled — refunded",
+  RIDER_BOOKING_CANCELLED: "Ride cancelled",
   // Chauffeur events
   CHAUFFEUR_WELCOME: "Welcome to MOVO Chauffeur!",
   CHAUFFEUR_ONBOARDING_SUBMITTED: "Application submitted",
@@ -56,6 +57,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   RIDER_INCIDENT_SUBMITTED: "Your incident report has been submitted.",
   RIDER_INCIDENT_RESOLVED: "Your incident report has been resolved.",
   RIDER_RIDE_UNAVAILABLE_REFUNDED: "We couldn't find a driver for your ride and have issued a full refund.",
+  RIDER_BOOKING_CANCELLED: "Your ride has been cancelled.",
   // Chauffeur events
   CHAUFFEUR_WELCOME: "Welcome to the MOVO Chauffeur network!",
   CHAUFFEUR_ONBOARDING_SUBMITTED: "Your application has been submitted for review.",

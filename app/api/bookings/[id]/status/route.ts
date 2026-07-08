@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { BookingStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { sendNotification } from "@/lib/notifications";
+import { pushToDriver } from "@/lib/webpush";
 import { logAudit } from "@/lib/auditLog";
 import {
   dispatchBookingAccepted,
@@ -17,6 +18,87 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 const VALID_STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"];
+
+/* After ANY cancellation outcome (refunded / refund-failed / nothing to refund):
+   socket event so open apps update instantly, plus email/in-app (and SMS/push
+   where it's news, not a confirmation) to the rider and the assigned chauffeur.
+   Previously only the unpaid path emitted the socket event and nobody was
+   notified — a rider cancelling a paid ride left the chauffeur driving to a
+   pickup that no longer existed. */
+async function notifyCancellationParties(opts: {
+  bookingId: string;
+  booking: { userId: string | null; driverId: string | null; pickup: string; dropoff: string; total: number };
+  caller: string;
+  refunded: boolean;
+  refundAmount?: number;
+  refundPending?: boolean;
+}) {
+  const { bookingId, booking, caller, refunded, refundAmount, refundPending } = opts;
+
+  dispatchBookingCancelled({
+    bookingId,
+    driverId: booking.driverId,
+    userId: booking.userId,
+    cancelledBy: caller,
+    refunded,
+  });
+
+  /* Rider — confirmation of their own cancel, or news that someone else cancelled */
+  if (booking.userId) {
+    const user = await prisma.user
+      .findUnique({ where: { id: booking.userId }, select: { email: true, firstName: true, phone: true } })
+      .catch(() => null);
+    if (user?.email) {
+      const refundMsg = refundPending
+        ? "Your refund is being processed and will be confirmed shortly."
+        : refunded
+          ? `You've been refunded${refundAmount != null ? ` $${refundAmount.toFixed(2)}` : ""} to your original payment method.`
+          : "";
+      sendNotification({
+        eventType: "RIDER_BOOKING_CANCELLED",
+        /* SMS only when the rider did NOT cancel it themselves */
+        channels: caller === "user" ? ["EMAIL", "IN_APP"] : ["EMAIL", "IN_APP", "SMS"],
+        recipient: { type: "user", id: booking.userId, email: user.email, firstName: user.firstName, phone: user.phone ?? undefined },
+        data: {
+          bookingId,
+          pickup: booking.pickup,
+          dropoff: booking.dropoff,
+          cancelledBy: caller,
+          refunded,
+          refundAmount,
+          refundPending,
+          total: booking.total,
+          refundMsg,
+          message:
+            caller === "user"
+              ? `Your cancellation is confirmed.${refundMsg ? ` ${refundMsg}` : ""}`
+              : `Your ride was cancelled${caller === "driver" ? " by your chauffeur" : ""}.${refundMsg ? ` ${refundMsg}` : ""}`,
+        },
+      }).catch(() => {});
+    }
+  }
+
+  /* Chauffeur — skip when they cancelled it themselves */
+  if (booking.driverId && caller !== "driver") {
+    const driver = await prisma.driver
+      .findUnique({ where: { id: booking.driverId }, select: { email: true, firstName: true, phone: true } })
+      .catch(() => null);
+    if (driver) {
+      sendNotification({
+        eventType: "CHAUFFEUR_BOOKING_CANCELLED",
+        recipient: { type: "driver", id: booking.driverId, email: driver.email ?? "", firstName: driver.firstName, phone: driver.phone ?? undefined },
+        data: { bookingId, pickup: booking.pickup, dropoff: booking.dropoff, cancelledBy: caller },
+      }).catch(() => {});
+      /* Web push so their phone buzzes even with the app backgrounded */
+      pushToDriver(booking.driverId, {
+        title: "Ride cancelled",
+        body: `The ride from ${booking.pickup} was cancelled. You're back in the queue for new requests.`,
+        tag: `booking-cancelled-${bookingId}`,
+        data: { type: "booking_cancelled", bookingId },
+      }).catch(() => {});
+    }
+  }
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -202,6 +284,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               refundId: refund.id,
             },
           });
+          notifyCancellationParties({
+            bookingId: id,
+            booking: existing,
+            caller,
+            refunded: true,
+            refundAmount: isPartial ? policyRefundAmount : existing.total,
+          }).catch(() => {});
           logAudit({ action: "booking.cancelled", entityType: "Booking", entityId: id, actorType: caller === "admin" ? "ADMIN" : caller === "driver" ? "DRIVER" : "USER", actorId: session?.userId ?? session?.driverId ?? null, detail: { cancelledBy: caller, refunded: true, partialRefund: isPartial } }).catch(() => {});
           return NextResponse.json({ ...booking, refunded: true, partialRefund: isPartial });
         } catch (refundErr) {
@@ -210,6 +299,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             where: { id },
             data: { status: "CANCELLED", cancelledAt: now, cancelledBy: caller },
           });
+          notifyCancellationParties({
+            bookingId: id,
+            booking: existing,
+            caller,
+            refunded: false,
+            refundPending: true,
+          }).catch(() => {});
           return NextResponse.json({
             ...booking,
             refunded: false,
@@ -223,14 +319,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id },
         data: { status: "CANCELLED", cancelledAt: now, cancelledBy: caller },
       });
-      /* Socket: notify all parties */
-      dispatchBookingCancelled({
+      notifyCancellationParties({
         bookingId: id,
-        driverId:  existing.driverId,
-        userId:    existing.userId,
-        cancelledBy: caller,
+        booking: existing,
+        caller,
         refunded: false,
-      });
+      }).catch(() => {});
       logAudit({ action: "booking.cancelled", entityType: "Booking", entityId: id, actorType: caller === "admin" ? "ADMIN" : caller === "driver" ? "DRIVER" : caller === "system_timeout" ? "SYSTEM" : "USER", actorId: session?.userId ?? session?.driverId ?? null, detail: { cancelledBy: caller, refunded: false } }).catch(() => {});
       return NextResponse.json({ ...booking, refunded: false });
     }

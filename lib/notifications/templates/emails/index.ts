@@ -9,6 +9,7 @@ import { riderPaymentReceiptTemplate } from "./rider/payment-receipt";
 import { riderIncidentSubmittedTemplate } from "./rider/incident-submitted";
 import { riderIncidentResolvedTemplate } from "./rider/incident-resolved";
 import { riderRideUnavailableRefundedTemplate } from "./rider/ride-unavailable-refunded";
+import { riderBookingCancelledTemplate } from "./rider/booking-cancelled";
 
 // Import chauffeur templates
 import { chauffeurWelcomeTemplate } from "./chauffeur/welcome";
@@ -17,6 +18,7 @@ import { chauffeurBookingAssignedTemplate } from "./chauffeur/booking-assigned";
 import { chauffeurOnboardingApprovedTemplate } from "./chauffeur/onboarding-approved";
 import { chauffeurOnboardingRejectedTemplate } from "./chauffeur/onboarding-rejected";
 import { chauffeurPayoutTemplate } from "./chauffeur/payout";
+import { chauffeurBookingCancelledTemplate } from "./chauffeur/booking-cancelled";
 
 // Import admin templates
 import { adminNewDriverApplicationTemplate } from "./admin/new-driver-application";
@@ -51,6 +53,7 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   RIDER_INCIDENT_SUBMITTED: riderIncidentSubmittedTemplate,
   RIDER_INCIDENT_RESOLVED: riderIncidentResolvedTemplate,
   RIDER_RIDE_UNAVAILABLE_REFUNDED: riderRideUnavailableRefundedTemplate,
+  RIDER_BOOKING_CANCELLED: riderBookingCancelledTemplate,
 
   // Chauffeur events
   CHAUFFEUR_WELCOME: chauffeurWelcomeTemplate,
@@ -71,7 +74,7 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   RIDER_EMAIL_VERIFICATION: emailVerificationTemplate,
   RIDER_PASSWORD_RESET: passwordResetTemplate,
   CHAUFFEUR_ONBOARDING_SUBMITTED: chauffeurOnboardingSubmittedTemplate,
-  CHAUFFEUR_BOOKING_CANCELLED: chauffeurBookingAssignedTemplate, // Similar structure
+  CHAUFFEUR_BOOKING_CANCELLED: chauffeurBookingCancelledTemplate,
 };
 
 /**

@@ -13,6 +13,8 @@ const SMS_TEMPLATES: Record<string, string> = {
   ADMIN_CARE_DISPATCH_FAILED: "MOVO ALERT: No {{role}} chauffeur found for Care Ride booking {{bookingId}}. Manual dispatch needed.",
   ADMIN_RIDE_DISPATCH_FAILED: "MOVO ALERT: No driver accepted booking {{bookingId}} in time. Rider has been refunded.",
   RIDER_RIDE_UNAVAILABLE_REFUNDED: "MOVO: We couldn't find a driver for your ride. You've been fully refunded — sorry for the inconvenience.",
+  RIDER_BOOKING_CANCELLED: "MOVO: Your ride has been cancelled. {{refundMsg}}",
+  CHAUFFEUR_BOOKING_CANCELLED: "MOVO: The ride from {{pickup}} was cancelled by the rider. You're back in the queue for new requests.",
 };
 
 function interpolateTemplate(template: string, data: Record<string, string>): string {
