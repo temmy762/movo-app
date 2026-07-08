@@ -13,15 +13,33 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
   const { id } = await params;
+  /* documents.fileUrl holds multi-MB base64 data URIs — shipping them here made
+     this endpoint take tens of seconds. The admin UI streams files on demand
+     via /api/admin/onboarding/documents/[id]/file, so the detail JSON only
+     needs metadata plus a hasFile flag. profilePhotoUrl can be base64 too. */
   const record = await prisma.driverOnboarding.findUnique({
     where: { id },
+    omit: { profilePhotoUrl: true },
     include: {
-      driver:    { select: { id: true, firstName: true, lastName: true, email: true, phone: true, country: true, city: true, status: true } },
-      documents: { orderBy: { uploadedAt: "asc" } },
+      driver: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, country: true, city: true, status: true } },
+      documents: {
+        orderBy: { uploadedAt: "asc" },
+        select: { id: true, type: true, fileName: true, status: true, adminNote: true, uploadedAt: true },
+      },
     },
   });
   if (!record) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(record);
+
+  const withFile = await prisma.onboardingDocument.findMany({
+    where: { onboardingId: id, fileUrl: { not: null } },
+    select: { id: true },
+  });
+  const fileIds = new Set(withFile.map((d) => d.id));
+
+  return NextResponse.json({
+    ...record,
+    documents: record.documents.map((d) => ({ ...d, hasFile: fileIds.has(d.id) })),
+  });
 }
 
 export async function PATCH(

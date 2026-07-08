@@ -34,12 +34,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Return full detailed list (exclude soft-deleted drivers)
+    // Return full detailed list (exclude soft-deleted drivers).
+    // Select only what the mapping below uses — `include: { vehicle: true }`
+    // dragged base64 photoUrl blobs (and the driver password hash) through the
+    // DB connection for every driver and made this list crawl.
     const drivers = await prisma.driver.findMany({
       where: { deletedAt: null } as never,
       orderBy: { createdAt: "desc" },
-      include: {
-        vehicle: true,
+      select: {
+        id: true, firstName: true, lastName: true, email: true, phone: true,
+        city: true, country: true, status: true, isOnline: true,
+        vehicle: { select: { make: true, model: true, tier: true, plate: true } },
         bookings: {
           select: { id: true, status: true, rating: true, createdAt: true, clientName: true, carName: true },
           orderBy: { createdAt: "desc" },

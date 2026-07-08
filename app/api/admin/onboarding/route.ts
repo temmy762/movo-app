@@ -19,6 +19,9 @@ export async function GET(req: NextRequest) {
       ...(type   ? { type:        type   as never } : {}),
     },
     orderBy: { createdAt: "desc" },
+    /* profilePhotoUrl can be a multi-MB base64 data URI — one per row makes
+       the whole list crawl. The list UI never renders it. */
+    omit: { profilePhotoUrl: true },
     include: {
       driver: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, country: true, city: true, status: true } },
     },

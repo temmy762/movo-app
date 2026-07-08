@@ -6,7 +6,7 @@ type DocStatus = "PENDING" | "APPROVED" | "REJECTED";
 type AdminStatus = "PENDING" | "UNDER_REVIEW" | "APPROVED" | "REJECTED";
 
 interface Document {
-  id: string; type: string; fileName: string; fileUrl: string | null; status: DocStatus; uploadedAt: string;
+  id: string; type: string; fileName: string; hasFile?: boolean; fileUrl?: string | null; status: DocStatus; uploadedAt: string;
 }
 
 interface Onboarding {
@@ -372,7 +372,7 @@ export default function AdminOnboardingPage() {
                             }}>
                             {doc.status.charAt(0) + doc.status.slice(1).toLowerCase()}
                           </span>
-                          {doc.fileUrl ? (
+                          {(doc.hasFile || doc.fileUrl) ? (
                             <a
                               href={`/api/admin/onboarding/documents/${doc.id}/file`}
                               target="_blank"
