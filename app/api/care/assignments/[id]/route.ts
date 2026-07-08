@@ -69,10 +69,39 @@ export async function PATCH(
     /* Validate transition */
     const allowed = VALID_TRANSITIONS[assignment.status] ?? [];
     if (!allowed.includes(newStatus)) {
+      /* Friendlier message for the common case: the batch window expired and
+         the assignment was auto-cancelled before the driver tapped Accept. */
+      if (newStatus === "ACCEPTED" && assignment.status === "CANCELLED") {
+        return NextResponse.json(
+          { error: "This request has expired. New requests will appear automatically." },
+          { status: 422 },
+        );
+      }
       return NextResponse.json(
         { error: `Cannot transition from ${assignment.status} to ${newStatus}` },
         { status: 422 },
       );
+    }
+
+    /* First-accept-wins: if another chauffeur already holds this role on the
+       booking, this accept loses. (Previously only SUPPORT cancelled rivals,
+       and neither role guarded against a second acceptance.) */
+    if (newStatus === "ACCEPTED") {
+      const rival = await prisma.careAssignment.findFirst({
+        where: {
+          bookingId: assignment.bookingId,
+          role:      assignment.role,
+          id:        { not: id },
+          status:    { in: ["ACCEPTED", "ARRIVED", "STARTED"] },
+        },
+        select: { id: true },
+      });
+      if (rival) {
+        return NextResponse.json(
+          { error: "Another chauffeur accepted this request first." },
+          { status: 409 },
+        );
+      }
     }
 
     /* Timestamp field for the new status */
@@ -84,13 +113,22 @@ export async function PATCH(
       CANCELLED: "cancelledAt",
     };
 
-    const updated = await prisma.careAssignment.update({
-      where: { id },
+    /* Atomic: condition the write on the status we validated against, so a
+       concurrent timeout-cancel or rival accept can't be clobbered. */
+    const writeResult = await prisma.careAssignment.updateMany({
+      where: { id, status: assignment.status as never },
       data: {
         status: newStatus as never,
         ...(timestampField[newStatus] ? { [timestampField[newStatus]]: new Date() } : {}),
       },
     });
+    if (writeResult.count === 0) {
+      return NextResponse.json(
+        { error: "This request has expired. New requests will appear automatically." },
+        { status: 409 },
+      );
+    }
+    const updated = (await prisma.careAssignment.findUnique({ where: { id } }))!;
 
     const booking  = assignment.booking;
     const driver   = assignment.driver;
@@ -100,6 +138,18 @@ export async function PATCH(
     /* ── Side-effects ─────────────────────────────────────────────────────── */
 
     if (newStatus === "ACCEPTED" && assignment.role === "PRIMARY") {
+      /* First-accept-wins cleanup: cancel every other still-PENDING PRIMARY
+         offer for this booking so no second chauffeur can accept it. */
+      await prisma.careAssignment.updateMany({
+        where: {
+          bookingId: booking.id,
+          role:      "PRIMARY",
+          status:    "PENDING",
+          id:        { not: id },
+        },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
+      });
+
       dispatchCarePrimaryAccepted({
         bookingId: booking.id, assignmentId: id,
         driverId: driver!.id, driverName, userId,

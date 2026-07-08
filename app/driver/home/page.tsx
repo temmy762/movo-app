@@ -87,6 +87,7 @@ export default function DriverHomePage() {
   type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started";
   const [carePhase,        setCarePhase]        = useState<CarePhase>("idle");
   const [careLoading,      setCareLoading]      = useState(false);
+  const [careError,        setCareError]        = useState<string | null>(null);
   const [showCareComplete, setShowCareComplete] = useState(false);
   usePushSubscription();
   const { join, on } = useSocket();
@@ -228,6 +229,7 @@ export default function DriverHomePage() {
         .then(r => r.json())
         .then(({ assignment, coDriver: co, earning }) => {
           if (assignment && assignment.id === d.assignmentId) {
+            setCareError(null);
             setCareAssignment(assignment as CareAssignment);
             setCoDriver(co ?? null);
             setCareEarning(earning ?? 0);
@@ -252,6 +254,7 @@ export default function DriverHomePage() {
         .then(r => r.json())
         .then(({ assignment, coDriver: co, earning }) => {
           if (assignment?.booking?.id === d.bookingId) {
+            setCareError(null);
             setCareAssignment(assignment as CareAssignment);
             setCoDriver(co ?? null);
             setCareEarning(earning ?? 0);
@@ -599,15 +602,35 @@ export default function DriverHomePage() {
     stopCountdown();
     stopAlert();
     setCareLoading(true);
-    const res = await fetch(`/api/care/assignments/${careAssignment.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "ACCEPTED" }),
-    });
-    setCareLoading(false);
-    if (res.ok) {
-      setCarePhase("accepted");
-      startOnlineLocationBroadcast();
+    setCareError(null);
+    try {
+      const res = await fetch(`/api/care/assignments/${careAssignment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ACCEPTED" }),
+      });
+      if (res.ok) {
+        setCareLoading(false);
+        setCarePhase("accepted");
+        startOnlineLocationBroadcast();
+        return;
+      }
+      /* Expired or taken by another chauffeur — tell the driver and clear the
+         stale request instead of silently doing nothing. */
+      const d = await res.json().catch(() => ({}));
+      setCareError(d?.error ?? "Couldn't accept this request. Please try again.");
+      if (res.status === 409 || res.status === 422) {
+        setTimeout(() => {
+          setCareError(null);
+          setCareAssignment(null);
+          setCoDriver(null);
+          setCarePhase("idle");
+        }, 3500);
+      }
+    } catch {
+      setCareError("Network error — please try again.");
+    } finally {
+      setCareLoading(false);
     }
   }
 
@@ -902,6 +925,11 @@ export default function DriverHomePage() {
               </div>
             </div>
             {/* CTA */}
+            {careError && (
+              <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                <p className="text-[12px] font-semibold text-red-600">{careError}</p>
+              </div>
+            )}
             {carePhase === "requesting" && (
               <div className="flex gap-3">
                 <button onClick={handleCareDecline} disabled={careLoading}

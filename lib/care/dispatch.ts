@@ -23,7 +23,12 @@ import {
   dispatchCareDispatchFailed,
 } from "@/lib/socket/dispatcher";
 
-const DISPATCH_TIMEOUT_MS = 30_000;   // 30 s per batch
+/* Server batch window MUST exceed the driver's 30s on-screen countdown: the
+   client countdown starts when the push/socket lands (seconds after dispatch),
+   so a 30s server window cancelled assignments while drivers were still inside
+   their visible countdown — their Accept then 422'd ("did not work"). 45s gives
+   the whole client window plus network/skew grace. */
+const DISPATCH_TIMEOUT_MS = 45_000;
 const PRIMARY_BATCH_SIZE  = 5;
 const SUPPORT_BATCH_SIZE  = 5;
 const RADII_KM            = [5, 10, 20];
@@ -218,11 +223,16 @@ export async function dispatchPrimary(
       ),
     );
 
-    dispatchCarePrimaryDispatched({
-      bookingId,
-      assignmentId: assignments[0].id,
-      driverId:     drivers[0].id,
-      userId,
+    /* Emit to EVERY batched driver with their OWN assignment id — previously
+       only drivers[0] got the socket event, so the rest of the batch saw the
+       request only if their web-push landed or they reloaded. */
+    drivers.forEach((d, i) => {
+      dispatchCarePrimaryDispatched({
+        bookingId,
+        assignmentId: assignments[i].id,
+        driverId:     d.id,
+        userId,
+      });
     });
 
     /* Timeout: cancel any still-PENDING, retry with expanded exclude list */
