@@ -204,19 +204,31 @@ export default function LandingPage() {
     else if (pl?.name) setDropoff(pl.name);
   };
 
-  const handleGetStarted = async () => {
+  /* "now"     → immediate pickup: no date/time carried, dispatch as soon as paid.
+     "reserve" → scheduled pickup: enforce the reservation lead time (30 min,
+                 45 min for Safe Ride) so dispatch can line up the right chauffeur. */
+  const handleGetStarted = async (kind: "now" | "reserve") => {
     setWidgetError("");
     if (!pickup.trim())                        { setWidgetError("Please enter a pickup location."); return; }
     if (tab !== "hourly" && !dropoff.trim())   { setWidgetError("Please enter your destination."); return; }
-    if (!date)                                 { setWidgetError("Please select a date."); return; }
-    if (!time)                                 { setWidgetError("Please select a time."); return; }
+    if (kind === "reserve") {
+      if (!date || !time) { setWidgetError("Please select a date and time for your reservation."); return; }
+      const leadMin = tab === "care" ? 45 : 30;
+      const when = new Date(`${date}T${time}:00`);
+      if (isNaN(when.getTime()) || when.getTime() < Date.now() + leadMin * 60_000) {
+        setWidgetError(`Reservations need at least ${leadMin} minutes' notice. For an immediate pickup, use Book Now.`);
+        return;
+      }
+    }
 
     setBookingBusy(true);
     const p = new URLSearchParams();
     p.set("pickup",     pickup);
     if (tab !== "hourly") p.set("dropoff", dropoff);
-    p.set("date",       date);
-    p.set("time",       time);
+    if (kind === "reserve") {
+      p.set("date", date);
+      p.set("time", time);
+    }
     p.set("passengers", String(passengers));
 
     const tier    = tab === "care" ? "black" : "all";
@@ -461,13 +473,24 @@ export default function LandingPage() {
                   {widgetError}
                 </p>
               )}
-              <button onClick={handleGetStarted} disabled={bookingBusy}
-                className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] tracking-wide mt-1 flex items-center justify-center gap-2 disabled:opacity-70"
-                style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
-                {bookingBusy
-                  ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Finding your ride…</>
-                  : "Book Now →"}
-              </button>
+              <div className="grid grid-cols-2 gap-3 mt-1">
+                <button onClick={() => handleGetStarted("now")} disabled={bookingBusy}
+                  className="py-3.5 rounded-xl text-white font-bold text-[14px] tracking-wide flex items-center justify-center gap-2 disabled:opacity-70"
+                  style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
+                  {bookingBusy
+                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Finding…</>
+                    : "Book Now →"}
+                </button>
+                <button onClick={() => handleGetStarted("reserve")} disabled={bookingBusy}
+                  className="py-3.5 rounded-xl font-bold text-[14px] tracking-wide flex items-center justify-center gap-1.5 disabled:opacity-70"
+                  style={{ border: `1.5px solid ${GOLD}`, color: GOLD, background: "rgba(198,191,178,0.08)" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Reserve Ride
+                </button>
+              </div>
+              <p className="text-center text-[10px] leading-relaxed text-white/40">
+                For the best experience and guaranteed chauffeur assignment, we recommend reserving your trip at least 30 minutes in advance.
+              </p>
               <p className="text-center text-[10px] text-white/30">Sign in or create an account to complete your booking.</p>
             </div>
           </div>

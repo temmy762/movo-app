@@ -79,6 +79,8 @@ function RideTrackingContent() {
   const [dispatchFailed,    setDispatchFailed]    = useState(false);
   const [noDriverRefunded,  setNoDriverRefunded]  = useState(false);
   const [scheduledForLabel, setScheduledForLabel] = useState<string | null>(null);
+  /* Chauffeur confirmed for a future reservation but hasn't set off yet */
+  const [awaitingSetOff, setAwaitingSetOff] = useState(false);
 
   /* ── Search progress (standard rides) — mirrors lib/dispatch/standardTimeout.ts windows ──
      "direct":     rider picked a specific driver, waiting for them to confirm (3 min)
@@ -407,16 +409,17 @@ function RideTrackingContent() {
         .then((data) => {
           if (!data) return;
 
-          /* Scheduled-ride banner — only while still searching for a driver */
-          if (data.scheduledAt && (data.status === "PENDING" || (data.status === "CONFIRMED" && !data.driver))) {
-            const when = new Date(data.scheduledAt);
-            if (!isNaN(when.getTime()) && when.getTime() > Date.now()) {
-              setScheduledForLabel(when.toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
-            } else {
-              setScheduledForLabel(null);
-            }
+          /* Scheduled-ride banner — while searching AND after a chauffeur is
+             confirmed but hasn't set off yet. A reserved 5 PM ride must NOT
+             read "your chauffeur is on the way" hours ahead of time. */
+          const scheduledFuture = data.scheduledAt && new Date(data.scheduledAt).getTime() > Date.now();
+          if (scheduledFuture && !data.enRouteAt && !data.startedAt &&
+              (data.status === "PENDING" || data.status === "CONFIRMED")) {
+            setScheduledForLabel(new Date(data.scheduledAt).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
+            setAwaitingSetOff(!!data.driver);
           } else {
             setScheduledForLabel(null);
+            setAwaitingSetOff(false);
           }
 
           /* Derive effective ride status from booking status + startedAt */
@@ -597,10 +600,13 @@ function RideTrackingContent() {
           {/* ETA + Status stages */}
           <div className="mb-3">
             <p className="text-[26px] md:text-[30px] font-extrabold text-gray-900 leading-tight">
-              {rideStatus === "PENDING" ? (scheduledForLabel ? "Ride Scheduled" : "Finding Your Chauffeur") : etaText}
+              {rideStatus === "PENDING" ? (scheduledForLabel ? "Ride Scheduled" : "Finding Your Chauffeur")
+                : awaitingSetOff ? "Reservation Confirmed"
+                : etaText}
             </p>
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
               {rideStatus === "PENDING"    ? (scheduledForLabel ? "We'll line up your chauffeur ahead of pickup." : isCareRide ? "Finding your chauffeurs…" : "We're contacting nearby chauffeurs — hang tight.") :
+               awaitingSetOff              ? `Your chauffeur is confirmed for ${scheduledForLabel}. You'll be notified when they set off.` :
                rideStatus === "CONFIRMED"  ? (isCareRide ? "Both chauffeurs are on the way" : "Your chauffeur is on the way to you") :
                rideStatus === "STARTED"    ? "Ride in progress — arriving at your destination" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
@@ -616,7 +622,9 @@ function RideTrackingContent() {
               { key: "COMPLETED", label: "Completed" },
             ].map((stage, i) => {
               const order = ["PENDING","CONFIRMED","STARTED","COMPLETED"];
-              const active = order.indexOf(rideStatus) >= i + 1; /* +1 because PENDING is index 0 */
+              /* A confirmed reservation isn't "On the Way" until the chauffeur sets off */
+              const effectiveStatus = awaitingSetOff ? "PENDING" : rideStatus;
+              const active = order.indexOf(effectiveStatus) >= i + 1; /* +1 because PENDING is index 0 */
               return (
                 <div key={stage.key} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full h-1.5 rounded-full" style={{ background: active ? "linear-gradient(90deg,#131936,#C6BFB2)" : "#e5e7eb" }} />

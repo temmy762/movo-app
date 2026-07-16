@@ -223,7 +223,10 @@ export default function ClientsPage() {
   const thCls = "px-4 py-3 text-left text-[11px] font-semibold text-gray-500 select-none";
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6 flex flex-col gap-4">
+    /* min-h-full (not h-full + own scroller): AdminShell already provides the
+       scroll container — a nested fixed-height scroller made the list
+       unreachable below the fold on some viewports. */
+    <div className="min-h-full p-4 md:p-6 flex flex-col gap-4">
 
       {/* ── Toolbar ── */}
       <div className="flex items-center gap-3 flex-wrap">

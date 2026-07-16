@@ -45,7 +45,11 @@ interface Booking {
   paymentStatus: string;
   createdAt: string;
   bookingType?: string;
+  scheduledAt?: string | null;
 }
+
+const fmtReserved = (iso: string) =>
+  new Date(iso).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 export default function RidesPage() {
   const router = useRouter();
@@ -124,6 +128,17 @@ export default function RidesPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[15px] font-bold text-gray-900">{ride.carName}</p>
                       <p className="text-[12px] text-gray-700 mt-0.5 truncate">{ride.pickup} → {ride.dropoff}</p>
+                      {/* Reserved pickup time — the whole point of a reservation */}
+                      {ride.scheduledAt && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                          <span className="text-[11px] font-bold" style={{ color: "#131936" }}>
+                            Reserved for {fmtReserved(ride.scheduledAt)}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[11px] font-semibold text-gray-500 uppercase">{ride.status}</span>
                         <span className="text-[12px] font-bold text-gray-800">${ride.total.toFixed(2)}</span>

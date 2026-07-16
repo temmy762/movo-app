@@ -35,6 +35,7 @@ function PickupContent() {
      its params when the user came from there */
   const [date,       setDate]       = useState(() => searchParams.get("date") || todayStr());
   const [time,       setTime]       = useState(() => searchParams.get("time") || nowTimeStr());
+  const [scheduleError, setScheduleError] = useState("");
   const [passengers, setPassengers] = useState(() => Math.min(8, Math.max(1, parseInt(searchParams.get("passengers") ?? "1", 10) || 1)));
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedDropoff, setSelectedDropoff] = useState<{ lat: number; lng: number } | null>(null);
@@ -137,7 +138,21 @@ function PickupContent() {
     else if (place?.name) setDropoff(place.name);
   };
 
-  const handleConfirm = () => {
+  /* "now" → immediate pickup (no date/time carried). "reserve" → scheduled,
+     with the reservation lead time enforced (30 min; 45 min for Safe Ride). */
+  const handleConfirm = (kind: "now" | "reserve") => {
+    setScheduleError("");
+    if (kind === "reserve") {
+      if (!date || !time) { setScheduleError("Please select a date and time for your reservation."); return; }
+      const leadMin = service === "care" ? 45 : 30;
+      const when = new Date(`${date}T${time}:00`);
+      if (isNaN(when.getTime()) || when.getTime() < Date.now() + leadMin * 60_000) {
+        setScheduleError(`Reservations need at least ${leadMin} minutes' notice. For an immediate pickup, use Book Now.`);
+        return;
+      }
+    }
+    const schedule = kind === "reserve" ? { date, time } : {};
+
     if (service === "care") {
       /* Care Ride: skip car selection — go straight to the Care confirm/pay page */
       const params = new URLSearchParams({
@@ -146,7 +161,7 @@ function PickupContent() {
         service: "care",
         tier:    "black",
         car:     "Safe Ride",
-        date, time,
+        ...schedule,
         passengers: String(passengers),
       });
       if (selectedPoint) {
@@ -159,7 +174,7 @@ function PickupContent() {
 
     const params = new URLSearchParams({
       tier, pickup, dropoff,
-      date, time,
+      ...schedule,
       passengers: String(passengers),
     });
     if (selectedPoint) {
@@ -299,15 +314,33 @@ function PickupContent() {
           </div>
         </div>
 
-        <button
-          type="button"
-          disabled={!pickup || !dropoff}
-          onClick={handleConfirm}
-          className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-50"
-          style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
-        >
-          Confirm pickup
-        </button>
+        {scheduleError && (
+          <p className="text-[12px] text-red-500 mb-3">{scheduleError}</p>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            disabled={!pickup || !dropoff}
+            onClick={() => handleConfirm("now")}
+            className="py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
+          >
+            Book Now
+          </button>
+          <button
+            type="button"
+            disabled={!pickup || !dropoff}
+            onClick={() => handleConfirm("reserve")}
+            className="py-3.5 rounded-xl font-bold text-[15px] tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5"
+            style={{ border: "1.5px solid #131936", color: "#131936", background: "white" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Reserve Ride
+          </button>
+        </div>
+        <p className="text-center text-[10px] text-gray-400 mt-2.5 leading-relaxed">
+          For the best experience and guaranteed chauffeur assignment, we recommend reserving your trip at least 30 minutes in advance.
+        </p>
       </div>
     </div>
   );
