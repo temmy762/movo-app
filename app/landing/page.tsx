@@ -350,11 +350,16 @@ export default function LandingPage() {
                 <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
                   {mapsLoaded ? (
-                    <GPlacesAuto onLoad={a => { pickupAutoRef.current = a; biasPickupToCurrent(); }} onPlaceChanged={onPickupPlaceChanged}>
-                      <input value={pickup} onChange={e => setPickup(e.target.value)}
-                        placeholder="Enter pickup location"
-                        className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none w-full" />
-                    </GPlacesAuto>
+                    /* flex-1 on a wrapper div: Google sizes the suggestion dropdown to
+                       the INPUT's width, and the Autocomplete wrapper div otherwise
+                       collapses to content width — which truncated every suggestion. */
+                    <div className="flex-1 min-w-0">
+                      <GPlacesAuto onLoad={a => { pickupAutoRef.current = a; biasPickupToCurrent(); }} onPlaceChanged={onPickupPlaceChanged}>
+                        <input value={pickup} onChange={e => setPickup(e.target.value)}
+                          placeholder="Enter pickup location"
+                          className="bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none w-full" />
+                      </GPlacesAuto>
+                    </div>
                   ) : (
                     <input value={pickup} onChange={e => setPickup(e.target.value)}
                       placeholder="Enter pickup location"
@@ -370,11 +375,13 @@ export default function LandingPage() {
                   <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
                     {mapsLoaded ? (
-                      <GPlacesAuto onLoad={a => { dropoffAutoRef.current = a; }} onPlaceChanged={onDropoffPlaceChanged}>
-                        <input value={dropoff} onChange={e => setDropoff(e.target.value)}
-                          placeholder="Enter destination"
-                          className="flex-1 bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none w-full" />
-                      </GPlacesAuto>
+                      <div className="flex-1 min-w-0">
+                        <GPlacesAuto onLoad={a => { dropoffAutoRef.current = a; }} onPlaceChanged={onDropoffPlaceChanged}>
+                          <input value={dropoff} onChange={e => setDropoff(e.target.value)}
+                            placeholder="Enter destination"
+                            className="bg-transparent text-white text-[13px] placeholder-white/30 focus:outline-none w-full" />
+                        </GPlacesAuto>
+                      </div>
                     ) : (
                       <input value={dropoff} onChange={e => setDropoff(e.target.value)}
                         placeholder="Enter destination"

@@ -118,3 +118,20 @@ a:focus-visible,
   border-radius: 9999px;
   padding: 2px;
 }
+
+/* ── Google Places autocomplete dropdown ──
+   Never truncate suggested addresses: let items wrap to a second line and give
+   the dropdown a sensible minimum width even when the input is narrow. */
+.pac-container {
+  min-width: 300px;
+  z-index: 10000;
+}
+.pac-item {
+  white-space: normal;
+  line-height: 1.35;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.pac-item .pac-item-query {
+  white-space: normal;
+}
