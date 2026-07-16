@@ -23,6 +23,7 @@ type FareEstimate = {
   stopFeeUnit: number; airportFeeUnit: number;
   freeWaitingMinutes: number; waitingRatePerMin: number;
   stops: number; isAirport: boolean;
+  hourly?: { rate: number; billedHours: number; minHours: number };
 };
 
 type CheckoutFormProps = {
@@ -242,6 +243,7 @@ function ConfirmPayContent() {
   const tier      = searchParams.get("tier")     || "";
   const carImg    = searchParams.get("carImg")   || "";
   const isCare    = searchParams.get("service")  === "care";
+  const mode      = searchParams.get("mode")     || "";
 
   /* Scheduling — carried from the pickup widget's date/time pickers */
   const dateParam = searchParams.get("date") || "";
@@ -263,17 +265,25 @@ function ConfirmPayContent() {
   const [estimating, setEstimating] = useState(true);
   const [retryKey, setRetryKey] = useState(0);
   const [stops, setStops] = useState(0);
+  const [showStopRow, setShowStopRow] = useState(false);
   const [airportPickup, setAirportPickup] = useState(false);
+  /* Sticky: is the airport fee even relevant to THIS trip? Controls whether the
+     toggle is rendered at all — most rides never see it. */
+  const [airportRelevant, setAirportRelevant] = useState(false);
   const { user, loading: userLoading } = useCurrentUser();
   const clientName = user ? `${user.firstName} ${user.lastName}`.trim() : "Guest";
   /* Safe Ride has its own admin-configurable pricing tier ("care") — never
      priced off the vehicle tier that happens to accept the job. */
   const resolvedTier = isCare ? "care" : (tier || carTierMap[carName] || "classic");
 
-  /* Auto-detect airport on mount */
+  /* Airport fee visibility: only Airport Transfer bookings or trips whose
+     addresses look like an airport ever see the toggle. Default it ON only
+     when the PICKUP is an airport (the fee applies to airport pickups). */
   useEffect(() => {
-    if (isAirportLocation(pickup) || isAirportLocation(dropoff)) setAirportPickup(true);
-  }, [pickup, dropoff]);
+    const pickupIsAirport = isAirportLocation(pickup);
+    if (mode === "airport" || pickupIsAirport || isAirportLocation(dropoff)) setAirportRelevant(true);
+    if (pickupIsAirport) setAirportPickup(true);
+  }, [pickup, dropoff, mode]);
 
   /* Load saved cards so returning riders can pay in one tap */
   useEffect(() => {
@@ -292,7 +302,7 @@ function ConfirmPayContent() {
     /* Reset payment intent so a fresh one is created for the new fare */
     setClientSecret(null);
     setIntentId(null);
-    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${airportPickup}`;
+    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${airportPickup}${mode === "hourly" ? "&mode=hourly" : ""}`;
     fetch(url)
       .then((r) => r.json())
       .then((d) => {
@@ -402,7 +412,44 @@ function ConfirmPayContent() {
               </div>
             </div>
 
-            <p className="text-[12px] md:text-[13px] text-gray-400 mt-2 ml-7">Arrives at 2:55 PM</p>
+            {/* ETA — computed from the live estimate (was a hardcoded placeholder) */}
+            {mode === "hourly" && estimate?.hourly ? (
+              <p className="text-[12px] md:text-[13px] text-gray-400 mt-2 ml-7">
+                Hourly charter · {estimate.hourly.billedHours}h billed at ${estimate.hourly.rate.toFixed(0)}/h
+              </p>
+            ) : estimate?.durationMin != null ? (
+              <p className="text-[12px] md:text-[13px] text-gray-400 mt-2 ml-7">
+                ~{estimate.durationMin} min trip · arrives around{" "}
+                {new Date((scheduledAt ? new Date(scheduledAt).getTime() : Date.now()) + estimate.durationMin * 60_000)
+                  .toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" })}
+              </p>
+            ) : null}
+
+            {/* Optional stops — hidden until the rider asks for one */}
+            {!isCare && !showStopRow && (
+              <button type="button" onClick={() => { setShowStopRow(true); setStops(1); }}
+                className="no-hover-fx flex items-center gap-1.5 mt-3 ml-7 text-[12px] font-semibold"
+                style={{ color: "#131936" }}>
+                <span className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[11px] leading-none">+</span>
+                Add a stop (${(estimate?.stopFeeUnit ?? 5).toFixed(2)} per stop)
+              </button>
+            )}
+            {!isCare && showStopRow && (
+              <div className="flex items-center justify-between mt-3 ml-7 rounded-xl border border-gray-200 px-3 py-2.5">
+                <div className="flex-1 min-w-0 pr-3">
+                  <p className="text-[13px] font-semibold text-gray-800">Additional stops</p>
+                  <p className="text-[11px] text-gray-400">${(estimate?.stopFeeUnit ?? 5).toFixed(2)} per stop — share the address with your chauffeur</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button type="button"
+                    onClick={() => { const n = Math.max(0, stops - 1); setStops(n); if (n === 0) setShowStopRow(false); }}
+                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">−</button>
+                  <span className="text-[14px] font-semibold text-gray-900 w-4 text-center">{stops}</span>
+                  <button type="button" onClick={() => setStops(s => Math.min(5, s + 1))}
+                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">+</button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Divider */}
@@ -509,52 +556,25 @@ function ConfirmPayContent() {
             )}
           </div>
 
-          {/* Divider */}
-          <div className="h-px bg-gray-100 my-5" />
-
-          {/* Additional Charges */}
-          <div>
-            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">Additional Charges</p>
-
-            {/* Additional Stop */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <div className="flex-1 min-w-0 pr-3">
-                <p className="text-[13px] font-semibold text-gray-800">Additional Stop</p>
-                <p className="text-[11px] text-gray-400">${estimate?.stopFeeUnit?.toFixed(2) ?? "5.00"} per stop</p>
+          {/* Airport Pickup Fee — only rendered for Airport Transfers or trips
+              whose addresses look like an airport. Everything else books with a
+              clean review screen: route, ETA, payment, fare breakdown, total. */}
+          {!isCare && airportRelevant && (
+            <>
+              <div className="h-px bg-gray-100 my-5" />
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0 pr-3">
+                  <p className="text-[13px] font-semibold text-gray-800">Airport Pickup Fee</p>
+                  <p className="text-[11px] text-gray-400">${estimate?.airportFeeUnit?.toFixed(2) ?? "10.00"} — applies to airport pickups</p>
+                </div>
+                <button type="button" onClick={() => setAirportPickup(v => !v)}
+                  className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${airportPickup ? "" : "bg-gray-200"}`}
+                  style={airportPickup ? { background: "#131936" } : {}}>
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${airportPickup ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button type="button" onClick={() => setStops(s => Math.max(0, s - 1))}
-                  disabled={stops === 0}
-                  className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 disabled:opacity-30 text-[16px] font-bold">−</button>
-                <span className="text-[14px] font-semibold text-gray-900 w-4 text-center">{stops}</span>
-                <button type="button" onClick={() => setStops(s => Math.min(5, s + 1))}
-                  className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">+</button>
-              </div>
-            </div>
-
-            {/* Airport Pickup Fee */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <div className="flex-1 min-w-0 pr-3">
-                <p className="text-[13px] font-semibold text-gray-800">Airport Pickup Fee</p>
-                <p className="text-[11px] text-gray-400">${estimate?.airportFeeUnit?.toFixed(2) ?? "10.00"} — applies to airport pickups</p>
-              </div>
-              <button type="button" onClick={() => setAirportPickup(v => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${airportPickup ? "" : "bg-gray-200"}`}
-                style={airportPickup ? { background: "#131936" } : {}}>
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${airportPickup ? "translate-x-5" : "translate-x-0"}`} />
-              </button>
-            </div>
-
-            {/* Waiting Time Policy */}
-            <div className="flex items-start gap-2 py-3">
-              <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <p className="text-[11px] text-gray-400 leading-relaxed">
-                <span className="font-semibold text-gray-600">Waiting time:</span> First {estimate?.freeWaitingMinutes ?? 5} minutes complimentary, then ${estimate?.waitingRatePerMin?.toFixed(2) ?? "0.75"}/minute. Charges applied at ride completion.
-              </p>
-            </div>
-          </div>
+            </>
+          )}
 
           {/* Divider */}
           <div className="h-px bg-gray-100 my-5" />

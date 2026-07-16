@@ -119,6 +119,9 @@ function AvailableCarsContent() {
     if (date)       params.set("date", date);
     if (time)       params.set("time", time);
     if (passengers) params.set("passengers", passengers);
+    /* Carry the booking mode through — the review screen shows the airport-fee
+       toggle only for Airport Transfers and prices hourly charters correctly */
+    if (mode)       params.set("mode", mode);
     router.push(`/home/ride/confirm?${params.toString()}`);
   };
 
