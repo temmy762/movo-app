@@ -5,6 +5,7 @@ import { BookingStatus } from "@prisma/client";
 import Stripe from "stripe";
 import { sendNotification } from "@/lib/notifications";
 import { pushToDriver } from "@/lib/webpush";
+import { normalizeCommissionRate } from "@/lib/earnings";
 import { logAudit } from "@/lib/auditLog";
 import {
   dispatchBookingAccepted,
@@ -355,7 +356,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           }).catch(() => null),
         ]);
 
-        const commission = tierConfig?.commissionRate ?? 0.20;
+        const commission = normalizeCommissionRate(tierConfig?.commissionRate);
         const netAfterPlatform = parseFloat((existing.fare * (1 - commission)).toFixed(2));
 
         const driverSplit     = driver?.fleetDriverSplit ?? 1.0;

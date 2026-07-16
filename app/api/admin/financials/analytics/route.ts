@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { normalizeCommissionRate } from "@/lib/earnings";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -31,9 +32,9 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    /* Build tier → commissionRate map */
+    /* Build tier → commissionRate map (normalized: 20 → 0.20) */
     const commissionMap: Record<string, number> = {};
-    tierConfigs.forEach((t) => { commissionMap[t.tier.toLowerCase()] = t.commissionRate; });
+    tierConfigs.forEach((t) => { commissionMap[t.tier.toLowerCase()] = normalizeCommissionRate(t.commissionRate); });
 
     /* Platform commission = fare × commissionRate for each booking */
     const totalGrossRevenue = paidBookings.reduce((s, b) => s + b.total, 0);

@@ -1586,9 +1586,10 @@ export default function DriverHomePage() {
                   });
                 }
                 setShowTripComplete(false);
+                /* Stay ONLINE after completing a trip — going offline is the
+                   chauffeur's explicit choice via the toggle, not a side
+                   effect of finishing a ride. */
                 setRidePhase("idle");
-                setIsOnline(false);
-                localStorage.setItem("driverOnline", "false");
                 setActiveBooking(null);
                 setTripFeedback("");
                 router.push("/driver/home/finish");

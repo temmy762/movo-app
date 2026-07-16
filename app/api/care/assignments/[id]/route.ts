@@ -22,6 +22,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { dispatchSupport } from "@/lib/care/dispatch";
+import { normalizeCommissionRate } from "@/lib/earnings";
 import {
   dispatchCarePrimaryAccepted,
   dispatchCareSupportAccepted,
@@ -256,7 +257,7 @@ export async function PATCH(
               where: { tier: { equals: "care", mode: "insensitive" } },
               select: { commissionRate: true },
             }).catch(() => null);
-            const commission = careConfig?.commissionRate ?? 0.20;
+            const commission = normalizeCommissionRate(careConfig?.commissionRate);
             const net = booking.fare * (1 - commission);
 
             const completedAssignments = [updated, ...siblings].filter(

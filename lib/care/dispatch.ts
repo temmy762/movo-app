@@ -155,6 +155,24 @@ async function findNearbyDrivers(
   return [];
 }
 
+/* Pick a dispatch batch: nearest drivers within expanding radii; if nobody is
+   in range (or eligible drivers have no GPS fix stored), fall back to ANY
+   online eligible chauffeur regardless of distance. With a small city fleet,
+   the hard 20 km cap silently produced zero candidates — the request was never
+   delivered to anyone even though chauffeurs were online. */
+async function selectDispatchBatch(
+  lat: number | null,
+  lng: number | null,
+  excludeIds: string[],
+  limit: number,
+): Promise<Array<{ id: string; firstName: string; lastName: string; distKm: number }>> {
+  for (const radius of RADII_KM) {
+    const drivers = await findNearbyDrivers(lat, lng, radius, excludeIds, limit);
+    if (drivers.length > 0) return drivers;
+  }
+  return findNearbyDrivers(null, null, 0, excludeIds, limit);
+}
+
 /* ── Dispatch PRIMARY drivers (batch, first-accept wins) ────────────────── */
 
 export async function dispatchPrimary(
@@ -190,81 +208,85 @@ export async function dispatchPrimary(
     return { ok: false, message: "No available primary chauffeur after max retries" };
   }
 
-  for (const radius of RADII_KM) {
-    const drivers = await findNearbyDrivers(
-      pickupLat, pickupLng, radius, excludeDriverIds, PRIMARY_BATCH_SIZE,
-    );
-    if (drivers.length === 0) continue;
+  const drivers = await selectDispatchBatch(
+    pickupLat, pickupLng, excludeDriverIds, PRIMARY_BATCH_SIZE,
+  );
 
-    /* Create PENDING assignments for all candidates simultaneously */
-    const assignments = await Promise.all(
-      drivers.map((d) =>
-        prisma.careAssignment.create({
-          data: {
-            bookingId,
-            driverId:    d.id,
-            role:        "PRIMARY",
-            status:      "PENDING",
-            dispatchedAt: new Date(),
-          },
-        }),
-      ),
-    );
-
-    /* Push notifications to all candidates */
-    await Promise.all(
-      drivers.map((d, i) =>
-        pushToDriver(d.id, {
-          title: "🌟 Movo Care Ride — Primary Chauffeur",
-          body:  `Pickup: ${booking.pickup} · ${d.distKm.toFixed(1)} km away`,
-          tag:   `care-primary-${bookingId}`,
-          data:  { type: "care_primary", bookingId, assignmentId: assignments[i].id, requireInteraction: "true" },
-        }).catch(() => {}),
-      ),
-    );
-
-    /* Emit to EVERY batched driver with their OWN assignment id — previously
-       only drivers[0] got the socket event, so the rest of the batch saw the
-       request only if their web-push landed or they reloaded. */
-    drivers.forEach((d, i) => {
-      dispatchCarePrimaryDispatched({
-        bookingId,
-        assignmentId: assignments[i].id,
-        driverId:     d.id,
-        userId,
-      });
-    });
-
-    /* Timeout: cancel any still-PENDING, retry with expanded exclude list */
-    const dispatchedIds = drivers.map((d) => d.id);
-    setTimeout(async () => {
-      /* Check if a PRIMARY was already accepted — if so, no retry needed */
-      const accepted = await prisma.careAssignment.findFirst({
-        where: { bookingId, role: "PRIMARY", status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "COMPLETED"] } },
-      });
-      if (accepted) return;
-
-      const stillPending = await prisma.careAssignment.findMany({
-        where: { bookingId, role: "PRIMARY", status: "PENDING" },
-      });
-      if (stillPending.length > 0) {
-        await prisma.careAssignment.updateMany({
-          where: { id: { in: stillPending.map((a) => a.id) } },
-          data:  { status: "CANCELLED", cancelledAt: new Date() },
-        });
-      }
-
-      const nextExclude = [...excludeDriverIds, ...dispatchedIds];
-      dispatchPrimary(bookingId, pickupLat, pickupLng, userId, nextExclude, retryRound + 1).catch(() => {});
+  /* Literally nobody online/eligible right now — wait a window before the next
+     round so a chauffeur coming online in the next couple of minutes still gets
+     the request (immediate recursion used to burn all rounds in milliseconds). */
+  if (drivers.length === 0) {
+    setTimeout(() => {
+      dispatchPrimary(bookingId, pickupLat, pickupLng, userId, excludeDriverIds, retryRound + 1).catch(() => {});
     }, DISPATCH_TIMEOUT_MS);
-
-    return { ok: true };
+    return { ok: false, message: "No driver available this round, retrying" };
   }
 
-  /* No driver found in any radius this round — retry next round */
-  const nextExclude = [...excludeDriverIds];
-  dispatchPrimary(bookingId, pickupLat, pickupLng, userId, nextExclude, retryRound + 1).catch(() => {});
-  return { ok: false, message: "No driver found in range, retrying" };
+  /* Create PENDING assignments for all candidates simultaneously */
+  const assignments = await Promise.all(
+    drivers.map((d) =>
+      prisma.careAssignment.create({
+        data: {
+          bookingId,
+          driverId:    d.id,
+          role:        "PRIMARY",
+          status:      "PENDING",
+          dispatchedAt: new Date(),
+        },
+      }),
+    ),
+  );
+
+  /* Push notifications to all candidates */
+  await Promise.all(
+    drivers.map((d, i) =>
+      pushToDriver(d.id, {
+        title: "🌟 Movo Care Ride — Primary Chauffeur",
+        body:  `Pickup: ${booking.pickup}${d.distKm > 0 ? ` · ${d.distKm.toFixed(1)} km away` : ""}`,
+        tag:   `care-primary-${bookingId}`,
+        data:  { type: "care_primary", bookingId, assignmentId: assignments[i].id, requireInteraction: "true" },
+      }).catch(() => {}),
+    ),
+  );
+
+  /* Emit to EVERY batched driver with their OWN assignment id — previously
+     only drivers[0] got the socket event, so the rest of the batch saw the
+     request only if their web-push landed or they reloaded. */
+  drivers.forEach((d, i) => {
+    dispatchCarePrimaryDispatched({
+      bookingId,
+      assignmentId: assignments[i].id,
+      driverId:     d.id,
+      userId,
+    });
+  });
+
+  /* Timeout: cancel any still-PENDING, then RE-OFFER TO THE SAME POOL.
+     Do NOT accumulate the tried drivers into the exclude list — with a small
+     fleet that excluded everyone after round 1, so an unanswered request was
+     never offered to anyone again. Chauffeurs who missed or declined the first
+     window deserve the next one too; MAX_RETRY_ROUNDS bounds the process. */
+  setTimeout(async () => {
+    /* Check if a PRIMARY was already accepted — if so, no retry needed */
+    const accepted = await prisma.careAssignment.findFirst({
+      where: { bookingId, role: "PRIMARY", status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "COMPLETED"] } },
+    });
+    if (accepted) return;
+
+    const stillPending = await prisma.careAssignment.findMany({
+      where: { bookingId, role: "PRIMARY", status: "PENDING" },
+    });
+    if (stillPending.length > 0) {
+      await prisma.careAssignment.updateMany({
+        where: { id: { in: stillPending.map((a) => a.id) } },
+        data:  { status: "CANCELLED", cancelledAt: new Date() },
+      });
+    }
+
+    dispatchPrimary(bookingId, pickupLat, pickupLng, userId, excludeDriverIds, retryRound + 1).catch(() => {});
+  }, DISPATCH_TIMEOUT_MS);
+
+  return { ok: true };
 }
 
 /* ── Dispatch SUPPORT drivers (batch, first-accept wins) ─────────────────── */
@@ -301,73 +323,73 @@ export async function dispatchSupport(
     return { ok: false, message: "No available support chauffeur after max retries" };
   }
 
-  for (const radius of RADII_KM) {
-    const drivers = await findNearbyDrivers(
-      dropoffLat, dropoffLng, radius, excludeDriverIds, SUPPORT_BATCH_SIZE,
-    );
-    if (drivers.length === 0) continue;
+  const drivers = await selectDispatchBatch(
+    dropoffLat, dropoffLng, excludeDriverIds, SUPPORT_BATCH_SIZE,
+  );
 
-    /* Create PENDING assignments for all candidates simultaneously */
-    const assignments = await Promise.all(
-      drivers.map((d) =>
-        prisma.careAssignment.create({
-          data: {
-            bookingId,
-            driverId:    d.id,
-            role:        "SUPPORT",
-            status:      "PENDING",
-            dispatchedAt: new Date(),
-          },
-        }),
-      ),
-    );
-
-    /* Push notifications to all candidates */
-    await Promise.all(
-      drivers.map((d, i) =>
-        pushToDriver(d.id, {
-          title: "🔄 Care Ride — Support Chauffeur",
-          body:  `Rendezvous: ${booking.dropoff} · ${d.distKm.toFixed(1)} km away`,
-          tag:   `care-support-${bookingId}`,
-          data:  { type: "care_support", bookingId, assignmentId: assignments[i].id, requireInteraction: "true" },
-        }).catch(() => {}),
-      ),
-    );
-
-    dispatchCareSupportDispatched({
-      bookingId,
-      driverIds: drivers.map((d) => d.id),
-      userId,
-    });
-
-    /* Timeout: cancel any still-PENDING after 30 s, re-dispatch with next batch */
-    const dispatchedIds = drivers.map((d) => d.id);
-    setTimeout(async () => {
-      /* Check if a SUPPORT was already accepted */
-      const accepted = await prisma.careAssignment.findFirst({
-        where: { bookingId, role: "SUPPORT", status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "COMPLETED"] } },
-      });
-      if (accepted) return;
-
-      const stillPending = await prisma.careAssignment.findMany({
-        where: { bookingId, role: "SUPPORT", status: "PENDING" },
-      });
-      if (stillPending.length > 0) {
-        await prisma.careAssignment.updateMany({
-          where: { id: { in: stillPending.map((a) => a.id) } },
-          data:  { status: "CANCELLED", cancelledAt: new Date() },
-        });
-      }
-
-      const nextExclude = [...excludeDriverIds, ...dispatchedIds];
-      dispatchSupport(bookingId, dropoffLat, dropoffLng, userId, nextExclude, retryRound + 1).catch(() => {});
+  /* Nobody eligible right now (remember: the PRIMARY driver is excluded) —
+     wait a window before retrying so a chauffeur coming online still gets it */
+  if (drivers.length === 0) {
+    setTimeout(() => {
+      dispatchSupport(bookingId, dropoffLat, dropoffLng, userId, excludeDriverIds, retryRound + 1).catch(() => {});
     }, DISPATCH_TIMEOUT_MS);
-
-    return { ok: true };
+    return { ok: false, message: "No support driver available this round, retrying" };
   }
 
-  /* No driver found in any radius this round — retry next round */
-  const nextExclude = [...excludeDriverIds];
-  dispatchSupport(bookingId, dropoffLat, dropoffLng, userId, nextExclude, retryRound + 1).catch(() => {});
-  return { ok: false, message: "No support driver found in range, retrying" };
+  /* Create PENDING assignments for all candidates simultaneously */
+  const assignments = await Promise.all(
+    drivers.map((d) =>
+      prisma.careAssignment.create({
+        data: {
+          bookingId,
+          driverId:    d.id,
+          role:        "SUPPORT",
+          status:      "PENDING",
+          dispatchedAt: new Date(),
+        },
+      }),
+    ),
+  );
+
+  /* Push notifications to all candidates */
+  await Promise.all(
+    drivers.map((d, i) =>
+      pushToDriver(d.id, {
+        title: "🔄 Care Ride — Support Chauffeur",
+        body:  `Rendezvous: ${booking.dropoff}${d.distKm > 0 ? ` · ${d.distKm.toFixed(1)} km away` : ""}`,
+        tag:   `care-support-${bookingId}`,
+        data:  { type: "care_support", bookingId, assignmentId: assignments[i].id, requireInteraction: "true" },
+      }).catch(() => {}),
+    ),
+  );
+
+  dispatchCareSupportDispatched({
+    bookingId,
+    driverIds: drivers.map((d) => d.id),
+    userId,
+  });
+
+  /* Timeout: cancel any still-PENDING, then re-offer to the SAME pool (see
+     dispatchPrimary — accumulating excludes starved small fleets) */
+  setTimeout(async () => {
+    /* Check if a SUPPORT was already accepted */
+    const accepted = await prisma.careAssignment.findFirst({
+      where: { bookingId, role: "SUPPORT", status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "COMPLETED"] } },
+    });
+    if (accepted) return;
+
+    const stillPending = await prisma.careAssignment.findMany({
+      where: { bookingId, role: "SUPPORT", status: "PENDING" },
+    });
+    if (stillPending.length > 0) {
+      await prisma.careAssignment.updateMany({
+        where: { id: { in: stillPending.map((a) => a.id) } },
+        data:  { status: "CANCELLED", cancelledAt: new Date() },
+      });
+    }
+
+    dispatchSupport(bookingId, dropoffLat, dropoffLng, userId, excludeDriverIds, retryRound + 1).catch(() => {});
+  }, DISPATCH_TIMEOUT_MS);
+
+  return { ok: true };
 }

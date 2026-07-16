@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { normalizeCommissionRate } from "@/lib/earnings";
 
 const TIER_SEEDS = [
   { tier: "classic", name: "Movo Classic",   image: "/images/movo classic.png", baseFare: 4.00,  ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00,  hourlyRate: 55.00,  hourlyMinHours: 2 },
@@ -72,7 +73,10 @@ export async function PUT(req: NextRequest) {
           data: {
             baseFare: t.baseFare, ratePerKm: t.ratePerKm, ratePerMin: t.ratePerMin,
             minFare: t.minFare, hourlyRate: t.hourlyRate, hourlyMinHours: t.hourlyMinHours,
-            commissionRate: t.commissionRate,
+            /* Store as a FRACTION always. Admins naturally type "20" for 20%,
+               which used to be saved verbatim and made every driver earning
+               fare × (1 − 20) — a large negative amount. */
+            commissionRate: normalizeCommissionRate(t.commissionRate),
           },
         })
       ),

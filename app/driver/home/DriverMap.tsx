@@ -22,7 +22,7 @@ function carIconSvg(headingDeg: number): string {
   );
 }
 
-const DEFAULT_CENTER = { lat: 43.6532, lng: -79.3832 }; /* Toronto */
+const DEFAULT_CENTER = { lat: 49.8951, lng: -97.1384 }; /* Winnipeg */
 
 const MAP_STYLES = [
   { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
