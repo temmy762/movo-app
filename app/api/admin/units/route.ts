@@ -17,10 +17,20 @@ function deriveStatus(driverStatus: string, isOnline: boolean): "Available" | "M
 
 export async function GET() {
   try {
-    const vehicles = await prisma.vehicle.findMany({
-      include: { driver: { select: { status: true, isOnline: true, firstName: true, lastName: true } } },
-      orderBy: { createdAt: "desc" },
-    });
+    /* photoUrl holds multi-MB base64 data URIs — inlining one per vehicle made
+       this endpoint take forever. Fetch metadata only; photos stream on demand
+       via /api/admin/units/[id]/photo. */
+    const [vehicles, withPhoto] = await Promise.all([
+      prisma.vehicle.findMany({
+        select: {
+          id: true, make: true, model: true, plate: true, tier: true, createdAt: true,
+          driver: { select: { status: true, isOnline: true, firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.vehicle.findMany({ where: { photoUrl: { not: null } }, select: { id: true } }),
+    ]);
+    const photoIds = new Set(withPhoto.map((v) => v.id));
 
     const units = vehicles.map((v, i) => {
       const tier = normalizeTier(v.tier);
@@ -33,7 +43,7 @@ export async function GET() {
         status:       deriveStatus(v.driver.status, v.driver.isOnline),
         units:        v.driver.status === "ACTIVE" ? 1 : 0,
         price:        TIER_PRICE[tier] ?? 50,
-        image:        v.photoUrl ?? TIER_IMG[tier] ?? "/images/movo classic.png",
+        image:        photoIds.has(v.id) ? `/api/admin/units/${v.id}/photo` : (TIER_IMG[tier] ?? "/images/movo classic.png"),
         plate:        v.plate,
         tier,
         driverName:   `${v.driver.firstName} ${v.driver.lastName}`,

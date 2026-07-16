@@ -118,7 +118,7 @@ function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDel
       {/* Desktop */}
       <div className="hidden md:flex items-center gap-4 px-5 py-3.5">
         <div className="relative w-36 h-[72px] shrink-0 rounded-xl overflow-hidden bg-gray-50">
-          <Image src={unit.image} alt={unit.model} fill className="object-contain p-2" sizes="144px"/>
+          <Image src={unit.image} alt={unit.model} fill className="object-contain p-2" sizes="144px" unoptimized/>
         </div>
         <div className="w-[200px] shrink-0">
           <p className="text-[10px] text-gray-400 font-medium leading-none">{unit.brand}</p>
@@ -166,7 +166,7 @@ function UnitRow({ unit, onEdit, onDelete, deletePending, onDeleteConfirm, onDel
       <div className="md:hidden p-3">
         <div className="flex gap-3">
           <div className="relative w-24 h-16 shrink-0 rounded-xl overflow-hidden bg-gray-50">
-            <Image src={unit.image} alt={unit.model} fill className="object-contain p-1.5" sizes="96px"/>
+            <Image src={unit.image} alt={unit.model} fill className="object-contain p-1.5" sizes="96px" unoptimized/>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[9px] text-gray-400 leading-none">{unit.brand}</p>
@@ -202,7 +202,7 @@ function UnitGridCard({ unit, onEdit, onDelete, pricing }: { unit: Unit; onEdit:
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col gap-3">
       <div className="relative w-full h-32 rounded-xl overflow-hidden bg-gray-50">
-        <Image src={unit.image} alt={unit.model} fill className="object-contain p-3" sizes="300px"/>
+        <Image src={unit.image} alt={unit.model} fill className="object-contain p-3" sizes="300px" unoptimized/>
       </div>
       <div>
         <p className="text-[10px] text-gray-400">{unit.brand}</p>
