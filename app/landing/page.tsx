@@ -23,13 +23,6 @@ const GOLD  = "#C6BFB2";
 const DARK  = "#0A0A0F";
 
 /* ── Data ───────────────────────────────────────────────────────────────────── */
-const SERVICES = [
-  { id: "classic",  label: "Standard",     desc: "Everyday city rides, elevated.",          img: "/images/movo classic.png",  from: 18,  href: "/home/pickup?tier=classic" },
-  { id: "premium",  label: "Executive",      desc: "More space, more presence.",              img: "/images/movo premium.png",  from: 25,  href: "/home/pickup?tier=premium" },
-  { id: "black",    label: "Concierge",  desc: "Unparalleled luxury at your fingertips.", img: "/images/prive black.png",   from: 35,  href: "/home/pickup?tier=black" },
-  { id: "care",     label: "Safe Ride",    desc: "We drive you home in your own vehicle.",  img: "/images/movo classic.png",  from: 129, href: "/home/care-ride", badge: "New" },
-];
-
 const WHY_ITEMS = [
   { iconKey: "shield",  title: "Vetted Chauffeurs",   desc: "Every driver is background-checked, licensed, and trained to Movo's luxury standard." },
   { iconKey: "pin",     title: "Real-Time Tracking",  desc: "Follow your chauffeur live from dispatch to arrival — no guessing, no waiting." },
@@ -563,86 +556,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CHOOSE YOUR LEVEL ── */}
+      {/* ── RIDE TIERS (replaces the old "Choose your level of service") ── */}
       <section id="services" className="py-20 px-5 md:px-10 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <SectionLabel>Services</SectionLabel>
-            <SectionHeading>Choose your level of service</SectionHeading>
-            <p className="text-gray-500 mt-3 text-[14px]">All services include professional chauffeurs and real-time tracking.</p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {SERVICES.map(s => (
-              <Link key={s.id} href={s.href}
-                className="rounded-2xl p-4 flex flex-col gap-3 border transition-all cursor-pointer hover:shadow-lg hover:-translate-y-0.5 group"
-                style={{ border: s.id === "care" ? `2px solid ${NAVY}` : "1px solid #e5e7eb", background: s.id === "care" ? `linear-gradient(135deg,${DARK},${NAVY})` : "white" }}>
-                {s.badge && (
-                  <span className="self-start text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: GOLD, color: DARK }}>{s.badge}</span>
-                )}
-                <div className="relative h-16 w-full">
-                  <Image src={s.img} alt={s.label} fill className="object-contain" unoptimized />
-                </div>
-                <p className="text-[13px] font-bold" style={{ color: s.id === "care" ? "white" : "#111827" }}>{s.label}</p>
-                <p className="text-[11px] leading-snug" style={{ color: s.id === "care" ? "rgba(255,255,255,0.6)" : "#6b7280" }}>{s.desc}</p>
-                <div className="flex items-center justify-between mt-auto">
-                  <span className="text-[10px]" style={{ color: s.id === "care" ? "rgba(255,255,255,0.5)" : "#9ca3af" }}>From ${s.from}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: s.id === "care" ? `${GOLD}22` : `${NAVY}11`, color: s.id === "care" ? GOLD : NAVY }}>Book Now</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <p className="text-center text-[11px] text-gray-400 mt-6">Prices are estimates and may vary based on time, distance, and traffic.</p>
-        </div>
-      </section>
-
-      {/* ── WHY MOVO ── */}
-      <section id="why-movo" className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <SectionLabel>Why Movo</SectionLabel>
-            <SectionHeading>The standard for premium<br />chauffeur travel</SectionHeading>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {WHY_ITEMS.map(w => (
-              <div key={w.title} className="bg-white rounded-2xl p-5 shadow-sm flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
-                  <WhyIcon k={w.iconKey} />
-                </div>
-                <p className="text-[15px] font-bold text-gray-900">{w.title}</p>
-                <p className="text-[13px] text-gray-500 leading-relaxed">{w.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── HOW IT WORKS ── */}
-      <section className="py-20 px-5 md:px-10 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <SectionLabel>Simple Process</SectionLabel>
-            <SectionHeading>Book in four steps</SectionHeading>
-          </div>
-          <div className="flex flex-col gap-6">
-            {HOW_IT_WORKS.map((s, i) => (
-              <div key={s.step} className="flex items-start gap-5">
-                <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center font-extrabold text-[16px]"
-                  style={{ background: i % 2 === 0 ? `linear-gradient(135deg,${DARK},${NAVY})` : `linear-gradient(135deg,${GOLD},#a89e8e)`, color: "white" }}>
-                  {s.step}
-                </div>
-                <div>
-                  <p className="text-[15px] font-bold text-gray-900 mb-1">{s.title}</p>
-                  <p className="text-[13px] text-gray-500 leading-relaxed">{s.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── RIDE TIERS ── */}
-      <section className="py-20 px-5 md:px-10 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <SectionLabel>Ride Tiers</SectionLabel>
@@ -711,6 +626,52 @@ export default function LandingPage() {
                 <p className="text-[12px] text-gray-500 leading-relaxed">It allows us to carefully coordinate your booking and ensure a seamless, punctual pickup every time.</p>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHY MOVO ── */}
+      <section id="why-movo" className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <SectionLabel>Why Movo</SectionLabel>
+            <SectionHeading>The standard for premium<br />chauffeur travel</SectionHeading>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+            {WHY_ITEMS.map(w => (
+              <div key={w.title} className="bg-white rounded-2xl p-5 shadow-sm flex flex-col gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+                  <WhyIcon k={w.iconKey} />
+                </div>
+                <p className="text-[15px] font-bold text-gray-900">{w.title}</p>
+                <p className="text-[13px] text-gray-500 leading-relaxed">{w.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="py-20 px-5 md:px-10 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <SectionLabel>Simple Process</SectionLabel>
+            <SectionHeading>Book in four steps</SectionHeading>
+          </div>
+          <div className="flex flex-col gap-6">
+            {HOW_IT_WORKS.map((s, i) => (
+              <div key={s.step} className="flex items-start gap-5">
+                <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center font-extrabold text-[16px]"
+                  style={{ background: i % 2 === 0 ? `linear-gradient(135deg,${DARK},${NAVY})` : `linear-gradient(135deg,${GOLD},#a89e8e)`, color: "white" }}>
+                  {s.step}
+                </div>
+                <div>
+                  <p className="text-[15px] font-bold text-gray-900 mb-1">{s.title}</p>
+                  <p className="text-[13px] text-gray-500 leading-relaxed">{s.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
