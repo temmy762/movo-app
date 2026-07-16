@@ -2,7 +2,7 @@ import DriverBottomNav from "./components/DriverBottomNav";
 import DriverSidebar from "./components/DriverSidebar";
 
 export const metadata = {
-  title: "MOVO PRIVÉ — Driver",
+  title: "MOVO — Driver",
 };
 
 export default function DriverHomeLayout({

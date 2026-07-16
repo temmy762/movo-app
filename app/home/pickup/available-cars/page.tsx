@@ -11,9 +11,9 @@ const TIER_IMAGES: Record<string, string> = {
 };
 
 const TIER_LABELS: Record<string, string> = {
-  classic: "Movo Classic",
-  premium: "Movo Premium",
-  black:   "Movo Privé Black",
+  classic: "Standard",
+  premium: "Executive",
+  black:   "Concierge",
 };
 
 const TIER_DESCS: Record<string, string> = {
@@ -133,7 +133,7 @@ function AvailableCarsContent() {
 
   const handleBookCare = () => {
     setBooking(true);
-    const params = new URLSearchParams({ pickup, dropoff, service: "care", tier: "care", car: "Movo Safe Ride" });
+    const params = new URLSearchParams({ pickup, dropoff, service: "care", tier: "care", car: "Safe Ride" });
     if (date)       params.set("date", date);
     if (time)       params.set("time", time);
     if (passengers) params.set("passengers", passengers);
@@ -187,7 +187,7 @@ function AvailableCarsContent() {
             <>
               <div className="mb-1 flex items-center gap-2 px-1">
                 <span className="w-2 h-2 rounded-full bg-[#C6BFB2] animate-pulse" />
-                <p className="text-[12px] font-semibold text-gray-500">You&apos;re booking a <span className="text-[#131936] font-bold">Movo Safe Ride</span></p>
+                <p className="text-[12px] font-semibold text-gray-500">You&apos;re booking a <span className="text-[#131936] font-bold">Safe Ride</span></p>
               </div>
               <div
                 className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border-2 cursor-pointer active:scale-[0.99] transition-transform"
@@ -197,7 +197,7 @@ function AvailableCarsContent() {
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-[16px] font-bold text-white">Movo Safe Ride</span>
+                        <span className="text-[16px] font-bold text-white">Safe Ride</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">Premium</span>
                       </div>
                       <p className="text-[12px] text-white/70 leading-snug mb-2">We drive you home in your own car — two vetted chauffeurs, one seamless booking.</p>
@@ -319,7 +319,7 @@ function AvailableCarsContent() {
             </div>
             <p className="text-[16px] font-bold text-gray-900 mb-1">Switch to Regular Ride?</p>
             <p className="text-[12px] text-gray-500 text-center mb-5">
-              You came here for a <strong>Movo Safe Ride</strong>. Selecting a regular category will exit the Safe Ride booking flow.
+              You came here for a <strong>Safe Ride</strong>. Selecting a regular category will exit the Safe Ride booking flow.
             </p>
             <div className="flex gap-3 w-full">
               <button type="button"

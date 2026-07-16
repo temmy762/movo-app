@@ -16,12 +16,12 @@ export default function LegalNoticePage() {
         <h1 className="text-[18px] font-bold text-gray-900">Legal Notice</h1>
       </header>
       <div className="px-4 pt-5 pb-10 w-full max-w-lg mx-auto space-y-4 text-[13px] text-gray-600 leading-relaxed">
-        <p className="text-[15px] font-bold text-gray-900">Movo Privé — Legal Notice</p>
-        <p>Movo Privé is operated by Movo Privé Ltd, a company registered in England and Wales.</p>
+        <p className="text-[15px] font-bold text-gray-900">Movo — Legal Notice</p>
+        <p>Movo is operated by Movo Ltd, a company registered in England and Wales.</p>
         <p><strong>Registered Address:</strong> 123 Example Street, London, EC1A 1BB, United Kingdom</p>
         <p><strong>Company Number:</strong> 12345678</p>
         <p><strong>VAT Number:</strong> GB 123 456 789</p>
-        <p>All content on this platform, including text, graphics, logos, and software, is the property of Movo Privé Ltd and is protected by applicable intellectual property laws.</p>
+        <p>All content on this platform, including text, graphics, logos, and software, is the property of Movo Ltd and is protected by applicable intellectual property laws.</p>
         <p>Use of this platform constitutes acceptance of our Terms & Conditions and Privacy Policy. Unauthorised use of this platform may give rise to a claim for damages.</p>
         <p>For legal enquiries, please contact: <a href="mailto:legal@movoprive.com" className="underline">legal@movoprive.com</a></p>
         <p className="text-[11px] text-gray-400">Last updated: January 2025</p>

@@ -73,7 +73,7 @@ export default function DriverSidebar() {
     >
       {/* Logo */}
       <div className="relative w-48 h-24 mx-auto mb-8">
-        <Image src="/images/logo/logo-horizontal-ivory.svg" alt="MOVO PRIVÉ" fill className="object-contain" />
+        <Image src="/images/logo/logo-horizontal-ivory.svg" alt="MOVO" fill className="object-contain" />
       </div>
 
       {/* Nav links */}

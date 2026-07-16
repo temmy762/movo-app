@@ -1,6 +1,6 @@
 import PolicyLayout, { PolicySection } from "@/components/legal/PolicyLayout";
 
-export const metadata = { title: "Terms & Conditions — Movo Privé" };
+export const metadata = { title: "Terms & Conditions — Movo" };
 
 const UPDATED = "July 4, 2026";
 
@@ -9,7 +9,7 @@ export default function TermsPage() {
     <PolicyLayout
       title="Terms & Conditions"
       updatedAt={UPDATED}
-      intro="These Terms & Conditions govern your use of the Movo Privé platform, whether as a customer booking a ride or a chauffeur providing one. By creating an account, you agree to be bound by these Terms."
+      intro="These Terms & Conditions govern your use of the Movo platform, whether as a customer booking a ride or a chauffeur providing one. By creating an account, you agree to be bound by these Terms."
     >
       <h2 className="text-[20px] font-extrabold text-gray-900 mb-4 mt-2">Part A — Customer Terms</h2>
 
@@ -50,7 +50,7 @@ export default function TermsPage() {
       </PolicySection>
 
       <PolicySection title="A.9 Limitation of Liability">
-        <p>Movo Privé is a platform connecting riders with independent chauffeurs. To the maximum extent permitted by law, Movo's liability for any claim arising from use of the platform is limited to the amount paid for the ride giving rise to the claim. Movo is not liable for indirect, incidental, or consequential damages.</p>
+        <p>Movo is a platform connecting riders with independent chauffeurs. To the maximum extent permitted by law, Movo's liability for any claim arising from use of the platform is limited to the amount paid for the ride giving rise to the claim. Movo is not liable for indirect, incidental, or consequential damages.</p>
       </PolicySection>
 
       <PolicySection title="A.10 Refund Policy">
@@ -58,13 +58,13 @@ export default function TermsPage() {
       </PolicySection>
 
       <PolicySection title="A.11 Service Availability">
-        <p>Movo Privé operates subject to chauffeur availability in your area and service hours may vary by region. We do not guarantee that a ride will always be available on demand, particularly for Movo Safe Ride, which requires two chauffeurs.</p>
+        <p>Movo operates subject to chauffeur availability in your area and service hours may vary by region. We do not guarantee that a ride will always be available on demand, particularly for Safe Ride, which requires two chauffeurs.</p>
       </PolicySection>
 
       <h2 className="text-[20px] font-extrabold text-gray-900 mb-4 mt-10">Part B — Chauffeur Terms</h2>
 
       <PolicySection title="B.1 Independent Contractor Relationship">
-        <p>Chauffeurs providing rides through the Movo platform are independent contractors, not employees, agents, or partners of Movo Privé. Chauffeurs control their own schedule, choose whether to accept a given ride request, and are responsible for their own tax obligations.</p>
+        <p>Chauffeurs providing rides through the Movo platform are independent contractors, not employees, agents, or partners of Movo. Chauffeurs control their own schedule, choose whether to accept a given ride request, and are responsible for their own tax obligations.</p>
       </PolicySection>
 
       <PolicySection title="B.2 Vehicle Requirements">

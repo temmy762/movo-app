@@ -145,7 +145,7 @@ function PickupContent() {
         dropoff,
         service: "care",
         tier:    "black",
-        car:     "Movo Care Ride",
+        car:     "Safe Ride",
         date, time,
         passengers: String(passengers),
       });

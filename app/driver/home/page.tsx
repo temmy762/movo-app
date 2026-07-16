@@ -849,7 +849,7 @@ export default function DriverHomePage() {
                   {/* Chips row */}
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <span className="text-[14px]">🌟</span>
-                    <p className="text-[13px] font-bold text-white">Movo Care Ride</p>
+                    <p className="text-[13px] font-bold text-white">Safe Ride</p>
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
                       style={{ background: "rgba(198,191,178,0.15)", color: "#C6BFB2" }}>
                       {careAssignment.role === "PRIMARY" ? "Primary Chauffeur" : "Support Chauffeur"}
@@ -1144,7 +1144,7 @@ export default function DriverHomePage() {
                 <span className="text-[14px]">🌟</span>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="text-[12px] font-bold text-white">Movo Care Ride</p>
+                    <p className="text-[12px] font-bold text-white">Safe Ride</p>
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-white/15 text-white/80">Care</span>
                   </div>
                   <p className="text-[10px] text-white/70">
@@ -1614,7 +1614,7 @@ export default function DriverHomePage() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <p className="text-[11px] font-semibold text-[#C6BFB2] uppercase tracking-wider mb-3">Movo Care Ride</p>
+            <p className="text-[11px] font-semibold text-[#C6BFB2] uppercase tracking-wider mb-3">Safe Ride</p>
             <div className="flex gap-1 mb-2">
               {[1,2,3,4,5].map((s) => (
                 <button key={s} className="no-hover-fx" onClick={() => setTripRating(s)}>

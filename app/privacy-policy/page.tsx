@@ -1,6 +1,6 @@
 import PolicyLayout, { PolicySection } from "@/components/legal/PolicyLayout";
 
-export const metadata = { title: "Privacy Policy — Movo Privé" };
+export const metadata = { title: "Privacy Policy — Movo" };
 
 const UPDATED = "July 4, 2026";
 
@@ -9,7 +9,7 @@ export default function PrivacyPolicyPage() {
     <PolicyLayout
       title="Privacy Policy"
       updatedAt={UPDATED}
-      intro="Movo Privé ('Movo', 'we', 'us') respects your privacy and is committed to protecting the personal information of our riders, chauffeurs, and website visitors. This Privacy Policy explains what information we collect, how we use it, and the rights you have over it. It applies to the Movo website, rider app, and chauffeur app."
+      intro="Movo ('Movo', 'we', 'us') respects your privacy and is committed to protecting the personal information of our riders, chauffeurs, and website visitors. This Privacy Policy explains what information we collect, how we use it, and the rights you have over it. It applies to the Movo website, rider app, and chauffeur app."
     >
       <PolicySection title="1. Information We Collect">
         <p><strong>Customers.</strong> Name, email address, phone number, payment details (processed by our payment provider — Movo does not store full card numbers), pickup/drop-off addresses, ride history, ratings and reviews, and support communications.</p>
@@ -73,7 +73,7 @@ export default function PrivacyPolicyPage() {
       </PolicySection>
 
       <PolicySection title="10. Compliance with PIPEDA">
-        <p>Movo Privé operates in accordance with the Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable provincial privacy legislation. We are committed to the ten PIPEDA fair information principles, including accountability, consent, limited collection, limited use/disclosure/retention, accuracy, safeguards, openness, individual access, and the ability to challenge compliance.</p>
+        <p>Movo operates in accordance with the Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable provincial privacy legislation. We are committed to the ten PIPEDA fair information principles, including accountability, consent, limited collection, limited use/disclosure/retention, accuracy, safeguards, openness, individual access, and the ability to challenge compliance.</p>
       </PolicySection>
 
       <PolicySection title="11. Contact Us">

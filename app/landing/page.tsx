@@ -24,10 +24,10 @@ const DARK  = "#0A0A0F";
 
 /* ── Data ───────────────────────────────────────────────────────────────────── */
 const SERVICES = [
-  { id: "classic",  label: "Movo Classic",     desc: "Everyday city rides, elevated.",          img: "/images/movo classic.png",  from: 18,  href: "/home/pickup?tier=classic" },
-  { id: "premium",  label: "Movo Premium",      desc: "More space, more presence.",              img: "/images/movo premium.png",  from: 25,  href: "/home/pickup?tier=premium" },
-  { id: "black",    label: "Movo Privé Black",  desc: "Unparalleled luxury at your fingertips.", img: "/images/prive black.png",   from: 35,  href: "/home/pickup?tier=black" },
-  { id: "care",     label: "Movo Care Ride",    desc: "We drive you home in your own vehicle.",  img: "/images/movo classic.png",  from: 129, href: "/home/care-ride", badge: "New" },
+  { id: "classic",  label: "Standard",     desc: "Everyday city rides, elevated.",          img: "/images/movo classic.png",  from: 18,  href: "/home/pickup?tier=classic" },
+  { id: "premium",  label: "Executive",      desc: "More space, more presence.",              img: "/images/movo premium.png",  from: 25,  href: "/home/pickup?tier=premium" },
+  { id: "black",    label: "Concierge",  desc: "Unparalleled luxury at your fingertips.", img: "/images/prive black.png",   from: 35,  href: "/home/pickup?tier=black" },
+  { id: "care",     label: "Safe Ride",    desc: "We drive you home in your own vehicle.",  img: "/images/movo classic.png",  from: 129, href: "/home/care-ride", badge: "New" },
 ];
 
 const WHY_ITEMS = [
@@ -40,20 +40,41 @@ const WHY_ITEMS = [
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Choose your service",   desc: "Select Classic, Premium, Privé Black, or Movo Care Ride from the booking widget." },
+  { step: "01", title: "Choose your service",   desc: "Select Standard, Executive, Concierge, or Safe Ride from the booking widget." },
   { step: "02", title: "Enter trip details",    desc: "Set your pickup and destination. Our system calculates the fare instantly." },
   { step: "03", title: "Review & pay securely", desc: "Confirm the price breakdown and pay via card, Apple Pay, or Google Pay." },
   { step: "04", title: "Your chauffeur arrives", desc: "Track your driver live. Sit back and enjoy the ride." },
 ];
 
-const FLEET = [
-  { label: "Movo Classic",    seats: "1–3", bags: 2, img: "/images/movo classic.png",   desc: "Reliable comfort for daily city travel." },
-  { label: "Movo Premium",    seats: "1–3", bags: 3, img: "/images/movo premium.png",   desc: "Spacious executive vehicles for every occasion." },
-  { label: "Movo Privé Black",seats: "1–3", bags: 3, img: "/images/prive black.png",    desc: "Unrivalled luxury — your personal concierge on wheels." },
+const RIDE_TIERS = [
+  {
+    label: "Standard", img: "/images/movo classic.png", from: 18, href: "/home/pickup?tier=classic",
+    desc: "Reliable, comfortable rides for everyday travel.",
+    specs: [["user", "1–4 passengers"], ["bag", "2 suitcases"], ["clock", "30 min advance booking"]],
+    premium: false,
+  },
+  {
+    label: "Executive", img: "/images/movo premium.png", from: 25, href: "/home/pickup?tier=premium",
+    desc: "More space, more comfort, perfect for business or leisure.",
+    specs: [["user", "1–4 passengers"], ["bag", "3 suitcases"], ["clock", "30 min advance booking"]],
+    premium: false,
+  },
+  {
+    label: "Concierge", img: "/images/prive black.png", from: 35, href: "/home/pickup?tier=black",
+    desc: "Top-tier luxury with refined vehicles and exceptional service.",
+    specs: [["user", "1–3 passengers"], ["bag", "3 suitcases"], ["clock", "30 min advance booking"]],
+    premium: false,
+  },
+  {
+    label: "Safe Ride", img: "/images/prive black.png", from: 129, href: "/home/care-ride",
+    desc: "Two chauffeurs. You relax, we drive you and your car home.",
+    specs: [["users", "2 chauffeurs"], ["car", "Your vehicle, safely driven"], ["clock", "45 min advance booking"]],
+    premium: true,
+  },
 ];
 
 const FAQS = [
-  { q: "What is Movo Care Ride?",         a: "Movo Care Ride sends two professional chauffeurs to your location. The primary driver takes the wheel of your own vehicle and drives you home, while the support driver follows in a Movo car to return both chauffeurs. You keep your car, you arrive safely." },
+  { q: "What is Safe Ride?",         a: "Safe Ride sends two professional chauffeurs to your location. The primary driver takes the wheel of your own vehicle and drives you home, while the support driver follows in a Movo car to return both chauffeurs. You keep your car, you arrive safely." },
   { q: "How is pricing calculated?",      a: "Fares are calculated from base fare, distance, duration, and applicable fees (service, GST, airport if relevant). You see the full breakdown before you pay — no surprises." },
   { q: "Can I book for someone else?",    a: "Yes. During booking you can specify the passenger name. The booking confirmation and receipt are sent to your registered account." },
   { q: "What areas do you cover?",        a: "We currently operate across major cities. Live driver availability is shown at the time of booking." },
@@ -62,7 +83,7 @@ const FAQS = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Amara O.",   role: "Corporate Client",      stars: 5, text: "Movo Privé Black is in a league of its own. Impeccable vehicle, professional driver — I won't use anyone else for client meetings." },
+  { name: "Amara O.",   role: "Corporate Client",      stars: 5, text: "Concierge is in a league of its own. Impeccable vehicle, professional driver — I won't use anyone else for client meetings." },
   { name: "Daniel T.",  role: "Regular Commuter",      stars: 5, text: "The Care Ride service saved my evening. I could relax knowing my car was being driven safely home." },
   { name: "Sophia R.",  role: "Airport Transfer",      stars: 5, text: "Never missed a flight since switching to Movo. Always early, always professional." },
 ];
@@ -230,7 +251,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-[999] border-b border-white/10" style={{ background: DARK }}>
         <div className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between h-16">
           <Link href="/" className="flex items-center">
-            <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo Privé" width={110} height={32} priority unoptimized />
+            <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo" width={110} height={32} priority unoptimized />
           </Link>
 
           {/* Desktop links */}
@@ -281,7 +302,7 @@ export default function LandingPage() {
               <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: GOLD }}>Premium Chauffeur Platform</span>
             </div>
             <h1 className="text-[32px] sm:text-[44px] md:text-[58px] font-extrabold text-white leading-[1.1] mb-5">
-              Premium<br />chauffeur<br />services,<br /><span style={{ color: GOLD }}>on your terms.</span>
+              Professional<br />Transportation.<br /><span style={{ color: GOLD }}>On Your Terms.</span>
             </h1>
             <p className="text-white/60 text-[14px] sm:text-[15px] md:text-[17px] leading-relaxed mb-8 max-w-md">
               Professional chauffeurs. Reliable service.<br />Every ride, your way.
@@ -334,7 +355,7 @@ export default function LandingPage() {
               {tab === "care" && (
                 <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(198,191,178,0.08)", border: `1px solid ${GOLD}40` }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  <p className="text-[11px] text-white/60"><span style={{ color: GOLD }} className="font-bold">Movo Safe Ride</span> — We drive you and your vehicle home safely.</p>
+                  <p className="text-[11px] text-white/60"><span style={{ color: GOLD }} className="font-bold">Safe Ride</span> — We drive you and your vehicle home safely.</p>
                 </div>
               )}
               {tab === "hourly" && (
@@ -555,7 +576,7 @@ export default function LandingPage() {
       <section id="why-movo" className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <SectionLabel>Why Movo Privé</SectionLabel>
+            <SectionLabel>Why Movo</SectionLabel>
             <SectionHeading>The standard for premium<br />chauffeur travel</SectionHeading>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
@@ -597,29 +618,76 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FLEET SHOWCASE ── */}
-      <section className="py-20 px-5 md:px-10" style={{ background: DARK }}>
-        <div className="max-w-5xl mx-auto">
+      {/* ── RIDE TIERS ── */}
+      <section className="py-20 px-5 md:px-10 bg-white">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <SectionLabel>Our Fleet</SectionLabel>
-            <SectionHeading light>A vehicle for every occasion</SectionHeading>
+            <SectionLabel>Ride Tiers</SectionLabel>
+            <SectionHeading>Choose the experience that suits you</SectionHeading>
+            <p className="text-gray-500 text-[14px] mt-3">All rides include professional chauffeurs, premium vehicles, and real-time tracking.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {FLEET.map(f => (
-              <div key={f.label} className="rounded-2xl overflow-hidden" style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <div className="relative h-40 bg-gray-900">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {RIDE_TIERS.map(f => (
+              <div key={f.label} className="rounded-2xl overflow-hidden flex flex-col border"
+                style={f.premium
+                  ? { background: "linear-gradient(160deg,#0A0A0F 0%,#131936 70%)", borderColor: "rgba(198,191,178,0.4)" }
+                  : { background: "white", borderColor: "#e5e7eb" }}>
+                <div className="relative h-36" style={{ background: f.premium ? "rgba(255,255,255,0.04)" : "#F5F5F2" }}>
+                  {f.premium && (
+                    <span className="absolute top-3 left-3 z-10 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                      style={{ background: GOLD, color: NAVY }}>
+                      Premium Service
+                    </span>
+                  )}
                   <Image src={f.img} alt={f.label} fill className="object-contain p-4" unoptimized />
                 </div>
-                <div className="p-4">
-                  <p className="text-[15px] font-bold text-white mb-1">{f.label}</p>
-                  <p className="text-[12px] text-white/50 mb-3">{f.desc}</p>
-                  <div className="flex items-center gap-3 text-[11px] text-white/40">
-                    <span>👤 {f.seats} passengers</span>
-                    <span>🧳 {f.bags} bags</span>
+                <div className="p-5 flex flex-col flex-1">
+                  <p className={`text-[16px] font-extrabold uppercase tracking-wide mb-1 ${f.premium ? "text-white" : "text-gray-900"}`}>{f.label}</p>
+                  <div className="w-8 h-0.5 mb-3" style={{ background: GOLD }} />
+                  <p className={`text-[12px] leading-relaxed mb-4 ${f.premium ? "text-white/60" : "text-gray-500"}`}>{f.desc}</p>
+                  <div className="flex flex-col gap-2 mb-5">
+                    {f.specs.map(([icon, text]) => (
+                      <div key={text} className={`flex items-center gap-2 text-[12px] ${f.premium ? "text-white/70" : "text-gray-600"}`}>
+                        {icon === "user" && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>}
+                        {icon === "users" && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+                        {icon === "bag" && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="7" width="14" height="14" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>}
+                        {icon === "car" && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>}
+                        {icon === "clock" && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+                        <span>{text}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-auto flex items-center justify-between">
+                    <p className={`text-[12px] ${f.premium ? "text-white/50" : "text-gray-400"}`}>
+                      From <span className="text-[17px] font-extrabold" style={{ color: GOLD }}>${f.from}</span>
+                    </p>
+                    <Link href={f.href}
+                      className="no-hover-fx text-[12px] font-bold px-5 py-2.5 rounded-xl text-white"
+                      style={{ background: "linear-gradient(135deg,#0A0A0F 0%,#131936 60%,#2A3055 100%)" }}>
+                      Select
+                    </Link>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Reserve-in-advance note */}
+          <div className="mt-8 rounded-2xl border border-gray-200 bg-[#FAFAF8] px-6 py-5 grid md:grid-cols-2 gap-6">
+            <div className="flex items-start gap-3">
+              <svg className="shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <div>
+                <p className="text-[13px] font-bold text-gray-900 mb-1">Reserve in advance</p>
+                <p className="text-[12px] text-gray-500 leading-relaxed">For the best experience and guaranteed chauffeur assignment, we recommend reserving your trip at least 30 minutes in advance.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3 md:border-l md:border-gray-200 md:pl-6">
+              <svg className="shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <div>
+                <p className="text-[13px] font-bold text-gray-900 mb-1">Why book in advance?</p>
+                <p className="text-[12px] text-gray-500 leading-relaxed">It allows us to carefully coordinate your booking and ensure a seamless, punctual pickup every time.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -631,7 +699,7 @@ export default function LandingPage() {
             <SectionLabel>Corporate Travel</SectionLabel>
             <SectionHeading>Business travel,<br />redefined.</SectionHeading>
             <p className="text-gray-500 text-[14px] leading-relaxed mt-4 mb-6">
-              Movo Privé partners with organisations to deliver seamless executive travel. Dedicated account management, consolidated invoicing, and priority dispatch — so your team always arrives composed and on time.
+              Movo partners with organisations to deliver seamless executive travel. Dedicated account management, consolidated invoicing, and priority dispatch — so your team always arrives composed and on time.
             </p>
             <div className="flex flex-col gap-3 mb-8">
               {["Priority driver allocation", "Consolidated monthly invoicing", "Dedicated account manager", "Custom ride policies & spending limits"].map(f => (
@@ -687,7 +755,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div>
             <SectionLabel>Exclusive Service</SectionLabel>
-            <SectionHeading light>Movo Care Ride</SectionHeading>
+            <SectionHeading light>Safe Ride</SectionHeading>
             <p className="text-white/60 text-[14px] leading-relaxed mt-4 mb-6">
               Had a long evening? Let us take care of everything. Our primary chauffeur drives you home in <em>your own vehicle</em> while a support driver follows to bring them back. You arrive safely. Your car stays with you.
             </p>
@@ -791,7 +859,7 @@ export default function LandingPage() {
       <section className="py-16 px-5 md:px-10" style={{ background: `linear-gradient(135deg,${NAVY},${GOLD})` }}>
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-[28px] md:text-[38px] font-extrabold text-white mb-4">Ready for a premium ride?</h2>
-          <p className="text-white/80 text-[15px] mb-8">Join thousands of clients who trust Movo Privé for every journey.</p>
+          <p className="text-white/80 text-[15px] mb-8">Join thousands of clients who trust Movo for every journey.</p>
           <Link href="/auth/select"
             className="inline-block px-10 py-4 rounded-full font-bold text-[15px]"
             style={{ background: "white", color: NAVY }}>
@@ -805,7 +873,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-16 grid grid-cols-2 md:grid-cols-5 gap-8 border-b border-white/10">
           <div className="col-span-2 md:col-span-1">
             <div className="mb-4">
-              <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo Privé" width={100} height={30} unoptimized />
+              <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo" width={100} height={30} unoptimized />
             </div>
             <p className="text-white/40 text-[12px] leading-relaxed">Premium chauffeur services for every occasion. Professional. Reliable. Yours.</p>
           </div>
@@ -815,7 +883,7 @@ export default function LandingPage() {
               <Link href="/home/pickup?tier=classic" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">In-City Rides</Link>
               <Link href="/home/pickup?tier=all&mode=airport" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Airport Transfer</Link>
               <Link href="/home/pickup?tier=all&mode=hourly" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Hourly Chauffeur</Link>
-              <Link href="/home/care-ride" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Movo Safe Ride</Link>
+              <Link href="/home/care-ride" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Safe Ride</Link>
             </div>
           </div>
           <div>
@@ -846,7 +914,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-5 md:px-10 py-5 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-white/30 text-[11px]">&copy; {new Date().getFullYear()} Movo Privé. All rights reserved.</p>
+          <p className="text-white/30 text-[11px]">&copy; {new Date().getFullYear()} Movo. All rights reserved.</p>
           <a href="https://www.upwork.com/freelancers/~01570d6e8820d27bcf" target="_blank" rel="noopener noreferrer"
             className="text-white/30 text-[11px] hover:text-white/60 transition-colors">
             Built by <span className="font-semibold">SolvaTree</span>

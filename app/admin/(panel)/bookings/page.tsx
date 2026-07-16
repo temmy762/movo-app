@@ -736,7 +736,7 @@ function CareBookingsTable() {
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-bold text-gray-900">Movo Care Ride Bookings</span>
+          <span className="text-[15px] font-bold text-gray-900">Safe Ride Bookings</span>
           <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white" style={{ background: "#1e2d45" }}>{total}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

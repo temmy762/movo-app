@@ -84,7 +84,7 @@ export default function DriverLoginPage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-6">
             <div className="relative" style={{ width: "160px", height: "140px" }}>
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -101,7 +101,7 @@ export default function DriverLoginPage() {
                   WebkitTextFillColor: "transparent",
                 }}
               >
-                Movo Privé
+                Movo
               </span>
             </p>
           </div>

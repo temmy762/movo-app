@@ -1,7 +1,7 @@
 /**
  * POST /api/bookings/care
  *
- * Creates a single Movo Care Ride booking visible to the customer, then
+ * Creates a single Safe Ride booking visible to the customer, then
  * immediately triggers PRIMARY chauffeur dispatch via CareAssignment records.
  * SUPPORT dispatch fires automatically when PRIMARY accepts.
  *
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     /* ── Socket: notify admin dashboard ONLY (never the driver tier room) ── */
     dispatchCareBookingCreated({
       id: booking.id, pickup, dropoff, carTier: "care",
-      carName: "Movo Care Ride",
+      carName: "Safe Ride",
       total: Number(total), status: resolvedStatus,
       createdAt: booking.createdAt.toISOString(),
     });
@@ -106,8 +106,8 @@ export async function POST(req: NextRequest) {
             bookingId: booking.id, pickup, dropoff, carTier: "care",
             fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total),
             message: isScheduled
-              ? `Your Movo Safe Ride is booked for ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. We'll line up your chauffeurs ahead of your pickup time.`
-              : "Your Movo Safe Ride is confirmed. We are now finding your chauffeurs.",
+              ? `Your Safe Ride is booked for ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. We'll line up your chauffeurs ahead of your pickup time.`
+              : "Your Safe Ride is confirmed. We are now finding your chauffeurs.",
           },
         }).catch(() => {});
       }

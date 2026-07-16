@@ -47,7 +47,7 @@ export default function ApprovedPage() {
           {/* Logo */}
           <div className="flex items-center justify-center mb-8">
             <div className="relative w-36 h-36">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -66,7 +66,7 @@ export default function ApprovedPage() {
 
           {/* Message */}
           <p className="text-[14px] text-gray-600 mb-2 leading-relaxed">
-            Congratulations! Your Movo Privé onboarding application has been approved.
+            Congratulations! Your Movo onboarding application has been approved.
           </p>
 
           <p className="text-[13px] text-gray-500 mb-6 leading-relaxed">

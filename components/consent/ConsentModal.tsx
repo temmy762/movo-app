@@ -93,7 +93,7 @@ export default function ConsentModal() {
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
           <div>
             <h2 className="text-[16px] font-bold text-gray-900">Cookie Preferences</h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">Control what Movo Privé stores on your device</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Control what Movo stores on your device</p>
           </div>
           <button
             type="button"
@@ -136,7 +136,7 @@ export default function ConsentModal() {
         {/* Privacy note */}
         <div className="mx-5 mb-4 px-3 py-2.5 bg-gray-50 rounded-xl">
           <p className="text-[11px] text-gray-400 leading-relaxed">
-            Your privacy matters. Movo Privé never sells your data. Essential cookies are required for
+            Your privacy matters. Movo never sells your data. Essential cookies are required for
             the app to work.{" "}
             <a href="/privacy" className="underline" style={{ color: "#2D0A53" }}>
               Privacy Policy

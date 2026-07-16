@@ -41,7 +41,7 @@ export default function PartnerContractPage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -74,7 +74,7 @@ export default function PartnerContractPage() {
                 className="font-semibold text-[13px]"
                 style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
               >
-                Movo Privé, Fasanenstrasse 59, 10827 Berlin, Germany
+                Movo, Fasanenstrasse 59, 10827 Berlin, Germany
               </p>
             </div>
           </div>

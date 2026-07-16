@@ -58,7 +58,7 @@ function TextField({ label, value, onChange }: { label: string; value: string; o
 }
 
 const years = Array.from({ length: 30 }, (_, i) => String(new Date().getFullYear() - i));
-const vehicleClasses = ["Economy (Movo Classic)", "Premium (Movo Premium)", "First Class (Movo Privé Black)"];
+const vehicleClasses = ["Economy (Standard)", "Premium (Executive)", "First Class (Concierge)"];
 const colors = ["Black", "White", "Silver", "Grey", "Dark Blue", "Other"];
 const brands = ["Mercedes-Benz", "BMW", "Audi", "Lexus", "Cadillac", "Lincoln", "Rolls-Royce", "Bentley"];
 
@@ -126,7 +126,7 @@ export default function VehicleInformationPage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 

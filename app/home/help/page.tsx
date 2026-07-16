@@ -25,7 +25,7 @@ const helpTopics: Topic[] = [
     ),
     sections: [
       { heading: "Book in a few taps", body: "From the home screen, tap “Where to?”, then set your pickup and destination. Your pickup defaults to your current location, and address suggestions appear as you type. Choose your service level, review the fare estimate, and pay to confirm." },
-      { heading: "Choose your service", body: "Movo Classic — comfortable everyday rides. Movo Premium — more space and presence. Movo Privé Black — top-tier luxury. Movo Safe Ride — two chauffeurs drive you home in your own vehicle. Each tier shows an estimated total before you book." },
+      { heading: "Choose your service", body: "Standard — comfortable everyday rides. Executive — more space and presence. Concierge — top-tier luxury. Safe Ride — two chauffeurs drive you home in your own vehicle. Each tier shows an estimated total before you book." },
       { heading: "Schedule for later", body: "Pick a future date and time when booking. Scheduled rides are lined up with a chauffeur ahead of your pickup, and you’ll be notified when your chauffeur sets off. You can view and manage upcoming rides from the Rides tab." },
       { heading: "Add a stop during your trip", body: "On the tracking screen, open Actions → Add Stop and enter the address. The additional stop fee (plus tax) is calculated automatically and charged to your card on file — you’ll see the updated total." },
     ],
@@ -96,7 +96,7 @@ const helpTopics: Topic[] = [
   },
   {
     id: "safe-ride",
-    title: "Movo Safe Ride",
+    title: "Safe Ride",
     description: "Our two-chauffeur service that drives you home in your own car",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -104,7 +104,7 @@ const helpTopics: Topic[] = [
       </svg>
     ),
     sections: [
-      { heading: "What is Safe Ride?", body: "Movo Safe Ride sends two professional chauffeurs. A primary chauffeur drives you home in your own vehicle, while a support chauffeur follows in a Movo car to bring the team back. You keep your car and arrive safely." },
+      { heading: "What is Safe Ride?", body: "Safe Ride sends two professional chauffeurs. A primary chauffeur drives you home in your own vehicle, while a support chauffeur follows in a Movo car to bring the team back. You keep your car and arrive safely." },
       { heading: "When to use it", body: "Perfect for late nights, events, or any time you’d rather not drive but don’t want to leave your car behind." },
       { heading: "Booking & pricing", body: "Choose Safe Ride when booking. Safe Ride has its own pricing, shown as an estimate before you confirm. Both chauffeurs are dispatched for you — you’ll see each chauffeur’s status on your tracking screen." },
     ],
@@ -117,7 +117,7 @@ const faqs = [
   { question: "When am I charged, and can I get a receipt?", answer: "You pay when you book. When the trip completes, an itemised receipt is emailed to you and shown on your ride summary." },
   { question: "How do I cancel a ride, and will I be refunded?", answer: "Cancelling within 5 minutes or before a chauffeur is assigned is free with a full refund. After that a partial charge may apply. If a chauffeur cancels or none is found, you’re fully refunded automatically." },
   { question: "How can I contact my chauffeur?", answer: "Once your ride is confirmed you can call or message your chauffeur directly from the ride tracking screen." },
-  { question: "What is Movo Safe Ride?", answer: "Safe Ride sends two chauffeurs — one drives you home in your own vehicle while a support chauffeur follows to bring the team back. You keep your car and arrive safely." },
+  { question: "What is Safe Ride?", answer: "Safe Ride sends two chauffeurs — one drives you home in your own vehicle while a support chauffeur follows to bring the team back. You keep your car and arrive safely." },
 ];
 
 export default function HelpPage() {

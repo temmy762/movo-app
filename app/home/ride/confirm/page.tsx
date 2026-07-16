@@ -10,6 +10,10 @@ const STRIPE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : Promise.resolve(null);
 
 const carTierMap: Record<string, string> = {
+  "Standard": "classic",
+  "Executive": "premium",
+  "Concierge": "black",
+  /* legacy names — drafts/links saved before the rename */
   "Movo Classic": "classic",
   "Movo Premium": "premium",
   "Movo Privé Black": "black",
@@ -64,7 +68,7 @@ async function createBookingAfterPayment(opts: {
       }),
     }).then(r => r.json()).catch(() => null);
 
-    const cp: Record<string, string> = { pickup, dropoff, car: "Movo Safe Ride", tier: "care", paid: "1", service: "care" };
+    const cp: Record<string, string> = { pickup, dropoff, car: "Safe Ride", tier: "care", paid: "1", service: "care" };
     if (careRes?.bookingId) cp.bookingId = careRes.bookingId;
     push(`/home/ride/tracking?${new URLSearchParams(cp).toString()}`);
     return;
@@ -368,7 +372,7 @@ function ConfirmPayContent() {
           {/* Title */}
           <h1 className="text-center text-[22px] md:text-[28px] font-bold text-gray-900">Confirm &amp; Pay</h1>
           {isCare && (
-            <p className="text-center text-[12px] text-gray-400 mt-1">Movo Care Ride · Two chauffeurs included</p>
+            <p className="text-center text-[12px] text-gray-400 mt-1">Safe Ride · Two chauffeurs included</p>
           )}
 
           {/* Care info banner */}
@@ -377,7 +381,7 @@ function ConfirmPayContent() {
               style={{ background: "linear-gradient(135deg,#0A0A0F,#131936)", border: "1px solid rgba(198,191,178,0.2)" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2" className="shrink-0 mt-0.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               <div>
-                <p className="text-[12px] font-bold text-white mb-0.5">Movo Care Ride</p>
+                <p className="text-[12px] font-bold text-white mb-0.5">Safe Ride</p>
                 <p className="text-[11px] text-white/60 leading-snug">A primary chauffeur will drive you home in your vehicle. A support chauffeur follows separately and is dispatched once the primary accepts.</p>
               </div>
             </div>

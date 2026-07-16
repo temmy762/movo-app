@@ -170,7 +170,7 @@ export async function PATCH(req: NextRequest) {
 
       /* Notify the new driver via push + socket */
       await pushToDriver(newDriverId, {
-        title: assignment.role === "PRIMARY" ? "🌟 Movo Care Ride — Primary Chauffeur" : "🔄 Care Ride — Support Chauffeur",
+        title: assignment.role === "PRIMARY" ? "🌟 Safe Ride — Primary Chauffeur" : "🔄 Care Ride — Support Chauffeur",
         body:  `You have been assigned to a Care Ride. Tap to view details.`,
         tag:   `care-${assignment.role.toLowerCase()}-${bookingId}`,
         data:  { type: assignment.role === "PRIMARY" ? "care_primary" : "care_support", bookingId, assignmentId, requireInteraction: "true" },
@@ -222,7 +222,7 @@ export async function PATCH(req: NextRequest) {
 
       /* Notify the assigned driver via push + socket */
       await pushToDriver(newDriverId, {
-        title: role === "PRIMARY" ? "🌟 Movo Care Ride — Primary Chauffeur" : "🔄 Care Ride — Support Chauffeur",
+        title: role === "PRIMARY" ? "🌟 Safe Ride — Primary Chauffeur" : "🔄 Care Ride — Support Chauffeur",
         body:  `Admin has manually assigned you to a Care Ride. Tap to view.`,
         tag:   `care-${role.toLowerCase()}-${bookingId}`,
         data:  { type: role === "PRIMARY" ? "care_primary" : "care_support", bookingId, assignmentId: assignment.id, requireInteraction: "true" },

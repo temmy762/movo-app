@@ -22,7 +22,7 @@ const dmSans = DM_Sans({
 const poppins = { variable: "--font-poppins" };
 
 export const metadata: Metadata = {
-  title: "Movo Privé",
+  title: "Movo",
   description: "Premium chauffeur service",
 };
 

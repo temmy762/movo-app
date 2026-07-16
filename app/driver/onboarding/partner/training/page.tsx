@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 const TOTAL_STEPS = 9;
 
 const modules = [
-  "Welcome to Movo Privé",
+  "Welcome to Movo",
   "Chauffeur App: The Basics",
   "Chauffeur App: Managing Rides",
   "Waiting Time Policy",
@@ -75,7 +75,7 @@ export default function TrainingModulesPage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -86,11 +86,11 @@ export default function TrainingModulesPage() {
           <p className="text-[13px] text-gray-600 leading-relaxed mb-3">
             Welcome to the{" "}
             <span className="font-semibold" style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Movo Privé
+              Movo
             </span>{" "}
             Partner Training. To begin offering rides with{" "}
             <span className="font-semibold" style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Movo Privé
+              Movo
             </span>
             , please complete the following nine modules. Each module can be accessed individually using the links below.
           </p>

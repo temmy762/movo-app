@@ -16,7 +16,7 @@ export function adminCareDispatchFailedTemplate(
   };
 
   const roleLabel = info.role === "PRIMARY" ? "Primary" : "Support";
-  const preview = `Movo Care Ride — no ${roleLabel} chauffeur found - ${settings.appName}`;
+  const preview = `Safe Ride — no ${roleLabel} chauffeur found - ${settings.appName}`;
 
   const html = render(
     <EmailLayout context={context} preview={preview}>
@@ -25,7 +25,7 @@ export function adminCareDispatchFailedTemplate(
       </Heading>
 
       <Text style={{ fontSize: "16px", color: "#333333" }}>
-        No available <strong>{roleLabel}</strong> chauffeur could be found for a Movo Care Ride
+        No available <strong>{roleLabel}</strong> chauffeur could be found for a Safe Ride
         after exhausting all retry rounds. Manual intervention is required.
       </Text>
 
@@ -80,7 +80,7 @@ export function adminCareDispatchFailedTemplate(
   const text = `
 Care Ride Dispatch Failed
 
-No available ${roleLabel} chauffeur could be found for a Movo Care Ride after exhausting all retry rounds. Manual intervention is required.
+No available ${roleLabel} chauffeur could be found for a Safe Ride after exhausting all retry rounds. Manual intervention is required.
 
 Booking ID: ${info.bookingId}
 ${info.clientName ? `Client: ${info.clientName}` : ""}

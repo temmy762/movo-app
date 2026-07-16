@@ -35,7 +35,7 @@ export default function ConsentBanner() {
         </div>
 
         <p className="text-[12px] text-gray-500 leading-relaxed mb-4">
-          Movo Privé uses cookies to keep you signed in, remember your preferences, and improve your
+          Movo uses cookies to keep you signed in, remember your preferences, and improve your
           experience. You control what we store.{" "}
           <button
             type="button"

@@ -1,6 +1,6 @@
 import PolicyLayout, { PolicySection } from "@/components/legal/PolicyLayout";
 
-export const metadata = { title: "Chauffeur Independent Contractor Agreement — Movo Privé" };
+export const metadata = { title: "Chauffeur Independent Contractor Agreement — Movo" };
 
 const UPDATED = "July 4, 2026";
 
@@ -9,10 +9,10 @@ export default function ChauffeurAgreementPage() {
     <PolicyLayout
       title="Chauffeur Independent Contractor Agreement"
       updatedAt={UPDATED}
-      intro="This Agreement governs the relationship between Movo Privé and chauffeurs who accept rides through the Movo platform. Every chauffeur must read and electronically sign this Agreement as part of onboarding, before their account is activated."
+      intro="This Agreement governs the relationship between Movo and chauffeurs who accept rides through the Movo platform. Every chauffeur must read and electronically sign this Agreement as part of onboarding, before their account is activated."
     >
       <PolicySection title="1. Independent Contractor Status">
-        <p>You are engaged as an independent contractor, not as an employee, worker, partner, or agent of Movo Privé. Nothing in this Agreement creates an employment relationship. You are free to accept or decline any ride request and to determine your own working hours.</p>
+        <p>You are engaged as an independent contractor, not as an employee, worker, partner, or agent of Movo. Nothing in this Agreement creates an employment relationship. You are free to accept or decline any ride request and to determine your own working hours.</p>
       </PolicySection>
 
       <PolicySection title="2. Driver Obligations">

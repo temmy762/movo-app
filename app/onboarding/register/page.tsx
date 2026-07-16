@@ -93,7 +93,7 @@ function RegisterContent() {
         {/* Logo */}
         <div className="flex items-center justify-center pt-4 sm:pt-3">
           <div className="relative w-52 h-52 sm:w-48 sm:h-48">
-            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
           </div>
         </div>
 

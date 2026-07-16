@@ -197,9 +197,9 @@ export async function POST(req: NextRequest) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         await resend.emails.send({
-          from: "Movo Privé <noreply@movoprive.com>",
+          from: "Movo <noreply@movoprive.com>",
           to: driver.email,
-          subject: "Onboarding Application Submitted - Movo Privé",
+          subject: "Onboarding Application Submitted - Movo",
           reply_to: "support@movoprive.com",
           html: `
             <!DOCTYPE html>
@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
               </head>
               <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #131936, #C6BFB2); padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                  <h1 style="color: white; margin: 0; font-size: 24px;">Movo Privé</h1>
+                  <h1 style="color: white; margin: 0; font-size: 24px;">Movo</h1>
                 </div>
                 <div style="background: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;">
                   <h2 style="color: #131936; margin-top: 0;">Thank you for submitting your onboarding application!</h2>
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
                   </div>
                   <p>If you have any questions, please contact our support team at <a href="mailto:support@movoprive.com" style="color: #131936; text-decoration: none;"><strong>support@movoprive.com</strong></a></p>
                   <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-                  <p style="color: #666; font-size: 12px; margin: 0;">Best regards,<br/><strong>The Movo Privé Team</strong></p>
+                  <p style="color: #666; font-size: 12px; margin: 0;">Best regards,<br/><strong>The Movo Team</strong></p>
                 </div>
               </body>
             </html>

@@ -1,6 +1,6 @@
 import PolicyLayout, { PolicySection } from "@/components/legal/PolicyLayout";
 
-export const metadata = { title: "Lost & Found Policy — Movo Privé" };
+export const metadata = { title: "Lost & Found Policy — Movo" };
 
 const UPDATED = "July 4, 2026";
 

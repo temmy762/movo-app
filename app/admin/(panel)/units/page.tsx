@@ -246,7 +246,7 @@ interface Driver {
 // ── Add / Edit Modal ──────────────────────────────────────────────────────────
 type UnitForm = { brand: string; model: string; transmission: "Automatic" | "Manual"; seats: number; status: UnitStatus; units: number; price: number; image: string; };
 const IMAGES = ["/images/movo classic.png", "/images/movo premium.png", "/images/prive black.png"];
-const IMG_LABELS: Record<string, string> = { "/images/movo classic.png": "Movo Classic", "/images/movo premium.png": "Movo Premium", "/images/prive black.png": "Prive Black" };
+const IMG_LABELS: Record<string, string> = { "/images/movo classic.png": "Standard", "/images/movo premium.png": "Executive", "/images/prive black.png": "Prive Black" };
 
 function UnitModal({ initial, onSave, onClose }: {
   initial?: Unit | null;
@@ -424,7 +424,7 @@ function CreateVehicleModal({ onSave, onClose }: {
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none" suppressHydrationWarning>
               <option value="classic">Classic</option>
               <option value="premium">Premium</option>
-              <option value="black">Privé Black</option>
+              <option value="black">Concierge</option>
             </select>
           </div>
           <div>

@@ -220,7 +220,7 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
 
       {/* Logo */}
       <div className="relative w-40 h-12 mx-auto mb-6">
-        <Image src="/images/logo/logo-horizontal-ivory.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+        <Image src="/images/logo/logo-horizontal-ivory.svg" alt="MOVO" fill className="object-contain" priority />
       </div>
 
       {/* Nav — scrolls vertically when the item list is taller than the viewport

@@ -17,10 +17,10 @@ export default function GpsPolicyPage() {
       </header>
       <div className="px-4 pt-5 pb-10 w-full max-w-lg mx-auto space-y-4 text-[13px] text-gray-600 leading-relaxed">
         <p className="text-[15px] font-bold text-gray-900">GPS Tracking Policy</p>
-        <p>Movo Privé uses GPS location tracking to provide its core ride-hailing service. This policy explains how and when your location is collected.</p>
+        <p>Movo uses GPS location tracking to provide its core ride-hailing service. This policy explains how and when your location is collected.</p>
 
         <p className="font-semibold text-gray-800">1. When We Track Your Location</p>
-        <p>Your location is tracked while you are online and actively using the Movo Privé driver app. Tracking begins when you go online and stops when you go offline.</p>
+        <p>Your location is tracked while you are online and actively using the Movo driver app. Tracking begins when you go online and stops when you go offline.</p>
 
         <p className="font-semibold text-gray-800">2. How Location Data Is Used</p>
         <p>Location data is used to match you with nearby ride requests, display your position to passengers during an active ride, and calculate route and fare estimates.</p>

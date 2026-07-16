@@ -22,7 +22,7 @@ function RideTrackingContent() {
   const searchParams = useSearchParams();
   const pickup    = searchParams.get("pickup")    || "";
   const dropoff   = searchParams.get("dropoff")   || "";
-  const car       = searchParams.get("car")       || "Movo Classic";
+  const car       = searchParams.get("car")       || "Standard";
   const tier      = searchParams.get("tier")      || "";
   const carImgParam = searchParams.get("carImg")  || "";
   const bookingIdParam = searchParams.get("bookingId") || null;
@@ -139,9 +139,9 @@ function RideTrackingContent() {
     black:    "/images/prive black.png",
   };
   const TIER_LABELS: Record<string, string> = {
-    classic:  "Movo Classic",
-    premium:  "Movo Premium",
-    black:    "Movo Privé Black",
+    classic:  "Standard",
+    premium:  "Executive",
+    black:    "Concierge",
   };
   const resolvedTier = tier.toLowerCase().replace(/ /g, "") === "firstclass" ? "black" : tier.toLowerCase();
   const carImg = vehicleImg || carImgParam || TIER_IMAGES[resolvedTier] || "/images/movo classic.png";
@@ -634,7 +634,7 @@ function RideTrackingContent() {
               style={{ background: "linear-gradient(135deg,#0d1128 0%,#131936 60%,#1e2a5e 100%)" }}>
               <div className="flex items-center gap-2 px-3 pt-3 pb-2">
                 <span className="text-[13px]">🌟</span>
-                <p className="text-[12px] font-bold text-white tracking-wide">Movo Care Ride</p>
+                <p className="text-[12px] font-bold text-white tracking-wide">Safe Ride</p>
                 <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
                   Dual Chauffeur
                 </span>

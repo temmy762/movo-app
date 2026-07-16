@@ -1,7 +1,7 @@
 /**
  * lib/care/scheduledDispatch.ts
  *
- * Deferred PRIMARY dispatch for SCHEDULED Movo Safe Ride bookings.
+ * Deferred PRIMARY dispatch for SCHEDULED Safe Ride bookings.
  *
  * Immediate (ASAP) Safe Rides dispatch the moment payment is captured (see
  * app/api/bookings/care/route.ts). A ride booked well in advance should NOT

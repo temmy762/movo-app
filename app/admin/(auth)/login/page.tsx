@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
           <div className="relative" style={{ width: "240px", height: "80px" }}>
-            <Image src="/images/logo/logo-stacked-tagline-ivory.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-tagline-ivory.svg" alt="MOVO" fill className="object-contain" priority />
           </div>
         </div>
 

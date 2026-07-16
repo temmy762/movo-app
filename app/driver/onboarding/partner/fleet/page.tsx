@@ -105,7 +105,7 @@ export default function FleetInformationPage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 

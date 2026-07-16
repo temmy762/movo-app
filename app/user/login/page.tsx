@@ -79,7 +79,7 @@ function LoginContent() {
         <div className="relative" style={{ width: "160px", height: "140px" }}>
           <Image
             src="/images/logo/logo-stacked-navy.svg"
-            alt="MOVO PRIVÉ"
+            alt="MOVO"
             fill
             className="object-contain"
             priority

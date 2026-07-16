@@ -17,7 +17,7 @@ export default function PrivacyPolicyPage() {
       </header>
       <div className="px-4 pt-5 pb-10 w-full max-w-lg mx-auto space-y-4 text-[13px] text-gray-600 leading-relaxed">
         <p className="text-[15px] font-bold text-gray-900">Privacy Policy</p>
-        <p>At Movo Privé, we are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR).</p>
+        <p>At Movo, we are committed to protecting your personal data in accordance with the UK General Data Protection Regulation (UK GDPR).</p>
 
         <p className="font-semibold text-gray-800">1. Data We Collect</p>
         <p>We collect your name, email address, phone number, vehicle details, location data, and ride history to provide and improve our services.</p>

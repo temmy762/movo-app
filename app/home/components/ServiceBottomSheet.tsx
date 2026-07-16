@@ -4,9 +4,9 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const tiers = [
-  { id: "classic", name: "Movo Classic", desc: "Effortless rides for every day." },
-  { id: "premium", name: "Movo Premium", desc: "Elevated comfort. Premium performance." },
-  { id: "black", name: "Movo Privé Black", desc: "Unparalleled luxury. Your personal concierge on wheels." },
+  { id: "classic", name: "Standard", desc: "Effortless rides for every day." },
+  { id: "premium", name: "Executive", desc: "Elevated comfort. Premium performance." },
+  { id: "black", name: "Concierge", desc: "Unparalleled luxury. Your personal concierge on wheels." },
 ];
 
 interface Service {
@@ -100,7 +100,7 @@ export default function ServiceBottomSheet({ service, onClose }: Props) {
                   <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${selected === "black" ? "translate-x-5" : "translate-x-1"}`} />
                 </button>
                 <div>
-                  <p className="text-[13px] font-bold text-gray-900">Movo Privé Black Charter</p>
+                  <p className="text-[13px] font-bold text-gray-900">Concierge Charter</p>
                   <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
                     Unparalleled luxury. Your personal concierge on wheels. Your private club on the move — where the journey is the party.
                   </p>

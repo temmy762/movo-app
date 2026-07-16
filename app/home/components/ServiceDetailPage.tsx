@@ -7,17 +7,17 @@ import { useState } from "react";
 const tiers = [
   {
     id: "classic",
-    name: "Movo Classic",
+    name: "Standard",
     desc: "Effortless rides for every day.",
   },
   {
     id: "premium",
-    name: "Movo Premium",
+    name: "Executive",
     desc: "Elevated comfort. Premium performance.",
   },
   {
     id: "black",
-    name: "Movo Privé Black",
+    name: "Concierge",
     desc: "Unparalleled luxury. Your personal concierge on wheels.",
   },
 ];

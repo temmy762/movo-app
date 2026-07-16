@@ -48,7 +48,7 @@ export default function RejectedPage() {
           {/* Logo */}
           <div className="flex items-center justify-center mb-8">
             <div className="relative w-36 h-36">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -69,7 +69,7 @@ export default function RejectedPage() {
 
           {/* Message */}
           <p className="text-[14px] text-gray-600 mb-2 leading-relaxed">
-            Unfortunately, your Movo Privé onboarding application was not approved at this time.
+            Unfortunately, your Movo onboarding application was not approved at this time.
           </p>
 
           <p className="text-[13px] text-gray-500 mb-6 leading-relaxed">

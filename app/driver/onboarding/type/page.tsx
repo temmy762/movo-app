@@ -14,12 +14,12 @@ export default function OnboardingTypePage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-8">
             <div className="relative w-28 h-28">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
           <h1 className="text-[22px] font-extrabold text-gray-900 mt-3 text-center">
-            Join Movo Privé
+            Join Movo
           </h1>
           <p className="text-[13px] text-gray-400 text-center mt-1 mb-8">
             Choose how you want to join our platform

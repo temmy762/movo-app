@@ -16,6 +16,13 @@ const MAP: Record<string, PlatformTier> = {
   classic:                         "classic",
   premium:                         "premium",
   black:                           "black",
+  /* 2026 display renames: Standard / Executive / Concierge */
+  standard:                        "classic",
+  "economy (standard)":            "classic",
+  executive:                       "premium",
+  "premium (executive)":           "premium",
+  concierge:                       "black",
+  "first class (concierge)":       "black",
   /* Movo Safe Ride (Care Ride) — its own pricing tier, independent of vehicle tiers */
   care:                            "care",
   "safe ride":                     "care",

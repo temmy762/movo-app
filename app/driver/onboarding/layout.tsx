@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FleetOnboardingProvider } from "./partner/provider";
 
 export const metadata: Metadata = {
-  title: "MOVO PRIVÉ — Driver",
+  title: "MOVO — Driver",
   description: "The art of sophisticated travel",
 };
 

@@ -57,7 +57,7 @@ export default function AuthSelectClient() {
         <div className="relative" style={{ width: "200px", height: "100px" }}>
           <Image
             src="/images/logo/logo-stacked-tagline-ivory.svg"
-            alt="MOVO PRIVÉ"
+            alt="MOVO"
             fill
             className="object-contain"
             priority
@@ -67,7 +67,7 @@ export default function AuthSelectClient() {
 
       {/* Title */}
       <h1 className="text-[22px] font-bold mb-2 text-center" style={{ color: "#F5F5F2", fontFamily: "var(--font-heading)" }}>
-        Welcome to MOVO Privé
+        Welcome to MOVO
       </h1>
       <p className="text-[13px] mb-8 text-center max-w-xs" style={{ color: "#8A8F9E" }}>
         Select how you&apos;d like to continue
@@ -122,7 +122,7 @@ export default function AuthSelectClient() {
             <p className="text-[15px] font-semibold" style={{ color: "#F5F5F2" }}>
               Continue as Chauffeur
             </p>
-            <p className="text-[11px]" style={{ color: "#8A8F9E" }}>Drive with MOVO Privé</p>
+            <p className="text-[11px]" style={{ color: "#8A8F9E" }}>Drive with MOVO</p>
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
             <polyline points="9 18 15 12 9 6" />

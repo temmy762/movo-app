@@ -1,7 +1,7 @@
 /**
  * lib/care/dispatch.ts
  *
- * Core dispatch logic for Movo Care Ride.
+ * Core dispatch logic for Safe Ride.
  * Called from API routes — never blocks the response (fire-and-forget pattern).
  *
  * Dispatch order:
@@ -67,7 +67,7 @@ async function notifyDispatchExhausted(
     });
     if (primary?.driverId) {
       pushToDriver(primary.driverId, {
-        title: "⚠️ Movo Care Ride",
+        title: "⚠️ Safe Ride",
         body: "No support chauffeur is currently available. Our team has been notified.",
         tag: `care-support-failed-${bookingId}`,
         data: { type: "care_support_failed", bookingId },
@@ -241,7 +241,7 @@ export async function dispatchPrimary(
   await Promise.all(
     drivers.map((d, i) =>
       pushToDriver(d.id, {
-        title: "🌟 Movo Care Ride — Primary Chauffeur",
+        title: "🌟 Safe Ride — Primary Chauffeur",
         body:  `Pickup: ${booking.pickup}${d.distKm > 0 ? ` · ${d.distKm.toFixed(1)} km away` : ""}`,
         tag:   `care-primary-${bookingId}`,
         data:  { type: "care_primary", bookingId, assignmentId: assignments[i].id, requireInteraction: "true" },

@@ -14,9 +14,9 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 const TIER_NAMES: Record<string, string> = {
-  classic: "Movo Classic",
-  premium: "Movo Premium",
-  black: "Movo Privé Black",
+  classic: "Standard",
+  premium: "Executive",
+  black: "Concierge",
 };
 
 const TIER_IMAGES: Record<string, string> = {

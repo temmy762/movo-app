@@ -31,7 +31,7 @@ export default function PolicyLayout({
       <nav className="sticky top-0 z-40 border-b border-gray-100" style={{ background: DARK }}>
         <div className="max-w-4xl mx-auto px-5 md:px-8 flex items-center justify-between h-16">
           <Link href="/" className="flex items-center">
-            <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo Privé" width={100} height={28} unoptimized />
+            <Image src="/images/logo/logo-horizontal-ivory.svg" alt="Movo" width={100} height={28} unoptimized />
           </Link>
           <Link href="/" className="text-white/60 text-[13px] font-medium hover:text-white transition-colors">
             Back to home
@@ -49,7 +49,7 @@ export default function PolicyLayout({
 
       <footer className="border-t border-gray-100 py-6" style={{ background: "#FAFAF8" }}>
         <div className="max-w-4xl mx-auto px-5 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[11px] text-gray-400">&copy; {new Date().getFullYear()} Movo Privé. All rights reserved.</p>
+          <p className="text-[11px] text-gray-400">&copy; {new Date().getFullYear()} Movo. All rights reserved.</p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 justify-center">
             <Link href="/privacy-policy" className="text-[11px] text-gray-400 hover:text-gray-700">Privacy Policy</Link>
             <Link href="/terms" className="text-[11px] text-gray-400 hover:text-gray-700">Terms &amp; Conditions</Link>

@@ -46,7 +46,7 @@ export default function AdminForgotPasswordPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
           <div className="relative" style={{ width: "300px", height: "96px" }}>
-            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
           </div>
         </div>
 

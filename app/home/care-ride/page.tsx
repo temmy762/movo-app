@@ -18,7 +18,7 @@ export default function CareRidePage() {
 
       {/* Hero */}
       <div className="relative overflow-hidden h-64">
-        <Image src="/images/home banner.png" alt="Movo Care Ride" fill className="object-cover object-top" priority />
+        <Image src="/images/home banner.png" alt="Safe Ride" fill className="object-cover object-top" priority />
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(0,0,0,0.1) 0%,rgba(10,10,15,0.85) 100%)" }} />
         <button
           onClick={() => router.back()}
@@ -30,7 +30,7 @@ export default function CareRidePage() {
         </button>
         <div className="absolute bottom-5 left-4 right-4">
           <span className="text-[11px] font-semibold text-white/60 uppercase tracking-widest">Premium Service</span>
-          <h1 className="text-[26px] font-bold text-white mt-1 leading-tight">Movo Care Ride</h1>
+          <h1 className="text-[26px] font-bold text-white mt-1 leading-tight">Safe Ride</h1>
           <p className="text-white/80 text-[13px] mt-1">We drive you home — in your own car.</p>
         </div>
       </div>
@@ -56,7 +56,7 @@ export default function CareRidePage() {
         <p className="text-[16px] font-bold text-gray-900 mb-4">The journey</p>
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           {[
-            "Select Movo Care Ride",
+            "Select Safe Ride",
             "Enter pickup & destination",
             "Confirm your booking",
             "Primary chauffeur arrives & drives your car",

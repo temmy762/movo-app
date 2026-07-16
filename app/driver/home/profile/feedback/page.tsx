@@ -46,7 +46,7 @@ export default function FeedbackPage() {
             </svg>
           </div>
           <p className="text-[17px] font-bold text-gray-900 mb-1">Thank you!</p>
-          <p className="text-[13px] text-gray-500">Your feedback helps us improve Movo Privé for everyone.</p>
+          <p className="text-[13px] text-gray-500">Your feedback helps us improve Movo for everyone.</p>
           <button onClick={() => router.back()}
             className="mt-6 px-8 py-3 rounded-xl text-white font-bold text-[14px]"
             style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>

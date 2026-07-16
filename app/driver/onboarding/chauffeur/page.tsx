@@ -26,7 +26,7 @@ const STEP_LABELS = [
   "Welcome", "Personal", "Vehicle", "Standards",
   "Test Assessment", "App Basics", "Safety", "Agreements", "Contract", "Review",
 ];
-const VEHICLE_TIERS = ["Economy (Movo Classic)", "Premium (Movo Premium)", "First Class (Movo Privé Black)"];
+const VEHICLE_TIERS = ["Economy (Standard)", "Premium (Executive)", "First Class (Concierge)"];
 const VEHICLE_COLORS = ["Black", "White", "Silver", "Grey", "Dark Blue", "Other"];
 const VEHICLE_YEARS  = Array.from({ length: 20 }, (_, i) => String(new Date().getFullYear() - i));
 
@@ -398,7 +398,7 @@ export default function ChauffeurOnboardingPage() {
                   Chauffeur Onboarding
                 </p>
                 <h2 className="text-[22px] font-extrabold text-white leading-tight">
-                  Welcome to Movo Privé,<br />
+                  Welcome to Movo,<br />
                   <span className="text-yellow-300">{driverName}</span>
                 </h2>
                 <p className="text-[12px] text-purple-200 mt-2 leading-relaxed">
@@ -421,7 +421,7 @@ export default function ChauffeurOnboardingPage() {
               {[
                 { n: "01", label: "Personal Verification", desc: "ID, license & background check" },
                 { n: "02", label: "Vehicle Verification", desc: "Registration, insurance & photos" },
-                { n: "03", label: "Standards & Training", desc: "Movo Privé service standards" },
+                { n: "03", label: "Standards & Training", desc: "Movo service standards" },
                 { n: "04", label: "Safety Procedures", desc: "Emergency protocols & GPS consent" },
                 { n: "05", label: "Agreements & Contract", desc: "Terms, privacy & digital signature" },
               ].map(item => (
@@ -613,7 +613,7 @@ export default function ChauffeurOnboardingPage() {
 
             <div className="mt-4 mb-5">
               <Checkbox checked={standards} onChange={setStandards}>
-                I have read and understood the Movo Privé Chauffeur Standards & Expectations. I commit to upholding these standards on every trip.
+                I have read and understood the Movo Chauffeur Standards & Expectations. I commit to upholding these standards on every trip.
               </Checkbox>
             </div>
 
@@ -631,14 +631,14 @@ export default function ChauffeurOnboardingPage() {
         return (
           <div>
             <p className="text-[18px] font-extrabold text-gray-900 mb-1">Standards Assessment</p>
-            <p className="text-[12px] text-gray-400 mb-5">Test your knowledge of Movo Privé standards and procedures.</p>
+            <p className="text-[12px] text-gray-400 mb-5">Test your knowledge of Movo standards and procedures.</p>
 
             <div className="rounded-2xl border border-gray-100 bg-gray-50 px-5 py-8 flex flex-col items-center text-center mb-6">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" className="mb-3">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
               </svg>
               <p className="text-[13px] font-semibold text-gray-500 mb-2">Assessment Coming Soon</p>
-              <p className="text-[11px] text-gray-400">The Movo Privé team is preparing your assessment. You can mark this as complete for now.</p>
+              <p className="text-[11px] text-gray-400">The Movo team is preparing your assessment. You can mark this as complete for now.</p>
             </div>
 
             <div className="mb-5">
@@ -661,7 +661,7 @@ export default function ChauffeurOnboardingPage() {
         return (
           <div>
             <p className="text-[18px] font-extrabold text-gray-900 mb-1">Chauffeur App Basics</p>
-            <p className="text-[12px] text-gray-400 mb-4">Familiarise yourself with how the Movo Privé app works.</p>
+            <p className="text-[12px] text-gray-400 mb-4">Familiarise yourself with how the Movo app works.</p>
 
             <InfoCard
               icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></svg>}
@@ -760,7 +760,7 @@ export default function ChauffeurOnboardingPage() {
                 <p className="text-[12px] font-bold" style={{ color: "#131936" }}>GPS Tracking Notice</p>
               </div>
               <p className="text-[12px] text-gray-600 leading-relaxed">
-                Movo Privé uses <strong>real-time GPS tracking</strong> during active trips for client safety, route verification, and dispute resolution. Location data is stored securely and used only for operational and safety purposes. You may review our Privacy Policy for full details.
+                Movo uses <strong>real-time GPS tracking</strong> during active trips for client safety, route verification, and dispute resolution. Location data is stored securely and used only for operational and safety purposes. You may review our Privacy Policy for full details.
               </p>
             </div>
 
@@ -801,16 +801,16 @@ export default function ChauffeurOnboardingPage() {
               <ConsentCard
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>}
                 title="Privacy Policy Acknowledgement"
-                description="Movo Privé collects and processes personal data in accordance with applicable privacy laws. Your data is used solely for operational, safety, and payment purposes."
+                description="Movo collects and processes personal data in accordance with applicable privacy laws. Your data is used solely for operational, safety, and payment purposes."
               />
               <Checkbox checked={consents.privacyPolicy} onChange={v => setConsent("privacyPolicy", v)}>
-                I have read and accept the Movo Privé Privacy Policy.
+                I have read and accept the Movo Privacy Policy.
               </Checkbox>
 
               <ConsentCard
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" /></svg>}
                 title="Legal Notice Acknowledgement"
-                description="You are registering as an independent chauffeur. Movo Privé is a technology platform and does not constitute an employment relationship."
+                description="You are registering as an independent chauffeur. Movo is a technology platform and does not constitute an employment relationship."
               />
               <Checkbox checked={consents.legalNotice} onChange={v => setConsent("legalNotice", v)}>
                 I acknowledge the legal notice regarding my status as an independent contractor.
@@ -819,10 +819,10 @@ export default function ChauffeurOnboardingPage() {
               <ConsentCard
                 icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>}
                 title="Terms & Conditions"
-                description="By joining Movo Privé, you agree to abide by our Chauffeur Terms & Conditions including the code of conduct, payment terms, and cancellation policy."
+                description="By joining Movo, you agree to abide by our Chauffeur Terms & Conditions including the code of conduct, payment terms, and cancellation policy."
               />
               <Checkbox checked={consents.termsAccepted} onChange={v => setConsent("termsAccepted", v)}>
-                I accept the Movo Privé Chauffeur Terms & Conditions.
+                I accept the Movo Chauffeur Terms & Conditions.
               </Checkbox>
             </div>
 
@@ -850,19 +850,19 @@ export default function ChauffeurOnboardingPage() {
               <div className="px-4 py-3 border-b border-gray-100"
                 style={{ background: "linear-gradient(90deg,#13193608,#C6BFB208)" }}>
                 <p className="text-[12px] font-bold text-gray-800">Chauffeur Services Agreement</p>
-                <p className="text-[11px] text-gray-400">Movo Privé · Independent Chauffeur</p>
+                <p className="text-[11px] text-gray-400">Movo · Independent Chauffeur</p>
               </div>
               <div className="px-4 py-4 max-h-52 overflow-y-auto">
                 <p className="text-[11px] text-gray-600 leading-relaxed space-y-2">
-                  This Agreement is entered into between <strong>Movo Privé</strong> (&quot;Platform&quot;) and the
+                  This Agreement is entered into between <strong>Movo</strong> (&quot;Platform&quot;) and the
                   individual chauffeur (&quot;Chauffeur&quot;) registering through this onboarding process.<br /><br />
                   <strong>1. Independent Contractor Status.</strong> The Chauffeur operates as an independent contractor.
                   Nothing in this Agreement creates an employer-employee relationship, partnership, or agency.<br /><br />
-                  <strong>2. Service Standards.</strong> Chauffeur agrees to uphold all Movo Privé service standards
+                  <strong>2. Service Standards.</strong> Chauffeur agrees to uphold all Movo service standards
                   including appearance, punctuality, vehicle maintenance, and client interaction protocols.<br /><br />
                   <strong>3. GPS & Data Consent.</strong> Chauffeur consents to real-time GPS tracking during active
                   trips. Location data is retained for 90 days for safety and dispute resolution purposes.<br /><br />
-                  <strong>4. Payments.</strong> Movo Privé will remit earnings to the Chauffeur&apos;s registered bank
+                  <strong>4. Payments.</strong> Movo will remit earnings to the Chauffeur&apos;s registered bank
                   account on a weekly basis after applicable platform fees are deducted.<br /><br />
                   <strong>5. Conduct.</strong> Harassment, discrimination, or unsafe driving will result in immediate
                   suspension and potential legal action.<br /><br />
@@ -912,7 +912,7 @@ export default function ChauffeurOnboardingPage() {
 
             <div className="mb-5">
               <Checkbox checked={consents.contractSigned} onChange={v => setConsent("contractSigned", v)}>
-                By typing my name above, I confirm I have read, understood, and agree to the Movo Privé Chauffeur Agreement in its entirety.
+                By typing my name above, I confirm I have read, understood, and agree to the Movo Chauffeur Agreement in its entirety.
               </Checkbox>
             </div>
 
@@ -968,7 +968,7 @@ export default function ChauffeurOnboardingPage() {
               </div>
               <p className="text-[22px] font-extrabold text-gray-900 mb-2 text-center">Application Submitted!</p>
               <p className="text-[13px] text-gray-500 text-center leading-relaxed mb-6 max-w-xs">
-                Your Movo Privé chauffeur application is under review. Our team will contact you within <strong>24–48 hours</strong>.
+                Your Movo chauffeur application is under review. Our team will contact you within <strong>24–48 hours</strong>.
               </p>
               <div className="w-full p-4 rounded-xl bg-gray-50 border border-gray-100 mb-6">
                 <p className="text-[12px] font-bold text-gray-700 mb-2">What happens next?</p>
@@ -1057,7 +1057,7 @@ export default function ChauffeurOnboardingPage() {
           {/* Logo + heading */}
           <div className="flex items-center justify-center pt-6 pb-1">
             <div className="relative w-20 h-20">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
           <h1 className="text-[14px] font-bold text-center mb-4"

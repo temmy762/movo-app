@@ -1,7 +1,7 @@
 import AdminShell from "./components/AdminShell";
 
 export const metadata = {
-  title: "MOVO PRIVÉ — Admin",
+  title: "MOVO — Admin",
 };
 
 export default function AdminPanelLayout({ children }: { children: React.ReactNode }) {

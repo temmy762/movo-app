@@ -11,7 +11,7 @@ const services = [
   { id: 1, title: "In-City Rides",      desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",    href: "/home/in-city-rides" },
   { id: 2, title: "Airport Transfer",   desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/airport-transfer" },
   { id: 3, title: "Hourly Chauffeur",   desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",     href: "/home/by-the-hour" },
-  { id: 4, title: "Movo Care Ride",     desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",    href: "/home/care-ride" },
+  { id: 4, title: "Safe Ride",     desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",    href: "/home/care-ride" },
 ];
 
 export default function HomePage() {

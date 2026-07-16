@@ -70,7 +70,7 @@ export default function DriverSetPasswordPage() {
         {/* Logo */}
         <div className="flex items-center justify-center mb-3">
           <div className="relative w-36 h-36">
-            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
           </div>
         </div>
 

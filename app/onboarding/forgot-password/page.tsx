@@ -93,7 +93,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-[420px]">
         <div className="flex items-center justify-center pt-8">
           <div className="relative w-28 h-28">
-            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+            <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
           </div>
         </div>
 

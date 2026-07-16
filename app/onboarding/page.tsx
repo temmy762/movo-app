@@ -22,7 +22,7 @@ export default function SplashPage() {
         <div className="relative w-64 h-64 sm:w-72 sm:h-72">
           <Image
             src="/images/logo/logo-stacked-navy.svg"
-            alt="MOVO PRIVÉ Logo"
+            alt="MOVO Logo"
             fill
             className="object-contain"
             priority

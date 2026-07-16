@@ -57,7 +57,7 @@ export default function OnboardingProgramPage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-36 h-36">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
@@ -74,7 +74,7 @@ export default function OnboardingProgramPage() {
               className="font-semibold"
               style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
             >
-              Movo Privé
+              Movo
             </span>{" "}
             partner, you&apos;ll get:
           </p>
@@ -98,7 +98,7 @@ export default function OnboardingProgramPage() {
               className="font-semibold"
               style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
             >
-              Movo Privé
+              Movo
             </span>{" "}
             global network of partners we need your help with following:
           </p>

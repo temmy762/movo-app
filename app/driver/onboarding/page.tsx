@@ -12,7 +12,7 @@ export default function DriverSplashPage() {
         <div className="relative w-72 h-72 sm:w-64 sm:h-64">
           <Image
             src="/images/logo/logo-stacked-navy.svg"
-            alt="MOVO PRIVÉ"
+            alt="MOVO"
             fill
             className="object-contain"
             priority

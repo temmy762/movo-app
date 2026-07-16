@@ -252,7 +252,7 @@ function RideCompletedContent() {
             /* Care: dual-chauffeur rating */
             <div className="w-full mb-5">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#C6BFB2]">Movo Care Ride</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#C6BFB2]">Safe Ride</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">Dual Chauffeur</span>
               </div>
               {careAssignments.map((a) => {

@@ -1,6 +1,6 @@
 import PolicyLayout, { PolicySection } from "@/components/legal/PolicyLayout";
 
-export const metadata = { title: "Data Security Policy — Movo Privé" };
+export const metadata = { title: "Data Security Policy — Movo" };
 
 const UPDATED = "July 4, 2026";
 
@@ -9,7 +9,7 @@ export default function DataSecurityPage() {
     <PolicyLayout
       title="Data Security Policy"
       updatedAt={UPDATED}
-      intro="This policy describes the technical and organizational measures Movo Privé uses to protect customer, chauffeur, and business data."
+      intro="This policy describes the technical and organizational measures Movo uses to protect customer, chauffeur, and business data."
     >
       <PolicySection title="1. Encryption of Sensitive Information">
         <p>All data in transit between your device and Movo's servers is encrypted using TLS. Sensitive fields — such as banking details used for chauffeur payouts — are stored encrypted at rest. Full payment card data is never stored on Movo's servers; it is tokenized and held by our PCI-DSS certified payment processor, Stripe.</p>

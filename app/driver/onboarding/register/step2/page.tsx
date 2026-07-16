@@ -174,7 +174,7 @@ function DriverRegisterStep2Content() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-6">
             <div className="relative w-44 h-44">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 

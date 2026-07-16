@@ -15,7 +15,7 @@ export default function StartPage() {
         <div className="relative w-64 h-64">
           <Image
             src="/images/logo/logo-stacked-navy.svg"
-            alt="MOVO PRIVÉ"
+            alt="MOVO"
             fill
             className="object-contain"
             priority

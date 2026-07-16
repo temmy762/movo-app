@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 
 const MODULES = [
   {
-    title: "Welcome to Movo Privé",
+    title: "Welcome to Movo",
     description:
-      "Get introduced to the Movo Privé platform, our mission, and what is expected of you as a partner chauffeur. Learn about our brand values, service standards, and the opportunities available to you.",
+      "Get introduced to the Movo platform, our mission, and what is expected of you as a partner chauffeur. Learn about our brand values, service standards, and the opportunities available to you.",
   },
   {
     title: "Chauffeur App: The Basics",
@@ -99,7 +99,7 @@ export default function ModulePage() {
           {/* Logo */}
           <div className="flex items-center justify-center pt-5">
             <div className="relative w-28 h-28">
-              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO PRIVÉ" fill className="object-contain" priority />
+              <Image src="/images/logo/logo-stacked-navy.svg" alt="MOVO" fill className="object-contain" priority />
             </div>
           </div>
 
