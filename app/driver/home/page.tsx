@@ -93,6 +93,18 @@ export default function DriverHomePage() {
   const [careError,        setCareError]        = useState<string | null>(null);
   const [showCareComplete, setShowCareComplete] = useState(false);
   const [cancelNotice,     setCancelNotice]     = useState<string | null>(null);
+  /* Rider's live position (pickup phase) — relayed over the socket */
+  const [riderPos,         setRiderPos]         = useState<{ lat: number; lng: number } | null>(null);
+  /* Wait-time billing: anchor + config returned by the arrived endpoint */
+  const [waitInfo,         setWaitInfo]         = useState<{ arrivedAt: number; freeMin: number; rate: number } | null>(null);
+  const [waitNow,          setWaitNow]          = useState(Date.now());
+
+  /* Tick the waiting clock once a second while at pickup */
+  useEffect(() => {
+    if (!waitInfo || ridePhase !== "arrived") return;
+    const t = setInterval(() => setWaitNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [waitInfo, ridePhase]);
   usePushSubscription();
   const { join, on } = useSocket();
   /* Keep ridePhaseRef in sync so async callbacks can read current phase without stale closure */
@@ -216,6 +228,15 @@ export default function DriverHomePage() {
       }
     });
 
+    /* Rider's live position during pickup phase — shown on the driver map */
+    const unsubRiderLoc = on(SOCKET_EVENTS.RIDER_LOCATION, (data) => {
+      const d = data as { bookingId: string; lat: number; lng: number };
+      setActiveBooking(prev => {
+        if (prev?.id === d.bookingId) setRiderPos({ lat: d.lat, lng: d.lng });
+        return prev;
+      });
+    });
+
     /* Booking cancelled while driver had it active */
     const unsubCancelled = on(SOCKET_EVENTS.BOOKING_CANCELLED, (data) => {
       const d = data as { bookingId: string; cancelledBy?: string };
@@ -232,6 +253,7 @@ export default function DriverHomePage() {
                 : "The rider cancelled this ride. You're back in the queue for new requests."
             );
           }
+          setRiderPos(null);
           setRidePhase("searching");
           startPolling(fetchNextPending);
           return null;
@@ -303,7 +325,7 @@ export default function DriverHomePage() {
       });
     });
 
-    return () => { unsubCreated(); unsubCancelled(); unsubCarePrimary(); unsubCareSupport(); unsubCareClosed(); };
+    return () => { unsubCreated(); unsubRiderLoc(); unsubCancelled(); unsubCarePrimary(); unsubCareSupport(); unsubCareClosed(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, ridePhase, carePhase]);
 
@@ -565,16 +587,19 @@ export default function DriverHomePage() {
   async function handleArrived() {
     setRidePhase("arrived");
     if (!activeBooking) return;
-    /* Notify rider in real-time that driver has arrived */
+    /* Persist arrivedAt (the wait-time billing anchor) and notify the rider —
+       the server dispatches the socket event; the old client-side dispatcher
+       import never reached the server's io instance. */
     try {
-      const res = await fetch(`/api/bookings/${activeBooking.id}`);
-      const data = await res.json();
-      const { dispatchDriverArrived } = await import("@/lib/socket/dispatcher");
-      dispatchDriverArrived({
-        bookingId: activeBooking.id,
-        userId: data.userId ?? null,
-        driverId: data.driverId ?? null,
-      });
+      const res = await fetch(`/api/bookings/${activeBooking.id}/arrived`, { method: "PATCH" });
+      if (res.ok) {
+        const d = await res.json();
+        setWaitInfo({
+          arrivedAt: new Date(d.arrivedAt).getTime(),
+          freeMin:   d.freeWaitingMinutes ?? 5,
+          rate:      d.waitingRatePerMin ?? 0.75,
+        });
+      }
     } catch {}
   }
 
@@ -584,6 +609,8 @@ export default function DriverHomePage() {
     await fetch(`/api/bookings/${activeBooking.id}/start`, { method: "PATCH" });
     setActionLoading(false);
     startLocationTracking(activeBooking.id);
+    setRiderPos(null); /* rider is in the car now */
+    setWaitInfo(null); /* waiting clock stops at trip start */
     setRidePhase("started");
   }
 
@@ -1071,6 +1098,7 @@ export default function DriverHomePage() {
 
       <DriverMap
         position={driverPos}
+        riderPosition={riderPos}
         pickup={careAssignment
           ? (careAssignment.role === "PRIMARY" ? careAssignment.booking.pickup : careAssignment.booking.dropoff)
           : activeBooking?.pickup}
@@ -1369,6 +1397,26 @@ export default function DriverHomePage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   <p className="text-[12px] font-semibold text-green-700">You&apos;re at the pickup location</p>
                 </div>
+                {/* Wait-time clock: free window countdown, then accruing charge */}
+                {waitInfo && (() => {
+                  const elapsedSec   = Math.max(0, Math.floor((waitNow - waitInfo.arrivedAt) / 1000));
+                  const freeRemain   = Math.max(0, waitInfo.freeMin * 60 - elapsedSec);
+                  const billableMin  = Math.max(0, Math.floor(elapsedSec / 60) - waitInfo.freeMin);
+                  const accrued      = billableMin * waitInfo.rate;
+                  const mm = String(Math.floor(freeRemain / 60)).padStart(1, "0");
+                  const ss = String(freeRemain % 60).padStart(2, "0");
+                  return freeRemain > 0 ? (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 mb-1">
+                      <p className="text-[12px] font-semibold text-gray-600">Complimentary waiting</p>
+                      <p className="text-[13px] font-bold" style={{ color: "#131936" }}>{mm}:{ss} left</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 mb-1">
+                      <p className="text-[12px] font-semibold text-amber-700">Wait charges accruing (${waitInfo.rate.toFixed(2)}/min)</p>
+                      <p className="text-[13px] font-bold text-amber-700">${accrued.toFixed(2)}</p>
+                    </div>
+                  );
+                })()}
                 <div className="flex gap-3">
                   <button type="button"
                     onClick={() => router.push(`/driver/home/finish/chat?bookingId=${activeBooking.id}`)}

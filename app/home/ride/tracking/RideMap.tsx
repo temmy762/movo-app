@@ -63,6 +63,40 @@ interface RideMapProps {
   onDirectionsFetched?: (durationText: string, durationSeconds: number) => void;
 }
 
+/* Smoothly animate the car between position updates instead of jumping — the
+   updates arrive every few seconds, so gliding between them reads as live
+   movement like modern ride-hailing apps. */
+function useAnimatedPosition(target: { lat: number; lng: number } | null, durationMs = 1800) {
+  const [animated, setAnimated] = useState<{ lat: number; lng: number } | null>(target);
+  const fromRef = useRef<{ lat: number; lng: number } | null>(target);
+  const rafRef  = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!target) { setAnimated(null); fromRef.current = null; return; }
+    const from = fromRef.current;
+    if (!from) { setAnimated(target); fromRef.current = target; return; }
+    if (from.lat === target.lat && from.lng === target.lng) return;
+
+    const start = performance.now();
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const e = 1 - Math.pow(1 - t, 2); /* ease-out */
+      setAnimated({
+        lat: from.lat + (target.lat - from.lat) * e,
+        lng: from.lng + (target.lng - from.lng) * e,
+      });
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
+      else fromRef.current = target;
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.lat, target?.lng, durationMs]);
+
+  return animated;
+}
+
 export default function RideMap({ pickup, dropoff, driverPosition, tripStarted, onDirectionsFetched }: RideMapProps) {
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
@@ -78,6 +112,9 @@ export default function RideMap({ pickup, dropoff, driverPosition, tripStarted, 
   const etaTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastEtaRef    = useRef<string>("");
   const prevPosRef    = useRef<{ lat: number; lng: number } | null>(null);
+
+  /* Glide the car between updates instead of teleporting */
+  const animatedDriverPos = useAnimatedPosition(driverPosition ?? null);
 
   /* Resolve and cache pickup/dropoff coords on first load */
   useEffect(() => {
@@ -199,9 +236,10 @@ export default function RideMap({ pickup, dropoff, driverPosition, tripStarted, 
         }}
       />
 
-      {/* Car marker — live driver position, rotated to the direction of travel */}
+      {/* Car marker — live driver position, animated between updates and
+          rotated to the direction of travel */}
       <Marker
-        position={driverPosition ?? mapCenter}
+        position={animatedDriverPos ?? driverPosition ?? mapCenter}
         icon={{
           url: `data:image/svg+xml;charset=UTF-8,${carSvg(heading)}`,
           scaledSize: new google.maps.Size(44, 44),

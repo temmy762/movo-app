@@ -261,6 +261,7 @@ model Booking {
   gst                   Float?
   additionalStopFee     Float?
   airportFee            Float?
+  waitingFee            Float?
   total                 Float
   status                BookingStatus @default(PENDING)
   paymentStatus         PaymentStatus @default(UNPAID)
@@ -272,6 +273,7 @@ model Booking {
   scheduledAt           DateTime?
   acceptedAt            DateTime?
   enRouteAt             DateTime?
+  arrivedAt             DateTime?
   startedAt             DateTime?
   completedAt           DateTime?
   cancelledAt           DateTime?

@@ -47,6 +47,8 @@ const DARK_STYLES = [
 
 interface Props {
   position:  { lat: number; lng: number } | null;
+  /** rider's live position (pickup phase) — shown as a pulsing person marker */
+  riderPosition?: { lat: number; lng: number } | null;
   /** pickup address — show route driver→pickup when provided */
   pickup?:   string;
   /** dropoff address — show route pickup→dropoff once ride started */
@@ -74,7 +76,51 @@ const DEST_PIN = encodeURIComponent(
   </svg>`
 );
 
-export default function DriverMap({ position, pickup, dropoff, navPhase, onEta, darkTheme }: Props) {
+/* Rider's live position — pulsing person marker */
+const RIDER_PIN = encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+    <circle cx="17" cy="17" r="16" fill="#4f46e5" opacity="0.25"/>
+    <circle cx="17" cy="17" r="10" fill="#4f46e5"/>
+    <circle cx="17" cy="13.5" r="3" fill="white"/>
+    <path d="M11 23c0-3 2.7-5 6-5s6 2 6 5" fill="white"/>
+  </svg>`
+);
+
+/* Smoothly animate a marker between position updates instead of jumping —
+   gives the "vehicle gliding along the route" feel of modern ride apps. */
+function useAnimatedPosition(target: { lat: number; lng: number } | null, durationMs = 900) {
+  const [animated, setAnimated] = useState<{ lat: number; lng: number } | null>(target);
+  const fromRef  = useRef<{ lat: number; lng: number } | null>(target);
+  const rafRef   = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!target) { setAnimated(null); fromRef.current = null; return; }
+    const from = fromRef.current;
+    if (!from) { setAnimated(target); fromRef.current = target; return; }
+    if (from.lat === target.lat && from.lng === target.lng) return;
+
+    const start = performance.now();
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const e = 1 - Math.pow(1 - t, 2); /* ease-out */
+      const cur = {
+        lat: from.lat + (target.lat - from.lat) * e,
+        lng: from.lng + (target.lng - from.lng) * e,
+      };
+      setAnimated(cur);
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
+      else fromRef.current = target;
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.lat, target?.lng, durationMs]);
+
+  return animated;
+}
+
+export default function DriverMap({ position, riderPosition, pickup, dropoff, navPhase, onEta, darkTheme }: Props) {
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
@@ -86,6 +132,10 @@ export default function DriverMap({ position, pickup, dropoff, navPhase, onEta, 
   const mapRef      = useRef<google.maps.Map | null>(null);
   const etaThrottle = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPosRef  = useRef<{ lat: number; lng: number } | null>(null);
+
+  /* Smooth marker motion between GPS updates */
+  const animatedPos      = useAnimatedPosition(position);
+  const animatedRiderPos = useAnimatedPosition(riderPosition ?? null);
 
   const center = useMemo(
     () => position ?? DEFAULT_CENTER,
@@ -123,6 +173,12 @@ export default function DriverMap({ position, pickup, dropoff, navPhase, onEta, 
     url: `data:image/svg+xml;charset=UTF-8,${DEST_PIN}`,
     scaledSize: new window.google.maps.Size(28, 36),
     anchor:     new window.google.maps.Point(14, 36),
+  } : undefined, [isLoaded]);
+
+  const riderIcon = useMemo(() => isLoaded ? {
+    url: `data:image/svg+xml;charset=UTF-8,${RIDER_PIN}`,
+    scaledSize: new window.google.maps.Size(34, 34),
+    anchor:     new window.google.maps.Point(17, 17),
   } : undefined, [isLoaded]);
 
   /* Recalculate nav route when position or phase changes (throttled 10 s) */
@@ -189,7 +245,12 @@ export default function DriverMap({ position, pickup, dropoff, navPhase, onEta, 
           />
         )}
 
-        {position && <Marker position={position} icon={carIcon} />}
+        {animatedPos && <Marker position={animatedPos} icon={carIcon} />}
+
+        {/* Rider's live position — pickup phase only (they're in the car after) */}
+        {animatedRiderPos && (navPhase === "accepted" || navPhase === "arrived") && riderIcon && (
+          <Marker position={animatedRiderPos} icon={riderIcon} zIndex={5} />
+        )}
 
         {/* Pickup pin */}
         {navDirections && (navPhase === "accepted" || navPhase === "arrived") && pickupIcon && (

@@ -154,6 +154,17 @@ export function dispatchDriverLocation(payload: {
   emit(`booking:${payload.bookingId}`, SOCKET_EVENTS.DRIVER_LOCATION, payload);
 }
 
+/* Rider's live position → the assigned chauffeur, for easier pickup */
+export function dispatchRiderLocation(payload: {
+  bookingId: string; driverId?: string | null; lat: number; lng: number;
+}) {
+  const rooms = [
+    `booking:${payload.bookingId}`,
+    ...(payload.driverId ? [`driver:${payload.driverId}`] : []),
+  ];
+  emitMany(rooms, SOCKET_EVENTS.RIDER_LOCATION, payload);
+}
+
 /* ── Driver presence ─────────────────────────────────────────────────────── */
 
 export function dispatchDriverOnline(driverId: string, name: string) {

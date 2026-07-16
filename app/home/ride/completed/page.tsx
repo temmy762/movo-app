@@ -11,6 +11,7 @@ type BookingData = {
   gst?: number | null;
   additionalStopFee?: number | null;
   airportFee?: number | null;
+  waitingFee?: number | null;
   pickup?: string;
   dropoff?: string;
   completedAt?: string | null;
@@ -218,6 +219,12 @@ function RideCompletedContent() {
                   <div className="flex justify-between text-[12px]">
                     <span className="text-gray-500">Airport Pickup Fee</span>
                     <span className="text-gray-800 font-medium">${booking.airportFee!.toFixed(2)}</span>
+                  </div>
+                )}
+                {(booking.waitingFee ?? 0) > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-gray-500">Waiting Time</span>
+                    <span className="text-gray-800 font-medium">${booking.waitingFee!.toFixed(2)}</span>
                   </div>
                 )}
                 {(booking.serviceFee ?? 0) > 0 && (

@@ -429,6 +429,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               { label: "Ride Fare", amount: existing.fare },
               ...(existing.additionalStopFee ? [{ label: "Additional Stops", amount: existing.additionalStopFee }] : []),
               ...(existing.airportFee ? [{ label: "Airport Pickup Fee", amount: existing.airportFee }] : []),
+              ...(existing.waitingFee ? [{ label: "Waiting Time", amount: existing.waitingFee }] : []),
               { label: "Service Fee", amount: existing.serviceFee },
               ...(existing.gst ? [{ label: "GST", amount: existing.gst }] : []),
             ];

@@ -81,6 +81,26 @@ function RideTrackingContent() {
   const [scheduledForLabel, setScheduledForLabel] = useState<string | null>(null);
   /* Chauffeur confirmed for a future reservation but hasn't set off yet */
   const [awaitingSetOff, setAwaitingSetOff] = useState(false);
+  const riderLocPushRef = useRef<number>(0);
+  /* Wait-time clock: chauffeur arrived, free window then accruing charges */
+  const [arrivedAtMs, setArrivedAtMs] = useState<number | null>(null);
+  const [waitCfg, setWaitCfg] = useState<{ freeMin: number; rate: number }>({ freeMin: 5, rate: 0.75 });
+  const [waitNow, setWaitNow] = useState(Date.now());
+
+  useEffect(() => {
+    fetch("/api/admin/pricing")
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (d?.global) setWaitCfg({ freeMin: d.global.freeWaitingMinutes ?? 5, rate: d.global.waitingRatePerMin ?? 0.75 });
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!arrivedAtMs) return;
+    const t = setInterval(() => setWaitNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [arrivedAtMs]);
 
   /* ── Search progress (standard rides) — mirrors lib/dispatch/standardTimeout.ts windows ──
      "direct":     rider picked a specific driver, waiting for them to confirm (3 min)
@@ -399,6 +419,29 @@ function RideTrackingContent() {
     return () => { if (locationPollRef.current) clearInterval(locationPollRef.current); };
   }, [bookingId]);
 
+  /* ── Share the rider's live position with the assigned chauffeur while they
+        head to pickup — so the chauffeur navigates to the passenger, not just
+        the typed address. Stops once the trip starts (rider is in the car). ── */
+  useEffect(() => {
+    if (!bookingId || rideStatus !== "CONFIRMED" || awaitingSetOff) return;
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        if (now - riderLocPushRef.current < 5000) return; /* throttle to 5 s */
+        riderLocPushRef.current = now;
+        fetch(`/api/bookings/${bookingId}/rider-location`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        }).catch(() => {});
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [bookingId, rideStatus, awaitingSetOff]);
+
   /* ── Booking status polling → auto-redirect on COMPLETED / CANCELLED ── */
   useEffect(() => {
     if (!bookingId) return;
@@ -420,6 +463,13 @@ function RideTrackingContent() {
           } else {
             setScheduledForLabel(null);
             setAwaitingSetOff(false);
+          }
+
+          /* Wait-time clock: runs from chauffeur arrival until the trip starts */
+          if (data.arrivedAt && !data.startedAt && data.status === "CONFIRMED") {
+            setArrivedAtMs(new Date(data.arrivedAt).getTime());
+          } else {
+            setArrivedAtMs(null);
           }
 
           /* Derive effective ride status from booking status + startedAt */
@@ -633,6 +683,34 @@ function RideTrackingContent() {
               );
             })}
           </div>
+
+          {/* Wait-time clock — chauffeur is waiting at pickup */}
+          {arrivedAtMs && (() => {
+            const elapsedSec  = Math.max(0, Math.floor((waitNow - arrivedAtMs) / 1000));
+            const freeRemain  = Math.max(0, waitCfg.freeMin * 60 - elapsedSec);
+            const billableMin = Math.max(0, Math.floor(elapsedSec / 60) - waitCfg.freeMin);
+            const accrued     = billableMin * waitCfg.rate;
+            const mm = String(Math.floor(freeRemain / 60));
+            const ss = String(freeRemain % 60).padStart(2, "0");
+            return freeRemain > 0 ? (
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl mb-4"
+                style={{ background: "#f8f8f6", border: "1px solid #e5e7eb" }}>
+                <div className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <p className="text-[12px] font-semibold text-gray-700">Your chauffeur is waiting — complimentary time</p>
+                </div>
+                <p className="text-[13px] font-bold" style={{ color: "#131936" }}>{mm}:{ss}</p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl mb-4 bg-amber-50 border border-amber-200">
+                <div className="flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <p className="text-[12px] font-semibold text-amber-700">Waiting charges apply (${waitCfg.rate.toFixed(2)}/min)</p>
+                </div>
+                <p className="text-[13px] font-bold text-amber-700">${accrued.toFixed(2)}</p>
+              </div>
+            );
+          })()}
 
           <div className="h-[2px] w-full rounded-full mb-4" style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }} />
 

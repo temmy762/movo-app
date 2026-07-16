@@ -18,6 +18,8 @@ export const SOCKET_EVENTS = {
   DRIVER_ONLINE:    "driver.online",
   DRIVER_OFFLINE:   "driver.offline",
   DRIVER_LOCATION:  "driver.location",
+  /* Rider's live position → assigned chauffeur (pickup phase) */
+  RIDER_LOCATION:   "rider.location",
   DRIVER_APPROVED:  "driver.approved",
   DRIVER_SUSPENDED: "driver.suspended",
 
