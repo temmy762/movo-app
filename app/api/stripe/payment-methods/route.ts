@@ -23,10 +23,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ paymentMethods: [] });
     }
 
-    const pms = await stripe.paymentMethods.list({
-      customer: user.stripeCustomerId,
-      type: "card",
-    });
+    let pms: Stripe.ApiList<Stripe.PaymentMethod>;
+    try {
+      pms = await stripe.paymentMethods.list({
+        customer: user.stripeCustomerId,
+        type: "card",
+      });
+    } catch (e) {
+      /* Stored customer id from the other Stripe mode (e.g. test-mode ids
+         after switching to live keys) — treat as "no saved cards" so the
+         checkout falls back to the new-card form instead of erroring. */
+      if ((e as { code?: string })?.code === "resource_missing") {
+        return NextResponse.json({ paymentMethods: [] });
+      }
+      throw e;
+    }
 
     const cards = pms.data.map((pm) => ({
       id: pm.id,

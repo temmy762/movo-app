@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { getOrCreateStripeCustomer } from "@/lib/stripeCustomer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -23,20 +24,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    /* Create or retrieve Stripe Customer */
-    let customerId = user.stripeCustomerId;
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email ?? undefined,
-        name: `${user.firstName} ${user.lastName}`.trim(),
-        metadata: { userId: user.id },
-      });
-      customerId = customer.id;
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { stripeCustomerId: customerId },
-      });
-    }
+    /* Create or retrieve Stripe Customer — validates stored ids against the
+       current Stripe mode and recreates stale (test-mode) ones */
+    const customerId = await getOrCreateStripeCustomer(stripe, user);
 
     /* Create SetupIntent for saving a card */
     const setupIntent = await stripe.setupIntents.create({

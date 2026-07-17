@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { getOrCreateStripeCustomer } from "@/lib/stripeCustomer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -25,17 +26,9 @@ export async function POST(req: NextRequest) {
           select: { id: true, email: true, firstName: true, lastName: true, stripeCustomerId: true },
         });
         if (user) {
-          if (user.stripeCustomerId) {
-            customerId = user.stripeCustomerId;
-          } else {
-            const customer = await stripe.customers.create({
-              email: user.email ?? undefined,
-              name: `${user.firstName} ${user.lastName}`.trim(),
-              metadata: { userId: user.id },
-            });
-            customerId = customer.id;
-            await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } });
-          }
+          /* Validates the stored id against the CURRENT Stripe mode and
+             recreates it when stale (test-mode ids after the live switch) */
+          customerId = await getOrCreateStripeCustomer(stripe, user);
         }
       }
     } catch { /* non-fatal — proceed without customer */ }
