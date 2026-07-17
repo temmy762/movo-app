@@ -17,6 +17,13 @@ const nowTimeStr = () => {
   return d.toTimeString().slice(0, 5);
 };
 
+/* Mirrors ServiceDetailPage's tier names / available-cars' TIER_LABELS */
+const TIER_LABELS: Record<string, string> = {
+  classic: "Standard",
+  premium: "Executive",
+  black:   "Concierge",
+};
+
 function PickupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -151,7 +158,7 @@ function PickupContent() {
         return;
       }
     }
-    const schedule = kind === "reserve" ? { date, time } : {};
+    const schedule: { date?: string; time?: string } = kind === "reserve" ? { date, time } : {};
 
     if (service === "care") {
       /* Care Ride: skip car selection — go straight to the Care confirm/pay page */
@@ -172,6 +179,28 @@ function PickupContent() {
       return;
     }
 
+    const mode = searchParams.get("mode");
+
+    /* A specific tier was already chosen on a service page (In-City Rides,
+       Airport Transfer, Hourly Chauffeur) — skip the available-cars
+       tier-picking screen entirely and go straight to Confirm & Pay for that
+       tier. Only the generic search widget (no preselected tier, tier="all")
+       still shows the tier cards on available-cars. */
+    if (tier !== "all") {
+      const params = new URLSearchParams({
+        tier, pickup, dropoff, car: TIER_LABELS[tier] ?? tier,
+        ...schedule,
+        passengers: String(passengers),
+      });
+      if (selectedPoint) {
+        params.set("pickupLat", String(selectedPoint.lat));
+        params.set("pickupLng", String(selectedPoint.lng));
+      }
+      if (mode) params.set("mode", mode);
+      router.push(`/home/ride/confirm?${params.toString()}`);
+      return;
+    }
+
     const params = new URLSearchParams({
       tier, pickup, dropoff,
       ...schedule,
@@ -181,7 +210,6 @@ function PickupContent() {
       params.set("pickupLat", String(selectedPoint.lat));
       params.set("pickupLng", String(selectedPoint.lng));
     }
-    const mode = searchParams.get("mode");
     if (mode) params.set("mode", mode);
     router.push(`/home/pickup/available-cars?${params.toString()}`);
   };
