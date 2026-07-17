@@ -111,6 +111,8 @@ function RideTrackingContent() {
   type SearchMode = "direct" | "pool" | "reassigned";
   const [searchMode,     setSearchMode]     = useState<SearchMode | null>(null);
   const [searchDeadline, setSearchDeadline] = useState<number | null>(null);
+  /* Elapsed seconds on the "Finding your chauffeur" screen — drives the staged checklist */
+  const [findElapsed, setFindElapsed] = useState(0);
   const [nowTick,        setNowTick]        = useState(() => Date.now());
   const [showChangeDest,    setShowChangeDest]    = useState(false);
   const [newDestination,    setNewDestination]    = useState("");
@@ -549,6 +551,15 @@ function RideTrackingContent() {
     };
   }, [bookingId, router]);
 
+  /* ── "Finding your chauffeur" staged checklist ticker ── */
+  useEffect(() => {
+    const showing = rideStatus === "PENDING" && !isCareRide && !scheduledForLabel && !awaitingSetOff;
+    if (!showing) { setFindElapsed(0); return; }
+    const t = setInterval(() => setFindElapsed((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rideStatus, isCareRide, scheduledForLabel, awaitingSetOff]);
+
   /* ── Search countdown: tick every second while a deadline is active ── */
   useEffect(() => {
     if (!searchDeadline) return;
@@ -632,8 +643,82 @@ function RideTrackingContent() {
       .catch(() => {});
   };
 
+  /* Full-screen "Finding your chauffeur" interstitial — standard immediate
+     rides only. Scheduled reservations and Care rides keep their own
+     dedicated status views (Care already shows PRIMARY/SUPPORT progress
+     individually, which an overlay would hide). */
+  const showFindingOverlay =
+    rideStatus === "PENDING" && !isCareRide && !scheduledForLabel && !awaitingSetOff;
+
+  const FIND_STAGES = [
+    { label: "Locating nearby chauffeurs", atSec: 0 },
+    { label: "Checking availability",      atSec: 3 },
+    { label: "Assigning the best chauffeur", atSec: 7 },
+  ];
+
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-gray-900" style={{ fontFamily: "var(--font-body)" }}>
+    <div className="relative h-screen overflow-hidden flex flex-col bg-gray-900" style={{ fontFamily: "var(--font-body)" }}>
+
+      {/* ── Finding Your Chauffeur — full-screen dark interstitial ── */}
+      {showFindingOverlay && (
+        <div className="absolute inset-0 z-[500] flex flex-col items-center justify-center px-8"
+          style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 55%, #2A3055 100%)" }}>
+
+          {/* Wordmark */}
+          <div className="absolute top-8 left-0 right-0 flex flex-col items-center">
+            <span className="text-[13px] font-bold tracking-[0.3em] text-white/90">MOVO</span>
+            <span className="text-[9px] tracking-[0.2em] text-white/40 mt-0.5">PRIVÉ</span>
+          </div>
+
+          {/* Pulsing car glyph */}
+          <div className="relative w-28 h-28 mb-8 flex items-center justify-center">
+            <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(198,191,178,0.15)" }} />
+            <span className="absolute inset-2 rounded-full" style={{ background: "rgba(198,191,178,0.1)" }} />
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="1.6" className="relative">
+              <path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2" />
+              <circle cx="7.5" cy="17.5" r="1.5" /><circle cx="16.5" cy="17.5" r="1.5" />
+            </svg>
+          </div>
+
+          <p className="text-[22px] font-bold text-white mb-1">Finding your chauffeur</p>
+          <p className="text-[13px] text-white/40 mb-8">Please wait a moment…</p>
+
+          {/* Staged checklist */}
+          <div className="flex flex-col gap-3.5 w-full max-w-xs">
+            {FIND_STAGES.map((stage) => {
+              const reached = findElapsed >= stage.atSec;
+              return (
+                <div key={stage.label} className="flex items-center gap-3">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300"
+                    style={{ background: reached ? "#C6BFB2" : "rgba(255,255,255,0.1)" }}>
+                    {reached ? (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0A0A0F" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white/30" />
+                    )}
+                  </span>
+                  <span className="text-[13px] font-medium transition-colors duration-300" style={{ color: reached ? "white" : "rgba(255,255,255,0.4)" }}>
+                    {stage.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {searchDeadline != null && searchRemainingMs > 0 && (
+            <p className="mt-8 text-[12px] font-semibold text-white/50 tabular-nums">
+              {searchMode === "direct"
+                ? `Waiting for ${driverName !== "Driver" ? driverName : "your driver"} to confirm — ${searchCountdown}`
+                : `${searchCountdown} remaining`}
+            </p>
+          )}
+          <p className="mt-1 text-[11px] text-white/30 text-center max-w-xs">
+            {searchMode === "direct"
+              ? "If they don't confirm in time, we'll automatically find you another driver."
+              : "If no driver accepts in time, you'll be automatically refunded in full."}
+          </p>
+        </div>
+      )}
 
       {/* Map */}
       <div className="relative flex-shrink-0 overflow-hidden" style={{ height: "44vh", minHeight: "220px" }}>
@@ -945,16 +1030,23 @@ function RideTrackingContent() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="fixed bottom-0 left-0 right-0 px-5 py-4 bg-white border-t border-gray-100 z-[1001]">
+      {/* Footer — reskinned dark and borderless while the Finding overlay is
+          showing, so Cancel Ride reads as part of that screen rather than a
+          white strip cutting into it */}
+      <div className={`fixed bottom-0 left-0 right-0 px-5 py-4 z-[1001] ${showFindingOverlay ? "" : "bg-white border-t border-gray-100"}`}
+        style={showFindingOverlay ? { background: "linear-gradient(0deg, #0A0A0F 0%, rgba(10,10,15,0) 100%)" } : undefined}>
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
           {view === "route" ? (
             <>
-              <button type="button" onClick={() => setShowCancelConfirm(true)} className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide" style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
+              <button type="button" onClick={() => setShowCancelConfirm(true)}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
+                style={showFindingOverlay
+                  ? { background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.25)" }
+                  : { background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
                 Cancel Ride
               </button>
               {(searchMode || rideStatus === "PENDING") && (
-                <p className="text-center text-[11px] text-gray-400 mt-1.5">
+                <p className={`text-center text-[11px] mt-1.5 ${showFindingOverlay ? "text-white/40" : "text-gray-400"}`}>
                   No driver confirmed yet — cancel anytime for a full refund.
                 </p>
               )}
