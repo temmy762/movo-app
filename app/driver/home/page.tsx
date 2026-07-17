@@ -93,6 +93,13 @@ export default function DriverHomePage() {
   const [careError,        setCareError]        = useState<string | null>(null);
   const [showCareComplete, setShowCareComplete] = useState(false);
   const [cancelNotice,     setCancelNotice]     = useState<string | null>(null);
+  /* Chauffeur backing out of an accepted ride/reservation before it starts —
+     the booking is released back to the pool for auto-reassignment, not
+     cancelled/refunded. */
+  const [showDriverCancel, setShowDriverCancel] = useState(false);
+  const [driverCancelReason, setDriverCancelReason] = useState("");
+  const [driverCancelling, setDriverCancelling] = useState(false);
+  const [driverCancelError, setDriverCancelError] = useState<string | null>(null);
   /* Rider's live position (pickup phase) — relayed over the socket */
   const [riderPos,         setRiderPos]         = useState<{ lat: number; lng: number } | null>(null);
   /* Wait-time billing: anchor + config returned by the arrived endpoint */
@@ -582,6 +589,41 @@ export default function DriverHomePage() {
     setActiveBooking(null);
     setRidePhase("searching");
     startPolling(fetchNextPending);
+  }
+
+  /* Chauffeur can no longer make an already-ACCEPTED ride or reservation
+     (before it starts). Releases the booking back to the pool for automatic
+     reassignment to another online chauffeur — the rider is told we're
+     finding them someone else, never that the ride was cancelled. */
+  async function handleDriverCancelRide() {
+    if (!activeBooking || driverCancelling) return;
+    setDriverCancelling(true);
+    setDriverCancelError(null);
+    try {
+      const res = await fetch(`/api/bookings/${activeBooking.id}/driver-cancel`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: driverCancelReason.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDriverCancelError(d?.error ?? "Couldn't cancel this ride. Please try again.");
+        setDriverCancelling(false);
+        return;
+      }
+      stopLocationTracking();
+      setShowDriverCancel(false);
+      setDriverCancelReason("");
+      setDriverCancelling(false);
+      setActiveBooking(null);
+      setWaitInfo(null);
+      setRiderPos(null);
+      setRidePhase("searching");
+      startPolling(fetchNextPending);
+    } catch {
+      setDriverCancelError("Network error — please try again.");
+      setDriverCancelling(false);
+    }
   }
 
   async function handleArrived() {
@@ -1434,6 +1476,13 @@ export default function DriverHomePage() {
               </div>
             )}
 
+            {(ridePhase === "accepted" || ridePhase === "arrived") && (
+              <button type="button" onClick={() => setShowDriverCancel(true)}
+                className="no-hover-fx w-full mt-2 py-2.5 rounded-xl text-[12px] font-semibold border border-red-200 text-red-600 bg-red-50">
+                Can&apos;t make this ride — Cancel
+              </button>
+            )}
+
             {ridePhase === "started" && (
               <div className="flex flex-col gap-2">
                 <div className="flex gap-3">
@@ -1580,6 +1629,53 @@ export default function DriverHomePage() {
                 className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[14px]"
                 style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
                 Sure
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Driver-cancel modal — backing out of an already-accepted ride/reservation.
+          This releases the booking for automatic reassignment; it does NOT
+          cancel or refund the rider's ride. */}
+      {showDriverCancel && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <p className="text-[16px] font-bold text-gray-900 mb-1">Cancel this ride?</p>
+            <p className="text-[13px] text-gray-500 text-center mb-4">
+              We&apos;ll automatically find another available chauffeur nearby — the rider will be told we&apos;re arranging this, not that their ride was cancelled.
+            </p>
+            <textarea
+              value={driverCancelReason}
+              onChange={(e) => setDriverCancelReason(e.target.value)}
+              placeholder="Reason (optional) — e.g. vehicle issue, running too late"
+              rows={2}
+              className="w-full rounded-xl px-3 py-2 text-[12px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none mb-2"
+              style={{ border: "1.5px solid #e5e7eb" }}
+            />
+            {driverCancelError && (
+              <p className="text-[11px] text-red-600 mb-2 w-full">{driverCancelError}</p>
+            )}
+            <div className="flex gap-3 w-full">
+              <button type="button"
+                onClick={() => { setShowDriverCancel(false); setDriverCancelError(null); }}
+                disabled={driverCancelling}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl font-semibold text-[14px] border border-gray-300 text-gray-700 disabled:opacity-50">
+                Keep Ride
+              </button>
+              <button type="button"
+                onClick={handleDriverCancelRide}
+                disabled={driverCancelling}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[14px] disabled:opacity-60"
+                style={{ background: "#dc2626" }}>
+                {driverCancelling ? "Cancelling…" : "Yes, Cancel"}
               </button>
             </div>
           </div>

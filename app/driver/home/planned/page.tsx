@@ -28,6 +28,12 @@ export default function PlannedPage() {
   const [rides, setRides] = useState<Reserved[]>([]);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState<string | null>(null);
+  /* Cancelling a reservation the chauffeur can no longer make — released back
+     to the pool for automatic reassignment, not cancelled/refunded. */
+  const [cancelTarget, setCancelTarget] = useState<Reserved | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -58,6 +64,32 @@ export default function PlannedPage() {
     } catch { /* fall through */ }
     setActivating(null);
     load();
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelTarget || cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await fetch(`/api/bookings/${cancelTarget.id}/driver-cancel`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: cancelReason.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setCancelError(d?.error ?? "Couldn't cancel this reservation. Please try again.");
+        setCancelling(false);
+        return;
+      }
+      setCancelTarget(null);
+      setCancelReason("");
+      setCancelling(false);
+      load();
+    } catch {
+      setCancelError("Network error — please try again.");
+      setCancelling(false);
+    }
   };
 
   return (
@@ -137,9 +169,53 @@ export default function PlannedPage() {
                     Tap when you actually set off — the rider is notified you&apos;re on the way.
                   </p>
                 )}
+                <button type="button" onClick={() => { setCancelTarget(r); setCancelError(null); }}
+                  className="no-hover-fx w-full mt-2 py-2 rounded-xl text-[11px] font-semibold border border-red-200 text-red-600 bg-red-50">
+                  Can&apos;t make this reservation — Cancel
+                </button>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Cancel-reservation confirmation */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.45)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <p className="text-[16px] font-bold text-gray-900 mb-1">Cancel this reservation?</p>
+            <p className="text-[13px] text-gray-500 text-center mb-4">
+              Scheduled for {formatWhen(cancelTarget.scheduledAt)}. We&apos;ll automatically find another available chauffeur before pickup — the rider will be told we&apos;re arranging this, not that their ride was cancelled.
+            </p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Reason (optional) — e.g. vehicle issue, scheduling conflict"
+              rows={2}
+              className="w-full rounded-xl px-3 py-2 text-[12px] text-gray-700 placeholder-gray-400 resize-none focus:outline-none mb-2"
+              style={{ border: "1.5px solid #e5e7eb" }}
+            />
+            {cancelError && <p className="text-[11px] text-red-600 mb-2 w-full">{cancelError}</p>}
+            <div className="flex gap-3 w-full">
+              <button type="button"
+                onClick={() => { setCancelTarget(null); setCancelReason(""); setCancelError(null); }}
+                disabled={cancelling}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl font-semibold text-[14px] border border-gray-300 text-gray-700 disabled:opacity-50">
+                Keep Reservation
+              </button>
+              <button type="button" onClick={confirmCancel} disabled={cancelling}
+                className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[14px] disabled:opacity-60"
+                style={{ background: "#dc2626" }}>
+                {cancelling ? "Cancelling…" : "Yes, Cancel"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
