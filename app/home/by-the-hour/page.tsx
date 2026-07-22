@@ -5,6 +5,8 @@ export default function ByTheHourPage() {
     <ServiceDetailPage
       title="By The Hour"
       bannerImg="/images/by-the-hour.png"
+      mode="hourly"
+      desc="Your personal chauffeur, available by the hour."
     />
   );
 }

@@ -122,37 +122,42 @@ async function findNearbyDrivers(
     select: { id: true, firstName: true, lastName: true, lat: true, lng: true, vehicle: { select: { tier: true } } },
   });
 
-  /* Walk the tier priority list — only fall back to a lower tier when the
-     higher tier has NO eligible chauffeur in range. */
-  for (const tier of CARE_TIER_PRIORITY) {
-    const tierCandidates = candidates.filter(
-      (d) => d.vehicle?.tier?.toLowerCase() === tier,
-    );
-    if (tierCandidates.length === 0) continue;
+  /* Tier priority is an ORDERING, not a filter. The old per-tier loop returned
+     ONLY the highest tier that had anyone online — so while a single black-tier
+     chauffeur was online, lower-tier chauffeurs never received the request, and
+     every retry round re-offered the same unresponsive person forever. Now the
+     batch fills across tiers: higher tiers claim the first slots, lower tiers
+     fill the rest, so an ignored offer reaches the next chauffeur down. */
+  const tierRank = (t: string | null | undefined): number => {
+    const i = CARE_TIER_PRIORITY.indexOf((t ?? "").toLowerCase() as (typeof CARE_TIER_PRIORITY)[number]);
+    return i === -1 ? CARE_TIER_PRIORITY.length : i;
+  };
 
-    /* When geocoding failed (no coords), dispatch to any online drivers of this tier */
-    if (lat === null || lng === null) {
-      return tierCandidates
-        .slice(0, limit)
-        .map((d) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
-    }
+  const eligible = candidates.filter((d) =>
+    (CARE_TIER_PRIORITY as readonly string[]).includes((d.vehicle?.tier ?? "").toLowerCase()),
+  );
 
-    const inRange = tierCandidates
-      .filter((d) => d.lat !== null && d.lng !== null)
-      .map((d) => ({
-        id:        d.id,
-        firstName: d.firstName,
-        lastName:  d.lastName,
-        distKm:    haversineKm(lat, lng, d.lat!, d.lng!),
-      }))
-      .filter((d) => d.distKm <= radiusKm)
-      .sort((a, b) => a.distKm - b.distKm)
-      .slice(0, limit);
-
-    if (inRange.length > 0) return inRange;
+  /* When geocoding failed (no coords), dispatch to any online eligible drivers */
+  if (lat === null || lng === null) {
+    return eligible
+      .sort((a, b) => tierRank(a.vehicle?.tier) - tierRank(b.vehicle?.tier))
+      .slice(0, limit)
+      .map((d) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
   }
 
-  return [];
+  return eligible
+    .filter((d) => d.lat !== null && d.lng !== null)
+    .map((d) => ({
+      id:        d.id,
+      firstName: d.firstName,
+      lastName:  d.lastName,
+      rank:      tierRank(d.vehicle?.tier),
+      distKm:    haversineKm(lat, lng, d.lat!, d.lng!),
+    }))
+    .filter((d) => d.distKm <= radiusKm)
+    .sort((a, b) => a.rank - b.rank || a.distKm - b.distKm)
+    .slice(0, limit)
+    .map(({ id, firstName, lastName, distKm }) => ({ id, firstName, lastName, distKm }));
 }
 
 /* Pick a dispatch batch: nearest drivers within expanding radii; if nobody is

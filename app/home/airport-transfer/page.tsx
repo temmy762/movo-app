@@ -5,6 +5,8 @@ export default function AirportTransferPage() {
     <ServiceDetailPage
       title="Airport Transfer"
       bannerImg="/images/Airport-Transfer.png"
+      mode="airport"
+      desc="From doorstep to departure gate — effortlessly."
     />
   );
 }

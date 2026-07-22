@@ -73,6 +73,11 @@ export default function DriverHomePage() {
   type ReservedRide = { id: string; clientName: string; pickup: string; dropoff: string; carName: string; scheduledAt: string | null; earning: number };
   const [reserved, setReserved] = useState<ReservedRide[]>([]);
   const [mapExpanded, setMapExpanded] = useState(false);
+  /* Unclaimed SCHEDULED requests, visible even while OFFLINE — a chauffeur
+     following the "open the app to accept" push must find the reservation
+     waiting for them, not an empty dashboard that requires going on shift. */
+  const [reservationRequests, setReservationRequests] = useState<Booking[]>([]);
+  const [reservationActing,   setReservationActing]   = useState<string | null>(null);
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const geoWatchRef     = useRef<number | null>(null);
@@ -186,6 +191,63 @@ export default function DriverHomePage() {
       .then((d) => { if (Array.isArray(d)) setReserved(d); })
       .catch(() => {});
   }, []);
+
+  /* Poll for unclaimed SCHEDULED requests while the chauffeur is OFFLINE and
+     idle. Immediate requests still require going online; reservations are
+     future commitments and must be claimable straight from the push
+     notification without starting a shift. */
+  useEffect(() => {
+    if (isOnline || ridePhase !== "idle" || carePhase !== "idle") {
+      setReservationRequests([]);
+      return;
+    }
+    const poll = () => {
+      fetch("/api/bookings?status=PENDING")
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data) => {
+          const list: Booking[] = Array.isArray(data) ? data : [];
+          setReservationRequests(
+            list
+              .filter((b) => b.scheduledAt && new Date(b.scheduledAt).getTime() > Date.now())
+              .filter((b) => !declinedIdsRef.current.has(b.id))
+              .slice(0, 3),
+          );
+        })
+        .catch(() => {});
+    };
+    poll();
+    const t = setInterval(poll, 20_000);
+    return () => clearInterval(t);
+  }, [isOnline, ridePhase, carePhase]);
+
+  async function acceptReservation(b: Booking) {
+    if (reservationActing) return;
+    setReservationActing(b.id);
+    try {
+      const res = await fetch(`/api/bookings/${b.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CONFIRMED" }),
+      });
+      setReservationRequests((prev) => prev.filter((r) => r.id !== b.id));
+      if (res.ok) {
+        setReservationConfirmed(true);
+        fetch("/api/driver/reserved")
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d) => { if (Array.isArray(d)) setReserved(d); })
+          .catch(() => {});
+      }
+    } catch {
+      /* leave the card — next poll refreshes it */
+    } finally {
+      setReservationActing(null);
+    }
+  }
+
+  function declineReservation(id: string) {
+    declinedIdsRef.current.add(id);
+    setReservationRequests((prev) => prev.filter((r) => r.id !== id));
+  }
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -1070,6 +1132,64 @@ export default function DriverHomePage() {
                 </div>
               )}
             </section>
+
+            {/* Reservation requests — claimable even while OFFLINE, so the
+                "open the app to accept" push notification lands somewhere real */}
+            {reservationRequests.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-[13px] font-bold text-white">Reservation Requests</h2>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(198,191,178,0.15)", color: "#C6BFB2" }}>
+                    No need to be online
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {reservationRequests.map((b) => (
+                    <div key={b.id} className="rounded-2xl p-4" style={{ background: "#14141C", border: "1px solid rgba(198,191,178,0.45)" }}>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className="flex items-center gap-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                          </svg>
+                          <p className="text-[12px] font-bold text-white">
+                            {b.scheduledAt ? new Date(b.scheduledAt).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Scheduled"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] leading-none mb-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>Your earnings</p>
+                          <p className="text-[13px] font-extrabold leading-none" style={{ color: "#C6BFB2" }}>${(b.earning ?? 0).toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1.5 mb-3">
+                        <div className="flex items-start gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1" style={{ background: "#C6BFB2" }} />
+                          <p className="text-[12px] leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>{b.pickup}</p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-1" />
+                          <p className="text-[12px] leading-tight" style={{ color: "rgba(255,255,255,0.75)" }}>{b.dropoff}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <button type="button" onClick={() => declineReservation(b.id)}
+                          disabled={reservationActing === b.id}
+                          className="no-hover-fx flex-1 py-2.5 rounded-xl font-bold text-[13px]"
+                          style={{ border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.8)" }}>
+                          Decline
+                        </button>
+                        <button type="button" onClick={() => acceptReservation(b)}
+                          disabled={reservationActing === b.id}
+                          className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[13px]"
+                          style={{ background: reservationActing === b.id ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+                          {reservationActing === b.id ? "…" : "Accept"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3">

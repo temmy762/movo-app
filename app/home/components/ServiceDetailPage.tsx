@@ -2,34 +2,24 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-
-const tiers = [
-  {
-    id: "classic",
-    name: "Standard",
-    desc: "Effortless rides for every day.",
-  },
-  {
-    id: "premium",
-    name: "Executive",
-    desc: "Elevated comfort. Premium performance.",
-  },
-  {
-    id: "black",
-    name: "Concierge",
-    desc: "Unparalleled luxury. Your personal concierge on wheels.",
-  },
-];
 
 interface Props {
   title: string;
   bannerImg: string;
+  /** booking mode carried into the funnel: "airport" | "hourly" (omit for city rides) */
+  mode?: string;
+  /** short blurb under the title */
+  desc?: string;
 }
 
-export default function ServiceDetailPage({ title, bannerImg }: Props) {
+/**
+ * Per MOVO Team's clarified flow, this page no longer pre-picks a ride tier —
+ * the tier toggles were removed. Booking goes straight to the address screen;
+ * the tier list (with live per-trip pricing) is chosen once, after addresses.
+ */
+export default function ServiceDetailPage({ title, bannerImg, mode, desc }: Props) {
   const router = useRouter();
-  const [selected, setSelected] = useState("classic");
+  const bookHref = `/home/pickup${mode ? `?mode=${mode}` : ""}`;
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-start overflow-y-auto" style={{ fontFamily: "var(--font-body)" }}>
@@ -51,45 +41,17 @@ export default function ServiceDetailPage({ title, bannerImg }: Props) {
         {/* Title */}
         <div className="px-4 mt-4">
           <h1 className="text-[20px] font-bold text-gray-900">{title}</h1>
-        </div>
-
-        {/* Tiers */}
-        <div className="px-4 mt-3 space-y-0">
-          {tiers.map((tier, i) => (
-            <div key={tier.id}>
-              <div className="flex items-start gap-3 py-3">
-                {/* Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setSelected(tier.id)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 mt-0.5 items-center rounded-full transition-colors ${
-                    selected === tier.id ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                      selected === tier.id ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-                <div>
-                  <p className="text-[15px] font-bold text-gray-900">{tier.name}</p>
-                  <p className="text-[13px] text-gray-500 mt-0.5 leading-snug">{tier.desc}</p>
-                </div>
-              </div>
-              {i < tiers.length - 1 && <div className="h-px bg-gray-100" />}
-            </div>
-          ))}
+          {desc && <p className="text-[13px] text-gray-500 mt-1 leading-snug">{desc}</p>}
         </div>
 
         {/* Spacer */}
         <div className="h-4" />
 
-        {/* Book now */}
+        {/* Book now — straight to the address screen; tiers are chosen after */}
         <div className="px-4 pb-8">
           <button
             type="button"
-            onClick={() => router.push(`/home/pickup?tier=${selected}`)}
+            onClick={() => router.push(bookHref)}
             className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
             style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
           >
