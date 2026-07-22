@@ -279,6 +279,19 @@ export default function AdminRentalsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  /* First-run UX: with an empty fleet, "Requests" (the default tab) just
+     shows "No pending rental requests" and gives no clue that vehicles are
+     added under Fleet. Land on Fleet automatically until at least one
+     vehicle exists — after that, Requests (the actionable queue) is the
+     more useful default. Runs once, after the first successful load. */
+  const [didSteer, setDidSteer] = useState(false);
+  useEffect(() => {
+    if (!loading && !didSteer) {
+      setDidSteer(true);
+      if (vehicles.length === 0) setTab("fleet");
+    }
+  }, [loading, didSteer, vehicles.length, setDidSteer]);
+
   const requests = rentals.filter((r) => r.status === "REQUESTED");
   const active   = rentals.filter((r) => r.status === "APPROVED");
   const history  = rentals.filter((r) => r.status === "DECLINED" || r.status === "COMPLETED" || r.status === "CANCELLED");
@@ -371,13 +384,13 @@ export default function AdminRentalsPage() {
     <div className="min-h-full p-4 md:p-6 flex flex-col gap-4" style={{ fontFamily: "var(--font-body)" }}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <p className="text-[18px] font-extrabold text-gray-900">Vehicle Rentals</p>
-        {tab === "fleet" && (
-          <button onClick={() => setVehicleForm("new")}
-            className="no-hover-fx px-4 py-2 rounded-xl text-white text-[12px] font-bold"
-            style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
-            + Add Vehicle
-          </button>
-        )}
+        {/* Always visible — not just on the Fleet tab — so admins can add a
+            car from wherever they land, including an empty Requests tab. */}
+        <button onClick={() => setVehicleForm("new")}
+          className="no-hover-fx px-4 py-2 rounded-xl text-white text-[12px] font-bold"
+          style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
+          + Add Vehicle
+        </button>
       </div>
 
       {/* Tabs */}
@@ -400,7 +413,17 @@ export default function AdminRentalsPage() {
         <p className="text-center text-[13px] text-gray-400 py-16">Loading…</p>
       ) : tab === "requests" ? (
         requests.length === 0 ? (
-          <p className="text-center text-[13px] text-gray-400 py-16">No pending rental requests.</p>
+          vehicles.length === 0 ? (
+            <div className="flex flex-col items-center py-16 gap-2">
+              <p className="text-[13px] text-gray-400">No rental vehicles yet — add one to get started.</p>
+              <button onClick={() => setTab("fleet")}
+                className="no-hover-fx text-[12px] font-semibold" style={{ color: "#131936" }}>
+                Go to Fleet →
+              </button>
+            </div>
+          ) : (
+            <p className="text-center text-[13px] text-gray-400 py-16">No pending rental requests.</p>
+          )
         ) : (
           <div className="flex flex-col gap-3">
             {requests.map((r) => (

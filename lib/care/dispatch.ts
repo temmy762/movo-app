@@ -137,12 +137,17 @@ async function findNearbyDrivers(
     (CARE_TIER_PRIORITY as readonly string[]).includes((d.vehicle?.tier ?? "").toLowerCase()),
   );
 
-  /* When geocoding failed (no coords), dispatch to any online eligible drivers */
+  /* Pickup geocoding itself failed (rare) — nobody's distance can be judged,
+     so fall back to tier order only. Shuffle within each tier so ties don't
+     deterministically favour whichever driver Postgres happens to return
+     first (e.g. by insertion order) — that read as "always the same
+     chauffeur" even though nothing in the code names a specific driver. */
   if (lat === null || lng === null) {
     return eligible
-      .sort((a, b) => tierRank(a.vehicle?.tier) - tierRank(b.vehicle?.tier))
+      .map((d) => ({ d, rank: tierRank(d.vehicle?.tier), jitter: Math.random() }))
+      .sort((a, b) => a.rank - b.rank || a.jitter - b.jitter)
       .slice(0, limit)
-      .map((d) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
+      .map(({ d }) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
   }
 
   return eligible
@@ -160,9 +165,43 @@ async function findNearbyDrivers(
     .map(({ id, firstName, lastName, distKm }) => ({ id, firstName, lastName, distKm }));
 }
 
+/* Drivers with NO stored GPS fix at all — genuinely unknown location, so
+   they can't be distance-filtered. Distinct from "has coordinates but is
+   simply far away," which must never be dispatched for a nearby pickup no
+   matter how thin the nearby pool is (a driver on another continent is not
+   a fallback candidate for a same-city ride). */
+async function findDriversWithUnknownLocation(
+  excludeIds: string[],
+  limit: number,
+): Promise<Array<{ id: string; firstName: string; lastName: string; distKm: number }>> {
+  const candidates = await prisma.driver.findMany({
+    where: {
+      status:   "ACTIVE",
+      isOnline: true,
+      vehicle:  { isNot: null },
+      id:       excludeIds.length ? { notIn: excludeIds } : undefined,
+      OR: [{ lat: null }, { lng: null }],
+    },
+    select: { id: true, firstName: true, lastName: true, vehicle: { select: { tier: true } } },
+  });
+
+  const tierRank = (t: string | null | undefined): number => {
+    const i = CARE_TIER_PRIORITY.indexOf((t ?? "").toLowerCase() as (typeof CARE_TIER_PRIORITY)[number]);
+    return i === -1 ? CARE_TIER_PRIORITY.length : i;
+  };
+
+  return candidates
+    .filter((d) => (CARE_TIER_PRIORITY as readonly string[]).includes((d.vehicle?.tier ?? "").toLowerCase()))
+    .map((d) => ({ d, rank: tierRank(d.vehicle?.tier), jitter: Math.random() }))
+    .sort((a, b) => a.rank - b.rank || a.jitter - b.jitter)
+    .slice(0, limit)
+    .map(({ d }) => ({ id: d.id, firstName: d.firstName, lastName: d.lastName, distKm: 0 }));
+}
+
 /* Pick a dispatch batch: the nearest tier-ranked drivers within the maximum
-   radius, then fill any remaining slots with other online eligible chauffeurs
-   (no GPS fix stored, or beyond the cap). The old expanding-radius loop
+   radius, then fill any remaining slots with drivers who have NO stored GPS
+   fix at all (never a driver who has a fix but is simply outside the cap —
+   see findDriversWithUnknownLocation). The old expanding-radius loop
    returned the FIRST non-empty distance band, so one unresponsive chauffeur
    sitting close to the pickup monopolised every batch and retry round —
    chauffeurs a few km further out never received the request at all. With
@@ -179,7 +218,7 @@ async function selectDispatchBatch(
   if (batch.length >= limit) return batch;
 
   const seen = new Set(batch.map((d) => d.id));
-  const fallback = await findNearbyDrivers(null, null, 0, excludeIds, limit);
+  const fallback = await findDriversWithUnknownLocation(excludeIds, limit);
   for (const d of fallback) {
     if (batch.length >= limit) break;
     if (!seen.has(d.id)) { batch.push(d); seen.add(d.id); }

@@ -102,6 +102,10 @@ export default function DriverHomePage() {
   const [careError,        setCareError]        = useState<string | null>(null);
   const [showCareComplete, setShowCareComplete] = useState(false);
   const [cancelNotice,     setCancelNotice]     = useState<string | null>(null);
+  /* Surfaced when the browser can't get a GPS fix while online — previously
+     silent, so a chauffeur with location blocked/unavailable never learned
+     why they weren't receiving nearby (especially Safe Ride) requests. */
+  const [locationWarning,  setLocationWarning]  = useState(false);
   /* Chauffeur backing out of an accepted ride/reservation before it starts —
      the booking is released back to the pool for auto-reassignment, not
      cancelled/refunded. */
@@ -462,10 +466,11 @@ export default function DriverHomePage() {
 
   /* Broadcast driver position while ONLINE (no booking needed) */
   const startOnlineLocationBroadcast = useCallback(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) { setLocationWarning(true); return; }
     if (onlineGeoRef.current !== null) navigator.geolocation.clearWatch(onlineGeoRef.current);
     onlineGeoRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        setLocationWarning(false);
         const { latitude: lat, longitude: lng } = pos.coords;
         setDriverPos({ lat, lng });
         fetch("/api/driver/location", {
@@ -474,7 +479,11 @@ export default function DriverHomePage() {
           body: JSON.stringify({ lat, lng }),
         }).catch(() => {});
       },
-      () => {},
+      /* Permission denied, timed out, or position unavailable — the server
+         keeps whatever stale/null coordinates it already had, so nearby
+         requests (e.g. Safe Ride) silently stop reaching this chauffeur.
+         Surface it instead of failing invisibly. */
+      () => setLocationWarning(true),
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
   }, []);
@@ -484,6 +493,7 @@ export default function DriverHomePage() {
       navigator.geolocation.clearWatch(onlineGeoRef.current);
       onlineGeoRef.current = null;
     }
+    setLocationWarning(false);
   }, []);
 
   const startLocationTracking = useCallback((bookingId: string) => {
@@ -958,6 +968,18 @@ export default function DriverHomePage() {
                   style={{ left: isOnline ? "23px" : "3px" }} />
               </button>
             </div>
+
+            {/* Location permission warning — without this, nearby requests
+                (especially Safe Ride's distance-matched dispatch) silently
+                stop reaching this chauffeur with no visible cause */}
+            {isOnline && locationWarning && (
+              <div className="flex items-start gap-2.5 rounded-2xl px-4 py-3" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" className="shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <p className="text-[11px] leading-snug" style={{ color: "#fca5a5" }}>
+                  Can&apos;t access your location. Enable location access for this site in your browser settings — otherwise nearby ride requests (including Safe Ride) may not reach you.
+                </p>
+              </div>
+            )}
 
             {/* Map card — expandable */}
             <div className="relative rounded-2xl overflow-hidden" style={{ height: mapExpanded ? "58vh" : "180px", transition: "height 0.3s ease", border: "1px solid rgba(255,255,255,0.08)" }}>
