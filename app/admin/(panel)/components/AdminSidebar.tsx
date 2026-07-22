@@ -143,6 +143,17 @@ const navItems: NavEntry[] = [
   },
   {
     kind: "item",
+    label: "Rentals", href: "/admin/rentals",
+    match: (p) => p.startsWith("/admin/rentals"),
+    icon: (a) => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={a ? "#131936" : "#9ca3af"} strokeWidth="2">
+        <path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/>
+        <circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/>
+      </svg>
+    ),
+  },
+  {
+    kind: "item",
     label: "Incidents", href: "/admin/incidents",
     match: (p) => p.startsWith("/admin/incidents"),
     icon: (a) => (
@@ -188,6 +199,7 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ Financials: pathname.startsWith("/admin/financials") });
   const [msgUnread, setMsgUnread] = useState(0);
   const [pendingOnboarding, setPendingOnboarding] = useState(0);
+  const [pendingRentals, setPendingRentals] = useState(0);
   const prevPath = useRef(pathname);
 
   useEffect(() => {
@@ -201,6 +213,11 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
     fetch("/api/admin/onboarding/pending-count")
       .then(r => r.json())
       .then((d: { count: number }) => { if (typeof d.count === "number") setPendingOnboarding(d.count); })
+      .catch(() => {});
+
+    fetch("/api/admin/rentals/pending-count")
+      .then(r => r.json())
+      .then((d: { count: number }) => { if (typeof d.count === "number") setPendingRentals(d.count); })
       .catch(() => {});
   }, [pathname]); // re-check on navigation
 
@@ -300,6 +317,11 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
               {entry.label === "Onboarding" && pendingOnboarding > 0 && (
                 <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
                   {pendingOnboarding > 9 ? "9+" : pendingOnboarding}
+                </span>
+              )}
+              {entry.label === "Rentals" && pendingRentals > 0 && (
+                <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                  {pendingRentals > 9 ? "9+" : pendingRentals}
                 </span>
               )}
             </Link>
