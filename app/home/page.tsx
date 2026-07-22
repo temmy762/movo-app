@@ -7,11 +7,15 @@ import { useState } from "react";
 import BottomNav from "./components/BottomNav";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
+/* Per MOVO Team: selecting a service goes STRAIGHT to address entry — no
+   intermediate "here's the service, tap Book now" screen in between. Safe
+   Ride keeps its own page since it's a substantive explainer (how it works,
+   two-chauffeur flow), not a single-button interstitial. */
 const services = [
-  { id: 1, title: "In-City Rides",      desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",    href: "/home/in-city-rides" },
-  { id: 2, title: "Airport Transfer",   desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/airport-transfer" },
-  { id: 3, title: "Hourly Chauffeur",   desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",     href: "/home/by-the-hour" },
-  { id: 4, title: "Safe Ride",     desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",    href: "/home/care-ride" },
+  { id: 1, title: "In-City Rides",    desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",     href: "/home/pickup" },
+  { id: 2, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/pickup?mode=airport" },
+  { id: 3, title: "Hourly Chauffeur", desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",      href: "/home/pickup?mode=hourly" },
+  { id: 4, title: "Safe Ride",        desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",     href: "/home/care-ride" },
 ];
 
 export default function HomePage() {
