@@ -318,6 +318,9 @@ model VehicleRental {
   /* Refuel / cleaning charges collected at return (fuel cost + $20 service fee) */
   returnCharge     Float?
   returnChargeNote String?
+  /* Snapshot of whatever vehicle (own car, or a prior rental) the chauffeur
+     had at approval time, so it can be restored on return instead of lost. */
+  parkedVehicle    Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

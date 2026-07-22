@@ -2,18 +2,26 @@
  * PATCH /api/admin/rentals/[id]
  * Admin actions on a rental agreement: { action: "approve" | "decline" | "return", ... }
  *
- *  - approve: REQUESTED → APPROVED. Materializes a Vehicle row for the
- *    chauffeur (make/model/year/plate/tier copied from the rental vehicle,
- *    tagged rentalVehicleId) — the SAME field every dispatch/earnings/admin
- *    query already reads, so the chauffeur becomes immediately dispatchable
- *    with zero changes anywhere else in the system.
+ * Chauffeurs onboard WITH a vehicle by design, so rentals are available to
+ * every chauffeur, not just ones with no vehicle on file — approving a
+ * rental for someone who already has a car PARKS it (snapshotted onto
+ * rental.parkedVehicle) rather than deleting their data, and RETURNING the
+ * rental restores it automatically.
+ *
+ *  - approve: REQUESTED → APPROVED. Whatever vehicle the chauffeur currently
+ *    has (own car, or a previous rental's leftover row) is snapshotted and
+ *    removed, then a fresh Vehicle row is created from the rental vehicle
+ *    (make/model/year/plate/tier, tagged rentalVehicleId) — the SAME field
+ *    every dispatch/earnings/admin query already reads, so the chauffeur
+ *    becomes immediately dispatchable with zero changes anywhere else.
  *  - decline: REQUESTED → DECLINED, full Stripe refund, vehicle stays
  *    AVAILABLE (it was never marked otherwise for a pending request).
  *  - return: APPROVED → COMPLETED ("assign/unassign" from the spec — ending
  *    an active rental IS unassigning the vehicle). Optionally charges a
  *    refuel/cleaning fee off-session to the card on file (same mechanism as
- *    the mid-ride waiting-time charge), deletes exactly the rental-sourced
- *    Vehicle row, frees the rental vehicle back to AVAILABLE.
+ *    the mid-ride waiting-time charge), deletes the rental-sourced Vehicle
+ *    row, restores the parked vehicle (if any), frees the rental vehicle
+ *    back to AVAILABLE.
  */
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -46,7 +54,12 @@ export async function PATCH(
       where: { id },
       include: {
         vehicle: true,
-        driver: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, stripeCustomerId: true, vehicle: { select: { id: true } } } },
+        driver: {
+          select: {
+            id: true, firstName: true, lastName: true, email: true, phone: true, stripeCustomerId: true,
+            vehicle: { select: { id: true, make: true, model: true, year: true, plate: true, tier: true, photoUrl: true, rentalVehicleId: true } },
+          },
+        },
       },
     });
     if (!rental) return NextResponse.json({ error: "Rental not found" }, { status: 404 });
@@ -59,18 +72,31 @@ export async function PATCH(
       if (!rental.driverId || !rental.driver) {
         return NextResponse.json({ error: "This rental has no chauffeur attached" }, { status: 409 });
       }
-      if (rental.driver.vehicle) {
-        return NextResponse.json({ error: "This chauffeur already has a vehicle on their account." }, { status: 409 });
-      }
 
       const startDate = new Date();
       const endDate = new Date(startDate.getTime() + (PLAN_DAYS[rental.plan] ?? 1) * 24 * 60 * 60 * 1000);
 
+      /* Snapshot whatever vehicle they currently have (own car, or a leftover
+         rental row) so it can be restored on return — never deleted for good. */
+      const existingVehicle = rental.driver.vehicle;
+      const parkedVehicle = existingVehicle
+        ? {
+            make: existingVehicle.make, model: existingVehicle.model, year: existingVehicle.year,
+            plate: existingVehicle.plate, tier: existingVehicle.tier, photoUrl: existingVehicle.photoUrl,
+            /* If what they had was itself a prior rental's vehicle, don't
+               re-park it as "their own car" — that rental has already been
+               completed/returned by the time this could happen, so treat it
+               like an ordinary owned vehicle snapshot. */
+            wasRental: !!existingVehicle.rentalVehicleId,
+          }
+        : null;
+
       try {
         await prisma.$transaction([
+          ...(existingVehicle ? [prisma.vehicle.delete({ where: { id: existingVehicle.id } })] : []),
           prisma.vehicleRental.update({
             where: { id },
-            data: { status: "APPROVED", approvedAt: startDate, startDate, endDate },
+            data: { status: "APPROVED", approvedAt: startDate, startDate, endDate, parkedVehicle: parkedVehicle ?? undefined },
           }),
           prisma.rentalVehicle.update({ where: { id: rental.vehicleId }, data: { status: "RENTED" } }),
           prisma.vehicle.create({
@@ -200,6 +226,12 @@ export async function PATCH(
         }
       }
 
+      /* Restore whatever vehicle was parked at approval time (own car, or a
+         prior rental) — this chauffeur is done with the Movo rental. */
+      const parked = rental.parkedVehicle as
+        | { make: string; model: string; year: number; plate: string; tier: string; photoUrl: string | null }
+        | null;
+
       await prisma.$transaction([
         prisma.vehicleRental.update({
           where: { id },
@@ -209,11 +241,21 @@ export async function PATCH(
           },
         }),
         prisma.rentalVehicle.update({ where: { id: rental.vehicleId }, data: { status: "AVAILABLE" } }),
-        /* Precise delete: only the rental-sourced Vehicle row for THIS rental's
-           vehicle and THIS driver — never a chauffeur's own car. */
+        /* Precise delete: only the rental-sourced Vehicle row for THIS
+           rental's vehicle and THIS driver. */
         prisma.vehicle.deleteMany({
           where: { driverId: rental.driverId ?? undefined, rentalVehicleId: rental.vehicleId },
         }),
+        ...(parked && rental.driverId
+          ? [prisma.vehicle.create({
+              data: {
+                driverId: rental.driverId,
+                make: parked.make, model: parked.model, year: parked.year,
+                plate: parked.plate, tier: parked.tier, photoUrl: parked.photoUrl,
+                rentalVehicleId: null,
+              },
+            })]
+          : []),
       ]);
 
       logAudit({

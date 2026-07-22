@@ -196,7 +196,9 @@ export default function DriverHomePage() {
       .catch(() => {});
     fetch("/api/driver/rental")
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setRentalPrompt(!d.hasOwnVehicle && !d.active); })
+      /* Available to every chauffeur, not just vehicle-less ones — only
+         suppressed while they already have an open request/active rental. */
+      .then((d) => { if (d) setRentalPrompt(!d.active); })
       .catch(() => {});
   }, []);
 
@@ -1223,8 +1225,8 @@ export default function DriverHomePage() {
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2"><path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-white">No vehicle yet? Rent one from Movo</p>
-                  <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>From $89/day — start accepting trips as soon as you're approved</p>
+                  <p className="text-[13px] font-bold text-white">Rent a Movo Vehicle</p>
+                  <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>From $89/day — daily, weekly, or monthly plans available</p>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5" className="shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
               </button>

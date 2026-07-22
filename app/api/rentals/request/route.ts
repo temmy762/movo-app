@@ -79,9 +79,11 @@ async function validateEligibility(driverId: string, vehicleId: string) {
   if (!driver || driver.status !== "ACTIVE") {
     return { error: NextResponse.json({ error: "Only approved chauffeurs can rent a Movo vehicle." }, { status: 403 }) };
   }
-  if (driver.vehicle) {
-    return { error: NextResponse.json({ error: "You already have a vehicle on your account. Contact Movo support if you'd like to switch to a rental." }, { status: 409 }) };
-  }
+  /* Chauffeurs onboard WITH a vehicle by design, so gating rentals on "no
+     vehicle" would make the feature unreachable for almost everyone. Renting
+     is available to every chauffeur; approval PARKS whatever vehicle they
+     currently have (own car or a prior rental) and restores it on return —
+     see the approve/return actions in app/api/admin/rentals/[id]/route.ts. */
   if (myOpenRental) {
     return { error: NextResponse.json({ error: "You already have a rental request or an active rental." }, { status: 409 }) };
   }

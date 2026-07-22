@@ -263,17 +263,16 @@ export default function DriverRentalsPage() {
           </p>
         </div>
 
-      ) : hasOwnVehicle ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
-          <p className="text-[15px] font-semibold text-gray-700 mb-1">You already have a vehicle on file</p>
-          <p className="text-[12px] text-gray-400 max-w-xs">
-            Vehicle rentals are for chauffeurs without a qualifying vehicle. Contact Movo support if you&apos;d like to switch to a rental.
-          </p>
-        </div>
-
       ) : (
         /* ── Browse available rental vehicles ── */
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+          {hasOwnVehicle && (
+            <div className="rounded-xl px-3.5 py-2.5 mb-1" style={{ background: "#f8f8f6", border: "1px solid #e5e7eb" }}>
+              <p className="text-[11px] text-gray-500">
+                Renting a Movo vehicle will replace the vehicle currently on your account while the rental is active. It&apos;s restored automatically once you return the rental vehicle.
+              </p>
+            </div>
+          )}
           {vehicles.length === 0 ? (
             <p className="text-center text-[13px] text-gray-400 py-16">No rental vehicles available right now — check back soon.</p>
           ) : vehicles.map((v) => {
