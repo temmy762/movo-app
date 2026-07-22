@@ -160,22 +160,31 @@ async function findNearbyDrivers(
     .map(({ id, firstName, lastName, distKm }) => ({ id, firstName, lastName, distKm }));
 }
 
-/* Pick a dispatch batch: nearest drivers within expanding radii; if nobody is
-   in range (or eligible drivers have no GPS fix stored), fall back to ANY
-   online eligible chauffeur regardless of distance. With a small city fleet,
-   the hard 20 km cap silently produced zero candidates — the request was never
-   delivered to anyone even though chauffeurs were online. */
+/* Pick a dispatch batch: the nearest tier-ranked drivers within the maximum
+   radius, then fill any remaining slots with other online eligible chauffeurs
+   (no GPS fix stored, or beyond the cap). The old expanding-radius loop
+   returned the FIRST non-empty distance band, so one unresponsive chauffeur
+   sitting close to the pickup monopolised every batch and retry round —
+   chauffeurs a few km further out never received the request at all. With
+   first-accept-wins batching there is no reason to withhold the request from
+   anyone eligible while slots remain. */
 async function selectDispatchBatch(
   lat: number | null,
   lng: number | null,
   excludeIds: string[],
   limit: number,
 ): Promise<Array<{ id: string; firstName: string; lastName: string; distKm: number }>> {
-  for (const radius of RADII_KM) {
-    const drivers = await findNearbyDrivers(lat, lng, radius, excludeIds, limit);
-    if (drivers.length > 0) return drivers;
+  const maxRadiusKm = RADII_KM[RADII_KM.length - 1];
+  const batch = await findNearbyDrivers(lat, lng, maxRadiusKm, excludeIds, limit);
+  if (batch.length >= limit) return batch;
+
+  const seen = new Set(batch.map((d) => d.id));
+  const fallback = await findNearbyDrivers(null, null, 0, excludeIds, limit);
+  for (const d of fallback) {
+    if (batch.length >= limit) break;
+    if (!seen.has(d.id)) { batch.push(d); seen.add(d.id); }
   }
-  return findNearbyDrivers(null, null, 0, excludeIds, limit);
+  return batch;
 }
 
 /* ── Dispatch PRIMARY drivers (batch, first-accept wins) ────────────────── */
