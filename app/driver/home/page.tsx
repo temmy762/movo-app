@@ -69,6 +69,10 @@ export default function DriverHomePage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [stats, setStats] = useState<{ totalEarned: number; todayEarned: number; preBooked: number; tripsCompleted: number; tripsToday: number }>({ totalEarned: 0, todayEarned: 0, preBooked: 0, tripsCompleted: 0, tripsToday: 0 });
+  /* Vehicle Rental: prompt chauffeurs with no vehicle to rent one. Only shown
+     once we actually know (fetch resolved) they have neither a vehicle nor a
+     rental already in flight. */
+  const [rentalPrompt, setRentalPrompt] = useState(false);
   const [driverName, setDriverName] = useState<string>("");
   type ReservedRide = { id: string; clientName: string; pickup: string; dropoff: string; carName: string; scheduledAt: string | null; earning: number };
   const [reserved, setReserved] = useState<ReservedRide[]>([]);
@@ -189,6 +193,10 @@ export default function DriverHomePage() {
     fetch("/api/driver/reserved")
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (Array.isArray(d)) setReserved(d); })
+      .catch(() => {});
+    fetch("/api/driver/rental")
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setRentalPrompt(!d.hasOwnVehicle && !d.active); })
       .catch(() => {});
   }, []);
 
@@ -1206,6 +1214,22 @@ export default function DriverHomePage() {
               ))}
             </div>
 
+            {/* No vehicle yet — prompt to rent one from Movo */}
+            {rentalPrompt && (
+              <button type="button" onClick={() => router.push("/driver/home/rentals")}
+                className="no-hover-fx w-full rounded-2xl px-4 py-4 flex items-center gap-3 text-left"
+                style={{ background: "linear-gradient(135deg,#131936,#1e2a5e)", border: "1px solid rgba(198,191,178,0.35)" }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(198,191,178,0.15)" }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2"><path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-white">No vehicle yet? Rent one from Movo</p>
+                  <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.55)" }}>From $89/day — start accepting trips as soon as you're approved</p>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5" className="shrink-0"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            )}
+
             {/* Upcoming Reserved Rides */}
             <section>
               <div className="flex items-center justify-between mb-2">
@@ -1681,6 +1705,7 @@ export default function DriverHomePage() {
                 { label: "Reserved Rides", href: "/driver/home/planned", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> },
                 { label: "Today's Rides", href: "/driver/home/finish/my-rides", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg> },
                 { label: "Earnings", href: "/driver/home/wallet", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.3a2.6 2.6 0 0 0-2.5-1.6c-1.4 0-2.5.9-2.5 2s1.1 1.7 2.5 2 2.5.9 2.5 2-1.1 2-2.5 2a2.6 2.6 0 0 1-2.5-1.6"/><line x1="12" y1="6" x2="12" y2="7.7"/><line x1="12" y1="16.3" x2="12" y2="18"/></svg> },
+                { label: "Rent a Vehicle", href: "/driver/home/rentals", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M9.5 6h5"/></svg> },
                 { label: "Inbox",   href: "/driver/home/news",    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg> },
                 { label: "Report Found Item", href: "/driver/home/report-found-item", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
                 { label: "Profile", href: "/driver/home/profile", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> },

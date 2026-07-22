@@ -19,6 +19,7 @@ import { chauffeurOnboardingApprovedTemplate } from "./chauffeur/onboarding-appr
 import { chauffeurOnboardingRejectedTemplate } from "./chauffeur/onboarding-rejected";
 import { chauffeurPayoutTemplate } from "./chauffeur/payout";
 import { chauffeurBookingCancelledTemplate } from "./chauffeur/booking-cancelled";
+import { chauffeurRentalApprovedTemplate, chauffeurRentalDeclinedTemplate } from "./chauffeur/rental-status";
 
 // Import admin templates
 import { adminNewDriverApplicationTemplate } from "./admin/new-driver-application";
@@ -75,6 +76,8 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   RIDER_PASSWORD_RESET: passwordResetTemplate,
   CHAUFFEUR_ONBOARDING_SUBMITTED: chauffeurOnboardingSubmittedTemplate,
   CHAUFFEUR_BOOKING_CANCELLED: chauffeurBookingCancelledTemplate,
+  CHAUFFEUR_RENTAL_APPROVED: chauffeurRentalApprovedTemplate,
+  CHAUFFEUR_RENTAL_DECLINED: chauffeurRentalDeclinedTemplate,
 };
 
 /**

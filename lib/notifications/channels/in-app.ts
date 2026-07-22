@@ -29,6 +29,8 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   CHAUFFEUR_BOOKING_CANCELLED: "Booking cancelled",
   CHAUFFEUR_PAYOUT_NOTIFICATION: "Payout processed",
   CHAUFFEUR_TOPUP_NOTIFICATION: "Wallet top-up update",
+  CHAUFFEUR_RENTAL_APPROVED: "Rental approved — vehicle assigned",
+  CHAUFFEUR_RENTAL_DECLINED: "Rental request update",
   // Admin events
   ADMIN_NEW_DRIVER_APPLICATION: "New driver application",
   ADMIN_NEW_INCIDENT_REPORT: "New incident report",
@@ -37,6 +39,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   ADMIN_PAYOUT_REQUEST: "Driver payout request",
   ADMIN_CARE_DISPATCH_FAILED: "Care Ride dispatch failed",
   ADMIN_RIDE_DISPATCH_FAILED: "Ride dispatch failed",
+  ADMIN_RENTAL_REQUEST: "New vehicle rental request",
   // Support events
   SUPPORT_TICKET_CREATED: "Support ticket created",
   SUPPORT_TICKET_UPDATED: "Ticket updated",
@@ -67,6 +70,8 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   CHAUFFEUR_BOOKING_CANCELLED: "A booking has been cancelled.",
   CHAUFFEUR_PAYOUT_NOTIFICATION: "Your payout has been processed.",
   CHAUFFEUR_TOPUP_NOTIFICATION: "There's an update on your wallet top-up request.",
+  CHAUFFEUR_RENTAL_APPROVED: "Your vehicle rental was approved. The vehicle is now assigned to your account and you can start accepting trips.",
+  CHAUFFEUR_RENTAL_DECLINED: "Your vehicle rental request was declined and your payment has been refunded in full.",
   // Admin events
   ADMIN_NEW_DRIVER_APPLICATION: "A new driver application requires review.",
   ADMIN_NEW_INCIDENT_REPORT: "A new incident report has been submitted.",
@@ -75,6 +80,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   ADMIN_PAYOUT_REQUEST: "A driver has requested a payout. Please review and approve.",
   ADMIN_CARE_DISPATCH_FAILED: "No chauffeur could be found for a Care Ride booking. Manual dispatch needed.",
   ADMIN_RIDE_DISPATCH_FAILED: "No driver accepted a ride in time. The rider has been refunded.",
+  ADMIN_RENTAL_REQUEST: "A chauffeur has requested to rent a Movo vehicle. Review and approve or decline in the Rentals section.",
   // Support events
   SUPPORT_TICKET_CREATED: "A new support ticket has been created.",
   SUPPORT_TICKET_UPDATED: "A support ticket has been updated.",

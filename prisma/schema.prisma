@@ -196,6 +196,9 @@ model Driver {
   fleetDriverSplit   Float              @default(0.85)
   stripeAccountId    String?
   stripeAccountStatus String?
+  /* Stripe CUSTOMER id (drivers PAYING us — e.g. vehicle rentals), distinct
+     from stripeAccountId (Connect account for payouts TO the driver). */
+  stripeCustomerId   String?
   trainingCompleted  Int[]              @default([])
   onboardingType     OnboardingType?    
   deletedAt          DateTime?
@@ -213,6 +216,7 @@ model Driver {
   consentRecords   ConsentRecord[]
   complaints       Complaint[]
   lostFoundItems   LostFoundItem[]
+  vehicleRentals   VehicleRental[]
 }
 
 model Vehicle {
@@ -225,8 +229,102 @@ model Vehicle {
   plate     String
   tier      String
   photoUrl  String?
+  /* Set when this vehicle row was materialized from an approved Movo rental —
+     lets return/unassign remove exactly the rental-sourced row and never a
+     chauffeur's own car. */
+  rentalVehicleId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── Chauffeur Vehicle Rental ─────────────────────────────────────────────────
+
+enum RentalVehicleStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum RentalPlan {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum RentalStatus {
+  REQUESTED
+  APPROVED
+  DECLINED
+  COMPLETED
+  CANCELLED
+}
+
+enum RenterType {
+  DRIVER
+  USER
+}
+
+model RentalVehicle {
+  id          String              @id @default(cuid())
+  make        String
+  model       String
+  year        Int
+  plate       String
+  color       String?
+  /* Ride tier this vehicle qualifies the renter to drive (classic/premium/black) */
+  tier        String              @default("classic")
+  /* Base64 data URIs — NEVER inlined in list responses; streamed one at a
+     time via /api/rentals/vehicles/[id]/photo?i=N */
+  photos      String[]            @default([])
+  dailyRate   Float               @default(89)
+  weeklyRate  Float               @default(575)
+  monthlyRate Float               @default(2150)
+  status      RentalVehicleStatus @default(AVAILABLE)
+  notes       String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  rentals VehicleRental[]
+
+  @@index([status])
+}
+
+model VehicleRental {
+  id         String        @id @default(cuid())
+  vehicleId  String
+  vehicle    RentalVehicle @relation(fields: [vehicleId], references: [id])
+  /* DRIVER for launch; USER reserved for future public customer rentals */
+  renterType RenterType    @default(DRIVER)
+  driverId   String?
+  driver     Driver?       @relation(fields: [driverId], references: [id])
+  userId     String?
+
+  plan   RentalPlan
+  amount Float
+  status RentalStatus @default(REQUESTED)
+
+  stripePaymentIntentId String?
+  paymentStatus         String  @default("PAID")
+  refundId              String?
+
+  startDate  DateTime?
+  endDate    DateTime?
+  approvedAt DateTime?
+  declinedAt DateTime?
+  returnedAt DateTime?
+
+  adminNote        String?
+  /* Refuel / cleaning charges collected at return (fuel cost + $20 service fee) */
+  returnCharge     Float?
+  returnChargeNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([status])
 }
 
 model Session {
