@@ -14,7 +14,7 @@ type Rental = {
   id: string; plan: "DAILY" | "WEEKLY" | "MONTHLY"; amount: number;
   status: "REQUESTED" | "APPROVED" | "DECLINED" | "COMPLETED" | "CANCELLED";
   startDate: string | null; endDate: string | null; adminNote: string | null;
-  returnCharge: number | null; returnChargeNote: string | null; createdAt: string;
+  returnCharge: number | null; returnChargeNote: string | null; returnRequestedAt: string | null; createdAt: string;
   driver: { id: string; firstName: string; lastName: string; email: string; phone: string | null } | null;
   vehicle: { id: string; make: string; model: string; year: number; plate: string; color: string | null; tier: string };
 };
@@ -40,6 +40,21 @@ const RENTAL_STATUS_CFG: Record<string, { bg: string; color: string; label: stri
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function fmtDateTime(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -433,6 +448,9 @@ export default function AdminRentalsPage() {
                   <p className="text-[11px] text-gray-400">{r.driver?.email} {r.driver?.phone ? `· ${r.driver.phone}` : ""}</p>
                   <p className="text-[12px] text-gray-700 mt-1">{r.vehicle.year} {r.vehicle.make} {r.vehicle.model} · {TIER_LABELS[r.vehicle.tier] ?? r.vehicle.tier}</p>
                   <p className="text-[12px] font-semibold mt-0.5" style={{ color: "#131936" }}>{PLAN_LABELS[r.plan]} — ${r.amount.toFixed(2)} paid</p>
+                  {(r.startDate || r.endDate) && (
+                    <p className="text-[11px] text-gray-400 mt-0.5">Requested: {fmtDateTime(r.startDate)} → {fmtDateTime(r.endDate)}</p>
+                  )}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button onClick={() => setDeclineTarget(r)} disabled={busyId === r.id}
@@ -455,15 +473,21 @@ export default function AdminRentalsPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {active.map((r) => (
-              <div key={r.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between">
+              <div key={r.id} className="bg-white rounded-2xl border p-4 flex flex-col md:flex-row md:items-center gap-3 justify-between"
+                style={{ borderColor: r.returnRequestedAt ? "#c7d2fe" : "#f3f4f6" }}>
                 <div>
                   <p className="text-[14px] font-bold text-gray-900">{r.driver ? `${r.driver.firstName} ${r.driver.lastName}` : "Unknown chauffeur"}</p>
                   <p className="text-[12px] text-gray-700 mt-1">{r.vehicle.year} {r.vehicle.make} {r.vehicle.model} · {r.vehicle.plate}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{PLAN_LABELS[r.plan]} · {fmtDate(r.startDate)} → {fmtDate(r.endDate)}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{PLAN_LABELS[r.plan]} · {fmtDateTime(r.startDate)} → {fmtDateTime(r.endDate)}</p>
+                  {r.returnRequestedAt && (
+                    <p className="text-[11px] font-semibold mt-1" style={{ color: "#4338ca" }}>
+                      ↩ Chauffeur requested return · {timeAgo(r.returnRequestedAt)}
+                    </p>
+                  )}
                 </div>
                 <button onClick={() => setReturnTarget(r)} disabled={busyId === r.id}
                   className="no-hover-fx px-4 py-2 rounded-xl text-white text-[12px] font-bold disabled:opacity-50 shrink-0"
-                  style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
+                  style={{ background: r.returnRequestedAt ? "linear-gradient(90deg,#4338ca,#6366f1)" : "linear-gradient(90deg,#131936,#C6BFB2)" }}>
                   Return Vehicle
                 </button>
               </div>

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true, renterType: true, plan: true, amount: true, status: true,
       startDate: true, endDate: true, approvedAt: true, declinedAt: true, returnedAt: true,
-      adminNote: true, returnCharge: true, returnChargeNote: true,
+      adminNote: true, returnCharge: true, returnChargeNote: true, returnRequestedAt: true,
       paymentStatus: true, stripePaymentIntentId: true, createdAt: true,
       driver: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
       vehicle: { select: { id: true, make: true, model: true, year: true, plate: true, color: true, tier: true } },

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true, plan: true, amount: true, status: true,
           startDate: true, endDate: true, adminNote: true,
-          returnCharge: true, returnChargeNote: true, createdAt: true,
+          returnCharge: true, returnChargeNote: true, returnRequestedAt: true, createdAt: true,
           vehicle: { select: { id: true, make: true, model: true, year: true, color: true, tier: true } },
         },
       }),

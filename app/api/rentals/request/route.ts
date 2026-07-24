@@ -107,9 +107,37 @@ export async function POST(req: NextRequest) {
     const vehicleId = body?.vehicleId as string | undefined;
     const plan      = body?.plan as string | undefined;
     const intentId  = body?.intentId as string | undefined;
+    const pickupAtRaw = body?.pickupAt as string | undefined;
+    const returnAtRaw = body?.returnAt as string | undefined;
 
     if (!vehicleId || !plan || !PLAN_DAYS[plan]) {
       return NextResponse.json({ error: "vehicleId and plan (DAILY/WEEKLY/MONTHLY) required" }, { status: 400 });
+    }
+
+    /* Pickup/return window is only required at Phase 2 (creating the actual
+       rental record) — Phase 1 just needs the plan to price the intent. */
+    let pickupAt: Date | null = null;
+    let returnAt: Date | null = null;
+    if (intentId) {
+      pickupAt = pickupAtRaw ? new Date(pickupAtRaw) : null;
+      returnAt = returnAtRaw ? new Date(returnAtRaw) : null;
+      if (!pickupAt || isNaN(pickupAt.getTime()) || !returnAt || isNaN(returnAt.getTime())) {
+        return NextResponse.json({ error: "A pickup date/time and return date/time are required." }, { status: 400 });
+      }
+      /* 30-minute grace so the payment step (which can take a few minutes)
+         doesn't push an honestly-chosen "now" pickup into the past */
+      if (pickupAt.getTime() < Date.now() - 30 * 60 * 1000) {
+        return NextResponse.json({ error: "Pickup date/time can't be in the past." }, { status: 400 });
+      }
+      if (returnAt.getTime() <= pickupAt.getTime()) {
+        return NextResponse.json({ error: "Return date/time must be after the pickup date/time." }, { status: 400 });
+      }
+      /* Loose floor (10% tolerance) so a Monthly-priced request can't be a
+         weekend rental — but still leaves room for early returns. */
+      const minMs = PLAN_DAYS[plan] * 24 * 60 * 60 * 1000 * 0.9;
+      if (returnAt.getTime() - pickupAt.getTime() < minMs) {
+        return NextResponse.json({ error: `The return time is too soon for a ${plan.toLowerCase()} rental. Choose a return date further out, or pick a shorter plan.` }, { status: 400 });
+      }
     }
 
     const check = await validateEligibility(session.driverId, vehicleId);
@@ -172,6 +200,8 @@ export async function POST(req: NextRequest) {
         status: "REQUESTED",
         stripePaymentIntentId: intentId,
         paymentStatus: "PAID",
+        startDate: pickupAt,
+        endDate: returnAt,
       },
     });
 

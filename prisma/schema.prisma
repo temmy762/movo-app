@@ -308,11 +308,18 @@ model VehicleRental {
   paymentStatus         String  @default("PAID")
   refundId              String?
 
+  /* Chauffeur-selected intended pickup/return window, captured when the
+     request is submitted — lets them schedule the rental in advance and
+     gives admin a clear period to plan around. */
   startDate  DateTime?
   endDate    DateTime?
   approvedAt DateTime?
   declinedAt DateTime?
   returnedAt DateTime?
+  /* Chauffeur tapped "I'm returning this vehicle" — admin still finalizes
+     the actual return (inspection + any refuel/cleaning charge) via the
+     "return" action, this just flags it as awaiting that step. */
+  returnRequestedAt DateTime?
 
   adminNote        String?
   /* Refuel / cleaning charges collected at return (fuel cost + $20 service fee) */

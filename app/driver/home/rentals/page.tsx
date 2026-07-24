@@ -18,7 +18,7 @@ type RentalVehicleRow = {
 type ActiveRental = {
   id: string; plan: "DAILY" | "WEEKLY" | "MONTHLY"; amount: number;
   status: "REQUESTED" | "APPROVED"; startDate: string | null; endDate: string | null;
-  adminNote: string | null;
+  adminNote: string | null; returnRequestedAt: string | null;
   vehicle: { id: string; make: string; model: string; year: number; color: string | null; tier: string };
 };
 
@@ -28,11 +28,30 @@ type HistoryRow = Omit<ActiveRental, "status"> & {
 };
 
 const PLAN_LABELS: Record<string, string> = { DAILY: "Daily", WEEKLY: "Weekly", MONTHLY: "Monthly" };
+const PLAN_DAYS: Record<string, number> = { DAILY: 1, WEEKLY: 7, MONTHLY: 30 };
 const TIER_LABELS: Record<string, string> = { classic: "Standard", premium: "Executive", black: "Concierge" };
 
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function fmtDateTime(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-CA", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+/* datetime-local input value (local time, no timezone) from a Date */
+function toDatetimeLocal(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/* Default pickup: now, rounded up to the next 30-minute slot */
+function defaultPickup(): Date {
+  const d = new Date();
+  d.setMinutes(Math.ceil(d.getMinutes() / 30) * 30, 0, 0);
+  return d;
 }
 
 /* ── Payment step for a rental request ── */
@@ -88,6 +107,24 @@ export default function DriverRentalsPage() {
   const [requestError, setRequestError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
+  /* Pickup/return window — chauffeur picks both so the rental period is
+     scheduled and clear, not just implied by the plan length. */
+  const [pickupAt, setPickupAt] = useState(() => toDatetimeLocal(defaultPickup()));
+  const [returnAt, setReturnAt] = useState(() => toDatetimeLocal(new Date(defaultPickup().getTime() + PLAN_DAYS.DAILY * 86_400_000)));
+  const [returnEdited, setReturnEdited] = useState(false);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [returning, setReturning] = useState(false);
+
+  /* Auto-suggest the return time whenever pickup or plan changes, unless the
+     chauffeur has deliberately typed their own return time */
+  useEffect(() => {
+    if (returnEdited) return;
+    const pickup = new Date(pickupAt);
+    if (isNaN(pickup.getTime())) return;
+    setReturnAt(toDatetimeLocal(new Date(pickup.getTime() + PLAN_DAYS[plan] * 86_400_000)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickupAt, plan]);
+
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
@@ -111,6 +148,26 @@ export default function DriverRentalsPage() {
 
   const startRequest = async () => {
     if (!selected || !agreed || starting) return;
+    setDateError(null);
+    const pickup = new Date(pickupAt);
+    const ret = new Date(returnAt);
+    if (isNaN(pickup.getTime()) || isNaN(ret.getTime())) {
+      setDateError("Please choose a pickup and return date/time.");
+      return;
+    }
+    if (pickup.getTime() < Date.now() - 5 * 60 * 1000) {
+      setDateError("Pickup date/time can't be in the past.");
+      return;
+    }
+    if (ret.getTime() <= pickup.getTime()) {
+      setDateError("Return date/time must be after the pickup date/time.");
+      return;
+    }
+    if (ret.getTime() - pickup.getTime() < PLAN_DAYS[plan] * 86_400_000 * 0.9) {
+      setDateError(`The return time is too soon for a ${PLAN_LABELS[plan].toLowerCase()} rental.`);
+      return;
+    }
+
     setStarting(true);
     setRequestError(null);
     try {
@@ -136,7 +193,11 @@ export default function DriverRentalsPage() {
       const res = await fetch("/api/rentals/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vehicleId: selected.id, plan, intentId }),
+        body: JSON.stringify({
+          vehicleId: selected.id, plan, intentId,
+          pickupAt: new Date(pickupAt).toISOString(),
+          returnAt: new Date(returnAt).toISOString(),
+        }),
       });
       if (res.ok) {
         setSubmitted(true);
@@ -151,6 +212,16 @@ export default function DriverRentalsPage() {
     } catch {
       setRequestError("Payment succeeded but the request couldn't be recorded — contact support.");
     }
+  };
+
+  const requestReturn = async () => {
+    if (!active || returning) return;
+    setReturning(true);
+    try {
+      await fetch(`/api/rentals/${active.id}/return-request`, { method: "PATCH" });
+    } catch { /* fall through — reload reflects real state either way */ }
+    setReturning(false);
+    load();
   };
 
   return (
@@ -207,6 +278,26 @@ export default function DriverRentalsPage() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <p className="text-[12px] font-semibold text-gray-700 mb-2">Pickup &amp; return</p>
+            <p className="text-[11px] text-gray-400 mb-3">Schedule now or in advance — the return time is suggested from your plan but you can adjust it.</p>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Pickup date &amp; time</label>
+                <input type="datetime-local" value={pickupAt}
+                  onChange={(e) => setPickupAt(e.target.value)}
+                  className="w-full mt-1 rounded-lg border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936]" />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Return date &amp; time</label>
+                <input type="datetime-local" value={returnAt}
+                  onChange={(e) => { setReturnAt(e.target.value); setReturnEdited(true); }}
+                  className="w-full mt-1 rounded-lg border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936]" />
+              </div>
+            </div>
+            {dateError && <p className="text-[11px] text-red-500 mt-2">{dateError}</p>}
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
             <p className="text-[12px] font-semibold text-gray-700 mb-2">Rental Terms</p>
             <ul className="text-[11px] text-gray-500 leading-relaxed list-disc pl-4 mb-3">
               <li>Vehicle is provided with a full tank of fuel.</li>
@@ -248,14 +339,34 @@ export default function DriverRentalsPage() {
             </div>
             <p className="text-[15px] font-bold text-gray-900 mb-0.5">{active.vehicle.year} {active.vehicle.make} {active.vehicle.model}</p>
             <p className="text-[12px] text-gray-400 mb-3">{active.vehicle.color ?? ""} · {TIER_LABELS[active.vehicle.tier] ?? active.vehicle.tier} tier</p>
-            {active.status === "APPROVED" && (
-              <div className="flex items-center gap-2 text-[12px] text-gray-600 mb-1">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                {fmtDate(active.startDate)} → {fmtDate(active.endDate)}
+            {(active.startDate || active.endDate) && (
+              <div className="flex flex-col gap-1 mb-3 rounded-xl px-3 py-2.5" style={{ background: "#f8f8f6" }}>
+                <div className="flex items-center gap-2 text-[12px] text-gray-700">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2" className="shrink-0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span><span className="text-gray-400">Pickup:</span> {fmtDateTime(active.startDate)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[12px] text-gray-700">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#131936" strokeWidth="2" className="shrink-0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span><span className="text-gray-400">Return by:</span> {fmtDateTime(active.endDate)}</span>
+                </div>
               </div>
             )}
             {active.status === "REQUESTED" && (
               <p className="text-[12px] text-gray-500">Your payment was received. The Movo team will review your request shortly.</p>
+            )}
+            {active.status === "APPROVED" && (
+              active.returnRequestedAt ? (
+                <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: "#eef2ff" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="2" className="shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                  <p className="text-[12px] text-indigo-700">Return requested — the Movo team has been notified and will confirm shortly.</p>
+                </div>
+              ) : (
+                <button type="button" onClick={requestReturn} disabled={returning}
+                  className="no-hover-fx w-full py-3 rounded-xl font-bold text-[14px] disabled:opacity-50"
+                  style={{ border: "1.5px solid #131936", color: "#131936" }}>
+                  {returning ? "…" : "I'm Returning This Vehicle"}
+                </button>
+              )
             )}
           </div>
           <p className="text-[11px] text-gray-400 text-center px-4">
@@ -305,7 +416,13 @@ export default function DriverRentalsPage() {
                     <span>${v.monthlyRate.toFixed(0)}/month</span>
                   </div>
                   <button type="button" disabled={!bookable}
-                    onClick={() => { setSelected(v); setPlan("DAILY"); setAgreed(false); }}
+                    onClick={() => {
+                      setSelected(v); setPlan("DAILY"); setAgreed(false); setDateError(null);
+                      const pickup = defaultPickup();
+                      setPickupAt(toDatetimeLocal(pickup));
+                      setReturnAt(toDatetimeLocal(new Date(pickup.getTime() + PLAN_DAYS.DAILY * 86_400_000)));
+                      setReturnEdited(false);
+                    }}
                     className="no-hover-fx w-full py-2.5 rounded-xl text-white font-bold text-[13px] disabled:opacity-50"
                     style={{ background: bookable ? "linear-gradient(90deg,#131936,#C6BFB2)" : "#9ca3af" }}>
                     {bookable ? "Rent This Vehicle" : v.status === "AVAILABLE" ? "Already Requested" : "Not Available"}

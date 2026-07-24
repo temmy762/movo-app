@@ -73,8 +73,13 @@ export async function PATCH(
         return NextResponse.json({ error: "This rental has no chauffeur attached" }, { status: 409 });
       }
 
-      const startDate = new Date();
-      const endDate = new Date(startDate.getTime() + (PLAN_DAYS[rental.plan] ?? 1) * 24 * 60 * 60 * 1000);
+      /* Pickup/return window is chosen by the chauffeur at request time now
+         (see app/api/rentals/request/route.ts) — approval just confirms it.
+         Fall back to approval-time + plan length only for any rental created
+         before that change (startDate/endDate not yet populated). */
+      const approvedAt = new Date();
+      const startDate = rental.startDate ?? approvedAt;
+      const endDate = rental.endDate ?? new Date(startDate.getTime() + (PLAN_DAYS[rental.plan] ?? 1) * 24 * 60 * 60 * 1000);
 
       /* Snapshot whatever vehicle they currently have (own car, or a leftover
          rental row) so it can be restored on return — never deleted for good. */
@@ -96,7 +101,7 @@ export async function PATCH(
           ...(existingVehicle ? [prisma.vehicle.delete({ where: { id: existingVehicle.id } })] : []),
           prisma.vehicleRental.update({
             where: { id },
-            data: { status: "APPROVED", approvedAt: startDate, startDate, endDate, parkedVehicle: parkedVehicle ?? undefined },
+            data: { status: "APPROVED", approvedAt, startDate, endDate, parkedVehicle: parkedVehicle ?? undefined },
           }),
           prisma.rentalVehicle.update({ where: { id: rental.vehicleId }, data: { status: "RENTED" } }),
           prisma.vehicle.create({

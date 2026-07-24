@@ -40,6 +40,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   ADMIN_CARE_DISPATCH_FAILED: "Care Ride dispatch failed",
   ADMIN_RIDE_DISPATCH_FAILED: "Ride dispatch failed",
   ADMIN_RENTAL_REQUEST: "New vehicle rental request",
+  ADMIN_RENTAL_RETURN_REQUESTED: "Chauffeur returning rental vehicle",
   // Support events
   SUPPORT_TICKET_CREATED: "Support ticket created",
   SUPPORT_TICKET_UPDATED: "Ticket updated",
@@ -81,6 +82,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   ADMIN_CARE_DISPATCH_FAILED: "No chauffeur could be found for a Care Ride booking. Manual dispatch needed.",
   ADMIN_RIDE_DISPATCH_FAILED: "No driver accepted a ride in time. The rider has been refunded.",
   ADMIN_RENTAL_REQUEST: "A chauffeur has requested to rent a Movo vehicle. Review and approve or decline in the Rentals section.",
+  ADMIN_RENTAL_RETURN_REQUESTED: "A chauffeur has flagged their rental vehicle as ready for return. Inspect and finalize it in the Rentals section.",
   // Support events
   SUPPORT_TICKET_CREATED: "A new support ticket has been created.",
   SUPPORT_TICKET_UPDATED: "A support ticket has been updated.",
