@@ -301,3 +301,14 @@ export function dispatchCareSupportPickupReady(payload: {
     payload,
   );
 }
+
+/* Support has started driving to collect Primary for the return leg. */
+export function dispatchCarePrimaryPickupEnRoute(payload: {
+  bookingId: string; primaryDriverId: string;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, `driver:${payload.primaryDriverId}`],
+    SOCKET_EVENTS.CARE_PRIMARY_PICKUP_EN_ROUTE,
+    payload,
+  );
+}

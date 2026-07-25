@@ -46,6 +46,7 @@ export const SOCKET_EVENTS = {
   CARE_BOOKING_CLOSED:      "care.booking.closed",
   CARE_DISPATCH_FAILED:     "care.dispatch.failed",
   CARE_SUPPORT_PICKUP_READY: "care.support.pickupReady",
+  CARE_PRIMARY_PICKUP_EN_ROUTE: "care.primary.pickupEnRoute",
 } as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

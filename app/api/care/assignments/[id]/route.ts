@@ -41,6 +41,7 @@ import {
   dispatchCareBookingClosed,
   dispatchDriverArrived,
   dispatchCareSupportPickupReady,
+  dispatchCarePrimaryPickupEnRoute,
 } from "@/lib/socket/dispatcher";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -239,16 +240,30 @@ export async function PATCH(
 
     /* Gate: SUPPORT cannot pick up PRIMARY (the return leg) until PRIMARY has
        completed the customer trip — this is what "STARTED" now means for the
-       SUPPORT role, instead of a second, independent trip. */
+       SUPPORT role, instead of a second, independent trip. Once cleared,
+       let PRIMARY know Support is on the way to collect them. */
     if (newStatus === "STARTED" && assignment.role === "SUPPORT") {
       const primaryDone = await prisma.careAssignment.findFirst({
         where: { bookingId: booking.id, role: "PRIMARY", status: "COMPLETED" },
+        select: { driverId: true },
       });
       if (!primaryDone) {
         return NextResponse.json(
           { error: "Cannot start pickup: Primary chauffeur has not completed the ride yet" },
           { status: 422 },
         );
+      }
+      if (primaryDone.driverId) {
+        sendNotification({
+          eventType: "CHAUFFEUR_CARE_SUPPORT_EN_ROUTE",
+          recipient: { type: "driver", id: primaryDone.driverId },
+          data: { bookingId: booking.id },
+        }).catch((e) => console.error("[care support-en-route notify]", e));
+
+        dispatchCarePrimaryPickupEnRoute({
+          bookingId: booking.id,
+          primaryDriverId: primaryDone.driverId,
+        });
       }
     }
 
