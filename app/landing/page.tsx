@@ -127,6 +127,7 @@ export default function LandingPage() {
   const [tab,     setTab]     = useState<"oneway" | "hourly" | "airport" | "care">("oneway");
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
+  const [chauffeursMenuOpen, setChauffeursMenuOpen] = useState(false);
   const [widgetError,  setWidgetError]  = useState("");
   const [draftBanner,  setDraftBanner]  = useState<"show" | "none">("none");
   const [bookingBusy,  setBookingBusy]  = useState(false);
@@ -263,7 +264,28 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8">
             <a href="#services"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">Services</a>
             <a href="#services" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Business</a>
-            <a href="#chauffeurs" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Chauffeurs</a>
+            <div className="relative"
+              onMouseEnter={() => setChauffeursMenuOpen(true)}
+              onMouseLeave={() => setChauffeursMenuOpen(false)}>
+              <a href="#chauffeurs"
+                className="flex items-center gap-1 text-[13px] font-medium text-white/70 hover:text-white transition-colors">
+                For Chauffeurs
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  style={{ transform: chauffeursMenuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </a>
+              {chauffeursMenuOpen && (
+                <div className="absolute top-full left-0 pt-3 -ml-1">
+                  <div className="rounded-xl overflow-hidden border border-white/10 shadow-xl min-w-[160px]" style={{ background: NAVY }}>
+                    <Link href="/auth/select"
+                      className="block px-4 py-3 text-[13px] font-medium text-white/80 hover:text-white hover:bg-white/5 transition-colors">
+                      Rent a Car
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
             <a href="#why-movo"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">About Us</a>
           </div>
 
@@ -286,6 +308,7 @@ export default function LandingPage() {
             <a href="#services" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">Services</a>
             <a href="#services" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Business</a>
             <a href="#chauffeurs" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Chauffeurs</a>
+            <Link href="/auth/select" onClick={() => setNavOpen(false)} className="text-left text-[13px] font-medium text-white/50 py-1 pl-4">↳ Rent a Car</Link>
             <a href="#why-movo" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">About Us</a>
             <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">Sign in</Link>
           </div>
