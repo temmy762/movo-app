@@ -812,10 +812,18 @@ function RideTrackingContent() {
               </div>
               <div className="flex flex-col divide-y divide-white/10">
                 {(["PRIMARY", "SUPPORT"] as const).map((role) => {
+                  /* PENDING = offered, not yet accepted — dispatch batches this
+                     role out to up to 5 chauffeurs at once (first-accept-wins),
+                     so a PENDING row's driver is just ONE candidate, not the
+                     confirmed chauffeur. Showing that name here looked like an
+                     assignment had happened (and could even show the WRONG
+                     candidate — whichever PENDING row the API returned first —
+                     if a different one ends up accepting). Identity is only
+                     revealed once a role is genuinely locked in. */
                   const assignment = careAssignments.find(a => a.role === role && a.status !== "CANCELLED");
                   const statusLabel: Record<string, string> = {
                     SEARCHING: "Searching…",
-                    PENDING:   "Notified",
+                    PENDING:   "Awaiting response",
                     ACCEPTED:  "Accepted",
                     ARRIVED:   "Arrived",
                     STARTED:   "En route",
@@ -832,7 +840,8 @@ function RideTrackingContent() {
                     CANCELLED: "#f87171",
                   };
                   const st = assignment?.status ?? "SEARCHING";
-                  const name = assignment?.driverName ?? "Searching…";
+                  const identityRevealed = st === "ACCEPTED" || st === "ARRIVED" || st === "STARTED" || st === "COMPLETED";
+                  const name = identityRevealed ? assignment!.driverName : "Searching…";
                   return (
                     <div key={role} className="flex items-center justify-between px-3 py-2.5">
                       <div className="flex items-center gap-2">

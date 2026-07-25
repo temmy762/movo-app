@@ -30,15 +30,6 @@ const FALLBACK_MIN_FARES: Record<string, number> = {
 
 const TIERS = ["classic", "premium", "black"] as const;
 
-interface FleetDriver {
-  isOnline: boolean;
-  vehicle: { tier: string } | null;
-}
-
-interface TierInfo {
-  onlineCount: number;
-}
-
 function AvailableCarsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,7 +43,6 @@ function AvailableCarsContent() {
   const isCare      = service === "care";
 
   type TierEstimate = { total: number; fare: number; distanceKm: number | null; durationMin: number | null; estimateBasis: string };
-  const [tierInfos,     setTierInfos]     = useState<Record<string, TierInfo>>({});
   const [loading,       setLoading]       = useState(true);
   const [minFares,      setMinFares]      = useState<Record<string, number>>(FALLBACK_MIN_FARES);
   const [tierEstimates, setTierEstimates] = useState<Record<string, TierEstimate>>({});
@@ -86,12 +76,12 @@ function AvailableCarsContent() {
 
   const anyEstimate = tierEstimates.classic ?? tierEstimates.premium ?? tierEstimates.black;
 
-  /* Online-driver counts — a trust signal only, never a pick-your-own-car list */
+  /* Admin-configured minimum fares — used as a fallback "From $X" price
+     until a live per-trip estimate comes back. Rider never sees which/how
+     many chauffeurs are online: it's never a pick-your-own-car list, and
+     showing headcounts invited exactly that expectation. */
   useEffect(() => {
-    const driversPromise = fetch("/api/drivers/nearby").then(r => r.ok ? r.json() : []).catch(() => []);
-    const pricingPromise = fetch("/api/admin/pricing").then(r => r.ok ? r.json() : null).catch(() => null);
-
-    Promise.all([driversPromise, pricingPromise]).then(([drivers, pricing]) => {
+    fetch("/api/admin/pricing").then(r => r.ok ? r.json() : null).catch(() => null).then((pricing) => {
       if (pricing?.tiers) {
         const fares: Record<string, number> = { ...FALLBACK_MIN_FARES };
         for (const t of pricing.tiers) {
@@ -99,17 +89,9 @@ function AvailableCarsContent() {
         }
         setMinFares(fares);
       }
-      const list: FleetDriver[] = Array.isArray(drivers) ? drivers : [];
-      const result: Record<string, TierInfo> = {};
-      for (const t of TIERS) {
-        result[t] = { onlineCount: list.filter(d => d.isOnline && d.vehicle?.tier?.toLowerCase() === t).length };
-      }
-      setTierInfos(result);
       setLoading(false);
     });
   }, []);
-
-  const totalOnline = TIERS.reduce((s, t) => s + (tierInfos[t]?.onlineCount ?? 0), 0);
 
   /* Book a tier — no vehicle/driver picking. The request broadcasts to every
      eligible chauffeur; whoever accepts first takes the trip. */
@@ -160,12 +142,7 @@ function AvailableCarsContent() {
               Checking availability…
             </p>
           ) : (
-            <p className="text-[13px] text-gray-400 mt-0.5">
-              3 categories available
-              {totalOnline > 0 && (
-                <span className="ml-2 text-green-600 font-medium">· {totalOnline} chauffeur{totalOnline !== 1 ? "s" : ""} online now</span>
-              )}
-            </p>
+            <p className="text-[13px] text-gray-400 mt-0.5">3 categories available</p>
           )}
           {anyEstimate?.distanceKm != null && (
             <div className="flex items-center gap-1.5 mt-1.5">
@@ -249,9 +226,6 @@ function AvailableCarsContent() {
             ))
           ) : (
             TIERS.map(t => {
-              const info = tierInfos[t];
-              const isAvailableNow = (info?.onlineCount ?? 0) > 0;
-
               return (
                 <div key={t}
                   className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border border-gray-200 bg-gray-50 cursor-pointer active:scale-[0.99] transition-transform"
@@ -261,16 +235,6 @@ function AvailableCarsContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="text-[16px] font-bold text-gray-900">{TIER_LABELS[t]}</span>
-                        {isAvailableNow ? (
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-green-600">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-                            {info!.onlineCount} available now
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                            Schedule only
-                          </span>
-                        )}
                       </div>
                       <p className="text-[12px] text-gray-500 leading-snug mb-2">{TIER_DESCS[t]}</p>
                       <div className="flex items-center gap-3 flex-wrap">

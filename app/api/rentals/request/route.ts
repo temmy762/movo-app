@@ -26,8 +26,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const PLAN_DAYS: Record<string, number> = { DAILY: 1, WEEKLY: 7, MONTHLY: 30 };
 
-function planAmount(vehicle: { dailyRate: number; weeklyRate: number; monthlyRate: number }, plan: string): number | null {
-  if (plan === "DAILY")   return vehicle.dailyRate;
+/* Only the Daily plan is billed per day — "days" lets a chauffeur book e.g.
+   3 days at 3x the daily rate instead of being stuck paying for a single day
+   no matter how long the pickup→return window actually spans. Weekly/Monthly
+   stay flat blocks, per the original spec. */
+function planAmount(
+  vehicle: { dailyRate: number; weeklyRate: number; monthlyRate: number },
+  plan: string,
+  days: number,
+): number | null {
+  if (plan === "DAILY")   return vehicle.dailyRate * days;
   if (plan === "WEEKLY")  return vehicle.weeklyRate;
   if (plan === "MONTHLY") return vehicle.monthlyRate;
   return null;
@@ -114,6 +122,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "vehicleId and plan (DAILY/WEEKLY/MONTHLY) required" }, { status: 400 });
     }
 
+    /* Day count only applies to the Daily plan; Weekly/Monthly are fixed
+       blocks regardless of what the client sends. */
+    const daysRaw = Number(body?.days);
+    const days = plan === "DAILY"
+      ? (Number.isFinite(daysRaw) && daysRaw >= 1 ? Math.min(90, Math.floor(daysRaw)) : 1)
+      : PLAN_DAYS[plan];
+
     /* Pickup/return window is only required at Phase 2 (creating the actual
        rental record) — Phase 1 just needs the plan to price the intent. */
     let pickupAt: Date | null = null;
@@ -133,10 +148,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Return date/time must be after the pickup date/time." }, { status: 400 });
       }
       /* Loose floor (10% tolerance) so a Monthly-priced request can't be a
-         weekend rental — but still leaves room for early returns. */
-      const minMs = PLAN_DAYS[plan] * 24 * 60 * 60 * 1000 * 0.9;
+         weekend rental, and a Daily request can't claim "3 days" but book a
+         2-hour window — but still leaves room for early returns. */
+      const minMs = days * 24 * 60 * 60 * 1000 * 0.9;
       if (returnAt.getTime() - pickupAt.getTime() < minMs) {
-        return NextResponse.json({ error: `The return time is too soon for a ${plan.toLowerCase()} rental. Choose a return date further out, or pick a shorter plan.` }, { status: 400 });
+        return NextResponse.json({ error: `The return time is too soon for ${plan === "DAILY" ? `${days} day${days !== 1 ? "s" : ""}` : `a ${plan.toLowerCase()} rental`}. Choose a return date further out, or adjust the plan.` }, { status: 400 });
       }
     }
 
@@ -155,7 +171,7 @@ export async function POST(req: NextRequest) {
     }
     const { driver, vehicle } = check;
 
-    const amount = planAmount(vehicle!, plan)!;
+    const amount = planAmount(vehicle!, plan, days)!;
 
     /* ── Phase 1: create the payment intent ── */
     if (!intentId) {
@@ -166,8 +182,8 @@ export async function POST(req: NextRequest) {
         customer: customerId,
         setup_future_usage: "off_session",
         automatic_payment_methods: { enabled: true },
-        description: `Movo vehicle rental — ${vehicle!.make} ${vehicle!.model} (${plan.toLowerCase()})`,
-        metadata: { kind: "vehicle_rental", rentalVehicleId: vehicleId, driverId: driver!.id, plan },
+        description: `Movo vehicle rental — ${vehicle!.make} ${vehicle!.model} (${plan === "DAILY" ? `${days} day${days !== 1 ? "s" : ""}` : plan.toLowerCase()})`,
+        metadata: { kind: "vehicle_rental", rentalVehicleId: vehicleId, driverId: driver!.id, plan, days: String(days) },
       });
       return NextResponse.json({ clientSecret: intent.client_secret, intentId: intent.id, amount });
     }
@@ -211,7 +227,7 @@ export async function POST(req: NextRequest) {
         rentalId: rental.id,
         driverName: `${driver!.firstName} ${driver!.lastName}`,
         vehicle: `${vehicle!.make} ${vehicle!.model} ${vehicle!.year}`,
-        plan,
+        plan: plan === "DAILY" ? `${days}-day` : plan,
         amount,
       },
       ["IN_APP"],
@@ -223,7 +239,7 @@ export async function POST(req: NextRequest) {
       entityId: rental.id,
       actorType: "DRIVER",
       actorId: session.driverId,
-      detail: { vehicleId, plan, amount },
+      detail: { vehicleId, plan, days, amount },
     }).catch(() => {});
 
     return NextResponse.json({ ok: true, rentalId: rental.id });

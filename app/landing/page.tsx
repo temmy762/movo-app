@@ -263,7 +263,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8">
             <a href="#services"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">Services</a>
             <a href="#services" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Business</a>
-            <Link href="/auth/select" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Chauffeurs</Link>
+            <a href="#chauffeurs" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Chauffeurs</a>
             <a href="#why-movo"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">About Us</a>
           </div>
 
@@ -285,7 +285,7 @@ export default function LandingPage() {
           <div className="md:hidden px-5 pb-4 flex flex-col gap-3 border-t border-white/10" style={{ background: DARK }}>
             <a href="#services" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">Services</a>
             <a href="#services" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Business</a>
-            <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">For Chauffeurs</Link>
+            <a href="#chauffeurs" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Chauffeurs</a>
             <a href="#why-movo" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">About Us</a>
             <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">Sign in</Link>
           </div>
@@ -790,6 +790,48 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── FOR CHAUFFEURS / VEHICLE RENTAL ── */}
+      <section id="chauffeurs" className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <SectionLabel>For Chauffeurs</SectionLabel>
+            <SectionHeading>Drive with Movo —<br />no car? Rent one.</SectionHeading>
+            <p className="text-gray-500 text-[14px] leading-relaxed mt-4 max-w-2xl mx-auto">
+              Approved chauffeurs who don&apos;t have a qualifying vehicle can rent one directly from Movo — daily, weekly, or monthly — and start accepting trips as soon as it&apos;s assigned.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-5 mb-8">
+            {[
+              { path: "M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10", label: "Commercial-use approved" },
+              { path: "M14.7 6.3a1 1 0 0 0 1.4 1.4l3.6-3.6a1 1 0 0 0-1.4-1.4zM9 9L4 4M4 9l5-5m6 15l5-5m0 5l-5-5", label: "Maintenance included" },
+              { path: "M13 2 3 14h9l-1 8 10-12h-9l1-8z", label: "Roadside assistance" },
+              { path: "M3 22h12M8 22V12l-3-3V4a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5l-3 3M18 3h2a1 1 0 0 1 1 1v6a2 2 0 0 1-2 2h-1", label: "Full tank at pickup — return the same" },
+            ].map(f => (
+              <div key={f.label} className="bg-white rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d={f.path}/></svg>
+                </div>
+                <span className="text-[13px] font-semibold text-gray-800">{f.label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-[12px] text-gray-400 mb-8">
+            Vehicles must be returned clean. Full rental terms are shown when requesting a vehicle from your chauffeur dashboard.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link href="/auth/select" className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
+              style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
+              Become a Chauffeur
+            </Link>
+            <Link href="/auth/select" className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
+              style={{ borderColor: NAVY, color: NAVY }}>
+              Sign In to Rent a Vehicle
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── FAQ ── */}
       <section className="py-20 px-5 md:px-10" style={{ background: "#F5F5F2" }}>
         <div className="max-w-3xl mx-auto">
@@ -875,7 +917,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-2">
               <a href="#why-movo" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">About Us</a>
               <a href="#services" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Business</a>
-              <Link href="/auth/select" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Chauffeurs</Link>
+              <a href="#chauffeurs" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">For Chauffeurs</a>
               <Link href="/contact" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Contact Us</Link>
             </div>
           </div>

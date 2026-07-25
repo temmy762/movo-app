@@ -100,6 +100,10 @@ export default function DriverRentalsPage() {
 
   const [selected, setSelected] = useState<RentalVehicleRow | null>(null);
   const [plan, setPlan] = useState<"DAILY" | "WEEKLY" | "MONTHLY">("DAILY");
+  /* Only meaningful for the Daily plan — Weekly/Monthly are flat blocks.
+     Lets a chauffeur book e.g. "3 days" instead of being stuck paying the
+     single-day rate no matter how many days they actually pick. */
+  const [days, setDays] = useState(1);
   const [agreed, setAgreed] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
@@ -115,15 +119,18 @@ export default function DriverRentalsPage() {
   const [dateError, setDateError] = useState<string | null>(null);
   const [returning, setReturning] = useState(false);
 
-  /* Auto-suggest the return time whenever pickup or plan changes, unless the
-     chauffeur has deliberately typed their own return time */
+  /* How many days this request actually spans — the paid-for duration */
+  const durationDays = plan === "DAILY" ? days : PLAN_DAYS[plan];
+
+  /* Auto-suggest the return time whenever pickup, plan, or day count changes,
+     unless the chauffeur has deliberately typed their own return time */
   useEffect(() => {
     if (returnEdited) return;
     const pickup = new Date(pickupAt);
     if (isNaN(pickup.getTime())) return;
-    setReturnAt(toDatetimeLocal(new Date(pickup.getTime() + PLAN_DAYS[plan] * 86_400_000)));
+    setReturnAt(toDatetimeLocal(new Date(pickup.getTime() + durationDays * 86_400_000)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickupAt, plan]);
+  }, [pickupAt, plan, days]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -143,8 +150,8 @@ export default function DriverRentalsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const rateFor = (v: RentalVehicleRow, p: string) =>
-    p === "DAILY" ? v.dailyRate : p === "WEEKLY" ? v.weeklyRate : v.monthlyRate;
+  const rateFor = (v: RentalVehicleRow, p: string, d: number) =>
+    p === "DAILY" ? v.dailyRate * d : p === "WEEKLY" ? v.weeklyRate : v.monthlyRate;
 
   const startRequest = async () => {
     if (!selected || !agreed || starting) return;
@@ -163,8 +170,10 @@ export default function DriverRentalsPage() {
       setDateError("Return date/time must be after the pickup date/time.");
       return;
     }
-    if (ret.getTime() - pickup.getTime() < PLAN_DAYS[plan] * 86_400_000 * 0.9) {
-      setDateError(`The return time is too soon for a ${PLAN_LABELS[plan].toLowerCase()} rental.`);
+    if (ret.getTime() - pickup.getTime() < durationDays * 86_400_000 * 0.9) {
+      setDateError(plan === "DAILY"
+        ? `The return time is too soon for ${days} day${days !== 1 ? "s" : ""} — adjust the return time or the day count.`
+        : `The return time is too soon for a ${PLAN_LABELS[plan].toLowerCase()} rental.`);
       return;
     }
 
@@ -174,7 +183,7 @@ export default function DriverRentalsPage() {
       const res = await fetch("/api/rentals/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vehicleId: selected.id, plan }),
+        body: JSON.stringify({ vehicleId: selected.id, plan, days }),
       });
       const d = await res.json();
       if (!res.ok) { setRequestError(d?.error ?? "Couldn't start this rental request."); setStarting(false); return; }
@@ -194,7 +203,7 @@ export default function DriverRentalsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vehicleId: selected.id, plan, intentId,
+          vehicleId: selected.id, plan, days, intentId,
           pickupAt: new Date(pickupAt).toISOString(),
           returnAt: new Date(returnAt).toISOString(),
         }),
@@ -270,11 +279,28 @@ export default function DriverRentalsPage() {
                   <div className="flex items-center gap-3">
                     <input type="radio" name="plan" checked={plan === p} onChange={() => setPlan(p)} className="accent-[#131936]" />
                     <span className="text-[13px] font-semibold text-gray-900">{PLAN_LABELS[p]}</span>
+                    {p === "DAILY" && <span className="text-[11px] text-gray-400">(${selected.dailyRate.toFixed(0)}/day)</span>}
                   </div>
-                  <span className="text-[14px] font-bold" style={{ color: "#131936" }}>${rateFor(selected, p).toFixed(2)}</span>
+                  <span className="text-[14px] font-bold" style={{ color: "#131936" }}>${rateFor(selected, p, days).toFixed(2)}</span>
                 </label>
               ))}
             </div>
+
+            {/* Daily is the only plan billed per day — let the chauffeur pick
+                how many, e.g. "3 days" instead of being stuck paying the
+                single-day rate regardless of how long they actually keep it. */}
+            {plan === "DAILY" && (
+              <div className="flex items-center justify-between rounded-xl border border-gray-200 px-3.5 py-3">
+                <span className="text-[12px] font-semibold text-gray-700">Number of days</span>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setDays((d) => Math.max(1, d - 1))}
+                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">−</button>
+                  <span className="text-[14px] font-semibold text-gray-900 w-6 text-center">{days}</span>
+                  <button type="button" onClick={() => setDays((d) => Math.min(90, d + 1))}
+                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">+</button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
@@ -298,9 +324,15 @@ export default function DriverRentalsPage() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
+            <p className="text-[12px] font-semibold text-gray-700 mb-2">What&apos;s included</p>
+            <ul className="text-[11px] text-gray-500 leading-relaxed list-disc pl-4 mb-3">
+              <li>Commercial-use approved.</li>
+              <li>Maintenance included.</li>
+              <li>Roadside assistance.</li>
+              <li>Fuel provided at pickup — return at the same level.</li>
+            </ul>
             <p className="text-[12px] font-semibold text-gray-700 mb-2">Rental Terms</p>
             <ul className="text-[11px] text-gray-500 leading-relaxed list-disc pl-4 mb-3">
-              <li>Vehicle is provided with a full tank of fuel.</li>
               <li>Vehicle must be returned clean and with a full tank of fuel.</li>
               <li>If returned without a full tank, the fuel cost plus a CAD $20 refueling service fee will be charged to your card on file.</li>
               <li>Damages or excessive cleaning are handled according to Movo&apos;s rental policy.</li>
@@ -317,7 +349,7 @@ export default function DriverRentalsPage() {
             <button type="button" onClick={startRequest} disabled={!agreed || starting}
               className="w-full py-3.5 rounded-full text-white font-bold text-[15px] tracking-wide disabled:opacity-50"
               style={{ background: "linear-gradient(135deg,#0A0A0F 0%,#131936 50%,#2A3055 100%)" }}>
-              {starting ? "Preparing payment…" : `Continue to Payment — $${rateFor(selected, plan).toFixed(2)}`}
+              {starting ? "Preparing payment…" : `Continue to Payment — $${rateFor(selected, plan, days).toFixed(2)}`}
             </button>
           ) : (
             <Elements stripe={stripePromise} options={{ clientSecret }}>
@@ -417,7 +449,7 @@ export default function DriverRentalsPage() {
                   </div>
                   <button type="button" disabled={!bookable}
                     onClick={() => {
-                      setSelected(v); setPlan("DAILY"); setAgreed(false); setDateError(null);
+                      setSelected(v); setPlan("DAILY"); setDays(1); setAgreed(false); setDateError(null);
                       const pickup = defaultPickup();
                       setPickupAt(toDatetimeLocal(pickup));
                       setReturnAt(toDatetimeLocal(new Date(pickup.getTime() + PLAN_DAYS.DAILY * 86_400_000)));
