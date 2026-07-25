@@ -799,72 +799,69 @@ function RideTrackingContent() {
 
           <div className="h-[2px] w-full rounded-full mb-4" style={{ background: "linear-gradient(90deg, #131936 0%, #C6BFB2 100%)" }} />
 
-          {/* ── Care Ride: dual-driver status panel ── */}
-          {isCareRide && (
-            <div className="mb-4 rounded-2xl overflow-hidden border border-[#1e2a5e]/20"
-              style={{ background: "linear-gradient(135deg,#0d1128 0%,#131936 60%,#1e2a5e 100%)" }}>
-              <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-                <span className="text-[13px]">🌟</span>
-                <p className="text-[12px] font-bold text-white tracking-wide">Safe Ride</p>
-                <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  Dual Chauffeur
-                </span>
-              </div>
-              <div className="flex flex-col divide-y divide-white/10">
-                {(["PRIMARY", "SUPPORT"] as const).map((role) => {
-                  /* PENDING = offered, not yet accepted — dispatch batches this
-                     role out to up to 5 chauffeurs at once (first-accept-wins),
-                     so a PENDING row's driver is just ONE candidate, not the
-                     confirmed chauffeur. Showing that name here looked like an
-                     assignment had happened (and could even show the WRONG
-                     candidate — whichever PENDING row the API returned first —
-                     if a different one ends up accepting). Identity is only
-                     revealed once a role is genuinely locked in. */
-                  const assignment = careAssignments.find(a => a.role === role && a.status !== "CANCELLED");
-                  const statusLabel: Record<string, string> = {
-                    SEARCHING: "Searching…",
-                    PENDING:   "Awaiting response",
-                    ACCEPTED:  "Accepted",
-                    ARRIVED:   "Arrived",
-                    STARTED:   "En route",
-                    COMPLETED: "Done",
-                    CANCELLED: "Cancelled",
-                  };
-                  const statusColor: Record<string, string> = {
-                    SEARCHING: "#94a3b8",
-                    PENDING:   "#fbbf24",
-                    ACCEPTED:  "#34d399",
-                    ARRIVED:   "#34d399",
-                    STARTED:   "#60a5fa",
-                    COMPLETED: "#a3e635",
-                    CANCELLED: "#f87171",
-                  };
-                  const st = assignment?.status ?? "SEARCHING";
-                  const identityRevealed = st === "ACCEPTED" || st === "ARRIVED" || st === "STARTED" || st === "COMPLETED";
-                  const name = identityRevealed ? assignment!.driverName : "Searching…";
-                  return (
-                    <div key={role} className="flex items-center justify-between px-3 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold text-white">
-                          {role === "PRIMARY" ? "A" : "B"}
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider leading-none mb-0.5">
-                            {role === "PRIMARY" ? "Primary" : "Support"} Chauffeur
-                          </p>
-                          <p className="text-[13px] font-semibold text-white leading-none">{name}</p>
-                        </div>
-                      </div>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: statusColor[st] + "22", color: statusColor[st] }}>
-                        {statusLabel[st] ?? st}
-                      </span>
+          {/* ── Care Ride: chauffeur status panel ──
+              Only the Primary chauffeur is ever shown here. Safe Ride also
+              dispatches an internal Support chauffeur, but Support is purely
+              an operational resource and must never appear to the customer —
+              not their identity, status, or existence. */}
+          {isCareRide && (() => {
+            /* PENDING = offered, not yet accepted — dispatch batches this role
+               out to up to 5 chauffeurs at once (first-accept-wins), so a
+               PENDING row's driver is just ONE candidate, not the confirmed
+               chauffeur. Showing that name here looked like an assignment had
+               happened (and could even show the WRONG candidate — whichever
+               PENDING row the API returned first — if a different one ends up
+               accepting). Identity is only revealed once the role is genuinely
+               locked in. */
+            const assignment = careAssignments.find(a => a.role === "PRIMARY" && a.status !== "CANCELLED");
+            const statusLabel: Record<string, string> = {
+              SEARCHING: "Searching…",
+              PENDING:   "Awaiting response",
+              ACCEPTED:  "Accepted",
+              ARRIVED:   "Arrived",
+              STARTED:   "En route",
+              COMPLETED: "Done",
+              CANCELLED: "Cancelled",
+            };
+            const statusColor: Record<string, string> = {
+              SEARCHING: "#94a3b8",
+              PENDING:   "#fbbf24",
+              ACCEPTED:  "#34d399",
+              ARRIVED:   "#34d399",
+              STARTED:   "#60a5fa",
+              COMPLETED: "#a3e635",
+              CANCELLED: "#f87171",
+            };
+            const st = assignment?.status ?? "SEARCHING";
+            const identityRevealed = st === "ACCEPTED" || st === "ARRIVED" || st === "STARTED" || st === "COMPLETED";
+            const name = identityRevealed ? assignment!.driverName : "Searching…";
+            return (
+              <div className="mb-4 rounded-2xl overflow-hidden border border-[#1e2a5e]/20"
+                style={{ background: "linear-gradient(135deg,#0d1128 0%,#131936 60%,#1e2a5e 100%)" }}>
+                <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+                  <span className="text-[13px]">🌟</span>
+                  <p className="text-[12px] font-bold text-white tracking-wide">Safe Ride</p>
+                </div>
+                <div className="flex items-center justify-between px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-[11px] font-bold text-white">
+                      A
                     </div>
-                  );
-                })}
+                    <div>
+                      <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider leading-none mb-0.5">
+                        Chauffeur
+                      </p>
+                      <p className="text-[13px] font-semibold text-white leading-none">{name}</p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: statusColor[st] + "22", color: statusColor[st] }}>
+                    {statusLabel[st] ?? st}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Driver arrived banner */}
           {driverArrived && rideStatus === "CONFIRMED" && (

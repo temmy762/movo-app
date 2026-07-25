@@ -31,6 +31,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   CHAUFFEUR_TOPUP_NOTIFICATION: "Wallet top-up update",
   CHAUFFEUR_RENTAL_APPROVED: "Rental approved — vehicle assigned",
   CHAUFFEUR_RENTAL_DECLINED: "Rental request update",
+  CHAUFFEUR_CARE_PICKUP_READY: "Primary chauffeur is ready for pickup",
   // Admin events
   ADMIN_NEW_DRIVER_APPLICATION: "New driver application",
   ADMIN_NEW_INCIDENT_REPORT: "New incident report",
@@ -73,6 +74,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   CHAUFFEUR_TOPUP_NOTIFICATION: "There's an update on your wallet top-up request.",
   CHAUFFEUR_RENTAL_APPROVED: "Your vehicle rental was approved. The vehicle is now assigned to your account and you can start accepting trips.",
   CHAUFFEUR_RENTAL_DECLINED: "Your vehicle rental request was declined and your payment has been refunded in full.",
+  CHAUFFEUR_CARE_PICKUP_READY: "The Primary chauffeur has completed the Safe Ride and is ready for pickup. Head over to bring them back to their vehicle.",
   // Admin events
   ADMIN_NEW_DRIVER_APPLICATION: "A new driver application requires review.",
   ADMIN_NEW_INCIDENT_REPORT: "A new incident report has been submitted.",

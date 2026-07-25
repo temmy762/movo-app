@@ -54,7 +54,16 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json(booking);
+    /* The Support chauffeur is an internal operational resource and must
+       never reach the customer — not their identity, not their status, not
+       their existence. Only strip it for a pure rider view; admins and the
+       assigned drivers still need to see both. */
+    const isPureRider = isOwner && !isAdmin && !isDriver;
+    const responseBooking = isPureRider
+      ? { ...booking, careAssignments: booking.careAssignments.filter((a) => a.role !== "SUPPORT") }
+      : booking;
+
+    return NextResponse.json(responseBooking);
   } catch (e) {
     console.error("[care GET]", e);
     return NextResponse.json({ error: "Failed to fetch Care booking" }, { status: 500 });

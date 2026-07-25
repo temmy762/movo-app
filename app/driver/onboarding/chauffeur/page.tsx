@@ -178,6 +178,29 @@ function Checkbox({ checked, onChange, children }: {
   );
 }
 
+function OptionCard({ selected, onClick, icon, title, description }: {
+  selected: boolean; onClick: () => void; icon: React.ReactNode; title: string; description: string;
+}) {
+  return (
+    <button type="button" onClick={onClick}
+      className="no-hover-fx flex items-start gap-3 w-full text-left p-4 rounded-xl border transition-all"
+      style={{ borderColor: selected ? "#131936" : "#e5e7eb", background: selected ? "#f5f0ff" : "#fafafa" }}>
+      <div className="w-9 h-9 rounded-lg shrink-0 flex items-center justify-center"
+        style={{ background: selected ? "linear-gradient(135deg,#131936,#C6BFB2)" : "#e5e7eb" }}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-bold text-gray-900">{title}</p>
+        <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{description}</p>
+      </div>
+      <div className="w-5 h-5 rounded-full shrink-0 mt-0.5 flex items-center justify-center border-2 transition-all"
+        style={{ borderColor: selected ? "#131936" : "#d1d5db", background: selected ? "#131936" : "white" }}>
+        {selected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5"><polyline points="20 6 9 17 4 12" /></svg>}
+      </div>
+    </button>
+  );
+}
+
 function ConsentCard({ icon, title, description, required = true }: {
   icon: React.ReactNode; title: string; description: string; required?: boolean;
 }) {
@@ -225,6 +248,7 @@ export default function ChauffeurOnboardingPage() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [driverName, setDriverName] = useState("Chauffeur");
+  const [vehicleOption, setVehicleOption] = useState<"OWN" | "RENT" | "">("");
 
   const [form, setForm] = useState<FormData>({
     dob: "", licenseNumber: "",
@@ -255,6 +279,7 @@ export default function ChauffeurOnboardingPage() {
           const o = data.onboarding;
           if (o.currentStep > 1) setStep(o.currentStep);
           if (o.submittedAt) setSubmitted(true);
+          if (o.vehicleOption) setVehicleOption(o.vehicleOption);
           setForm(prev => ({
             ...prev,
             dob:             o.dob             ?? "",
@@ -329,6 +354,7 @@ export default function ChauffeurOnboardingPage() {
         body: JSON.stringify({
           type: "INDIVIDUAL",
           currentStep: step,
+          vehicleOption: vehicleOption || undefined,
           ...form,
           ...consents,
           ...extra,
@@ -336,7 +362,7 @@ export default function ChauffeurOnboardingPage() {
       });
     } catch { /* silent */ }
     setSaving(false);
-  }, [step, form, consents]);
+  }, [step, form, consents, vehicleOption]);
 
   const next = useCallback(async (extra: Record<string, unknown> = {}) => {
     await saveProgress({ currentStep: step + 1, ...extra });
@@ -512,52 +538,84 @@ export default function ChauffeurOnboardingPage() {
           </div>
         );
 
-      // ─── Step 3: Vehicle Verification ───────────────────────────────────────
+      // ─── Step 3: Vehicle ────────────────────────────────────────────────────
       case 3:
         return (
           <div>
-            <p className="text-[18px] font-extrabold text-gray-900 mb-1">Vehicle Verification</p>
-            <p className="text-[12px] text-gray-400 mb-5">Provide your vehicle details and upload required documents.</p>
+            <p className="text-[18px] font-extrabold text-gray-900 mb-1">Vehicle</p>
+            <p className="text-[12px] text-gray-400 mb-5">Tell us how you&apos;ll be driving with Movo.</p>
 
-            <div className="flex flex-col gap-4 mb-5">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Make" required>
-                  <TextInput value={form.vehicleMake} onChange={v => setField("vehicleMake", v)} placeholder="e.g. Mercedes" />
-                </Field>
-                <Field label="Model" required>
-                  <TextInput value={form.vehicleModel} onChange={v => setField("vehicleModel", v)} placeholder="e.g. S-Class" />
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Year" required>
-                  <SelectInput value={form.vehicleYear} onChange={v => setField("vehicleYear", v)} options={VEHICLE_YEARS} />
-                </Field>
-                <Field label="Color" required>
-                  <SelectInput value={form.vehicleColor} onChange={v => setField("vehicleColor", v)} options={VEHICLE_COLORS} />
-                </Field>
-              </div>
-              <Field label="License Plate" required>
-                <TextInput value={form.vehiclePlate} onChange={v => setField("vehiclePlate", v)} placeholder="e.g. ABC-1234" />
-              </Field>
-              <Field label="Vehicle Class" required>
-                <SelectInput value={form.vehicleTier} onChange={v => setField("vehicleTier", v)} options={VEHICLE_TIERS} />
-              </Field>
-            </div>
-
-            <p className="text-[12px] font-bold text-gray-700 mb-3">Vehicle Documents</p>
             <div className="flex flex-col gap-3 mb-5">
-              <UploadBox label="Vehicle Registration" docKey="VEHICLE_REGISTRATION" docs={docs} onUpload={handleDocUpload} />
-              <UploadBox label="Vehicle Insurance" docKey="VEHICLE_INSURANCE" docs={docs} onUpload={handleDocUpload} />
-              <UploadBox label="Vehicle Photos (interior/exterior)" docKey="VEHICLE_PHOTO" docs={docs} onUpload={handleDocUpload} />
+              <OptionCard
+                selected={vehicleOption === "OWN"}
+                onClick={() => setVehicleOption("OWN")}
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>}
+                title="I Have My Own Vehicle"
+                description="Provide your vehicle details and documents for verification."
+              />
+              <OptionCard
+                selected={vehicleOption === "RENT"}
+                onClick={() => setVehicleOption("RENT")}
+                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><circle cx="8" cy="15" r="4" /><path d="M10.5 12.5L19 4l2 2-1.5 1.5L21 9l-2.5 2.5-2-2L15 11" /></svg>}
+                title="Rent a Vehicle from Movo"
+                description="No car of your own? Rent an approved vehicle from Movo once your application is approved."
+              />
             </div>
+
+            {vehicleOption === "OWN" && (
+              <>
+                <div className="flex flex-col gap-4 mb-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Make" required>
+                      <TextInput value={form.vehicleMake} onChange={v => setField("vehicleMake", v)} placeholder="e.g. Mercedes" />
+                    </Field>
+                    <Field label="Model" required>
+                      <TextInput value={form.vehicleModel} onChange={v => setField("vehicleModel", v)} placeholder="e.g. S-Class" />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Year" required>
+                      <SelectInput value={form.vehicleYear} onChange={v => setField("vehicleYear", v)} options={VEHICLE_YEARS} />
+                    </Field>
+                    <Field label="Color" required>
+                      <SelectInput value={form.vehicleColor} onChange={v => setField("vehicleColor", v)} options={VEHICLE_COLORS} />
+                    </Field>
+                  </div>
+                  <Field label="License Plate" required>
+                    <TextInput value={form.vehiclePlate} onChange={v => setField("vehiclePlate", v)} placeholder="e.g. ABC-1234" />
+                  </Field>
+                  <Field label="Vehicle Class" required>
+                    <SelectInput value={form.vehicleTier} onChange={v => setField("vehicleTier", v)} options={VEHICLE_TIERS} />
+                  </Field>
+                </div>
+
+                <p className="text-[12px] font-bold text-gray-700 mb-3">Vehicle Documents</p>
+                <div className="flex flex-col gap-3 mb-5">
+                  <UploadBox label="Vehicle Registration" docKey="VEHICLE_REGISTRATION" docs={docs} onUpload={handleDocUpload} />
+                  <UploadBox label="Vehicle Insurance" docKey="VEHICLE_INSURANCE" docs={docs} onUpload={handleDocUpload} />
+                  <UploadBox label="Vehicle Photos (interior/exterior)" docKey="VEHICLE_PHOTO" docs={docs} onUpload={handleDocUpload} />
+                </div>
+              </>
+            )}
+
+            {vehicleOption === "RENT" && (
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 mb-5">
+                <p className="text-[12px] text-gray-500 leading-relaxed">
+                  You&apos;ll be able to browse and rent an available Movo vehicle from your chauffeur dashboard once your application is approved.
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <OutlineBtn label="← Back" onClick={back} />
               <div className="flex-1">
-                <GradBtn 
-                  label="Next →" 
-                  onClick={() => next()} 
-                  disabled={!form.vehicleMake || !form.vehiclePlate || !docs.VEHICLE_REGISTRATION?.uploaded || !docs.VEHICLE_INSURANCE?.uploaded || !docs.VEHICLE_PHOTO?.uploaded} 
+                <GradBtn
+                  label="Next →"
+                  onClick={() => next({ vehicleOption })}
+                  disabled={
+                    !vehicleOption ||
+                    (vehicleOption === "OWN" && (!form.vehicleMake || !form.vehiclePlate || !docs.VEHICLE_REGISTRATION?.uploaded || !docs.VEHICLE_INSURANCE?.uploaded || !docs.VEHICLE_PHOTO?.uploaded))
+                  }
                 />
               </div>
             </div>
@@ -931,7 +989,9 @@ export default function ChauffeurOnboardingPage() {
 
       // ─── Step 10: Final Review & Approval ────────────────────────────────────
       case 10: {
-        const docTypes = ["PROFILE_PHOTO", "DRIVERS_LICENSE", "BACKGROUND_CHECK", "DRIVERS_ABSTRACT", "WORK_ELIGIBILITY", "VEHICLE_REGISTRATION", "VEHICLE_INSURANCE", "VEHICLE_PHOTO"];
+        const docTypes = vehicleOption === "RENT"
+          ? ["PROFILE_PHOTO", "DRIVERS_LICENSE", "BACKGROUND_CHECK", "DRIVERS_ABSTRACT", "WORK_ELIGIBILITY"]
+          : ["PROFILE_PHOTO", "DRIVERS_LICENSE", "BACKGROUND_CHECK", "DRIVERS_ABSTRACT", "WORK_ELIGIBILITY", "VEHICLE_REGISTRATION", "VEHICLE_INSURANCE", "VEHICLE_PHOTO"];
         const docLabels: Record<string, string> = {
           PROFILE_PHOTO: "Profile Photo", DRIVERS_LICENSE: "Driver's License",
           BACKGROUND_CHECK: "Background Check", DRIVERS_ABSTRACT: "Driver's Abstract",
@@ -942,7 +1002,7 @@ export default function ChauffeurOnboardingPage() {
 
         const checkItems = [
           { label: "Personal information", ok: !!form.dob && !!form.licenseNumber },
-          { label: "Vehicle information", ok: !!form.vehicleMake && !!form.vehiclePlate },
+          { label: "Vehicle information", ok: vehicleOption === "RENT" || (!!form.vehicleMake && !!form.vehiclePlate) },
           { label: "Documents uploaded", ok: uploadedCount === docTypes.length, note: `${uploadedCount}/${docTypes.length}` },
           { label: "Chauffeur standards acknowledged", ok: standards },
           { label: "App basics reviewed", ok: appBasics },

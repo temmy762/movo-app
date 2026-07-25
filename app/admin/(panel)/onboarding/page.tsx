@@ -25,6 +25,7 @@ interface Onboarding {
   termsAcceptedAt: string | null;
   contractSignedAt: string | null;
   // Individual fields
+  vehicleOption: "OWN" | "RENT" | null;
   vehicleMake: string | null; vehicleModel: string | null; vehicleYear: string | null;
   vehiclePlate: string | null; vehicleTier: string | null; vehicleColor: string | null;
   dob: string | null; licenseNumber: string | null;
@@ -258,6 +259,14 @@ export default function AdminOnboardingPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Renting from Movo — Individual, no own vehicle */}
+              {selected.type === "INDIVIDUAL" && selected.vehicleOption === "RENT" && (
+                <div className="bg-white rounded-2xl p-4 border border-gray-100">
+                  <p className="text-[12px] font-bold text-gray-700 mb-1">Vehicle Information</p>
+                  <p className="text-[12px] text-gray-500">Chose to rent a vehicle from Movo — no vehicle of their own to verify.</p>
+                </div>
+              )}
 
               {/* Vehicle info — Individual */}
               {selected.type === "INDIVIDUAL" && (selected.vehicleMake || selected.vehiclePlate) && (

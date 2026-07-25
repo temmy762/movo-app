@@ -408,7 +408,18 @@ export default function DriverHomePage() {
       });
     });
 
-    return () => { unsubCreated(); unsubRiderLoc(); unsubCancelled(); unsubCarePrimary(); unsubCareSupport(); unsubCareClosed(); };
+    /* Primary just completed the customer leg — refresh so SUPPORT's co-driver
+       status flips to COMPLETED and the "Pick Up Primary" button unlocks. */
+    const unsubCarePickupReady = on(SOCKET_EVENTS.CARE_SUPPORT_PICKUP_READY, (data) => {
+      const d = data as { bookingId: string };
+      if (careAssignment?.booking?.id !== d.bookingId) return;
+      fetch("/api/care/driver")
+        .then(r => r.json())
+        .then(({ coDriver: co }) => setCoDriver(co ?? null))
+        .catch(() => {});
+    });
+
+    return () => { unsubCreated(); unsubRiderLoc(); unsubCancelled(); unsubCarePrimary(); unsubCareSupport(); unsubCareClosed(); unsubCarePickupReady(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, ridePhase, carePhase]);
 
@@ -1312,7 +1323,11 @@ export default function DriverHomePage() {
         pickup={careAssignment
           ? (careAssignment.role === "PRIMARY" ? careAssignment.booking.pickup : careAssignment.booking.dropoff)
           : activeBooking?.pickup}
-        dropoff={careAssignment ? careAssignment.booking.dropoff : activeBooking?.dropoff}
+        dropoff={careAssignment
+          ? (careAssignment.role === "SUPPORT" && carePhase === "started"
+              ? careAssignment.booking.pickup /* return leg: driving Primary back to their parked car */
+              : careAssignment.booking.dropoff)
+          : activeBooking?.dropoff}
         navPhase={carePhase !== "idle" ? carePhase : ridePhase}
         onEta={setNavEta}
         darkTheme
@@ -1412,7 +1427,8 @@ export default function DriverHomePage() {
                     {coDriver.driver.vehicle ? ` · ${coDriver.driver.vehicle.make ?? ""} ${coDriver.driver.vehicle.model ?? ""}` : ""}
                   </p>
                   <p className="text-[10px] font-medium" style={{
-                    color: coDriver.status === "STARTED" ? "#16a34a" :
+                    color: coDriver.status === "COMPLETED" ? "#16a34a" :
+                           coDriver.status === "STARTED" ? "#16a34a" :
                            coDriver.status === "ARRIVED" ? "#2563eb" :
                            coDriver.status === "ACCEPTED" ? "#d97706" :
                            "#6b7280"
@@ -1420,7 +1436,8 @@ export default function DriverHomePage() {
                     {coDriver.status === "PENDING" ? "Awaiting acceptance…" :
                      coDriver.status === "ACCEPTED" ? "En route" :
                      coDriver.status === "ARRIVED" ? "Arrived at rendezvous" :
-                     coDriver.status === "STARTED" ? "In transit" : coDriver.status}
+                     coDriver.status === "STARTED" ? "In transit" :
+                     coDriver.status === "COMPLETED" ? (careAssignment.role === "SUPPORT" ? "Ready for pickup" : "Done") : coDriver.status}
                   </p>
                 </div>
                 {coDriver.driver.phone && (
@@ -1451,6 +1468,14 @@ export default function DriverHomePage() {
                   <div className="flex items-start gap-2">
                     <span className="w-3 h-3 rounded-full bg-red-500 shrink-0 mt-0.5" />
                     <p className="text-[12px] text-gray-600 leading-tight">{careAssignment.booking.dropoff}</p>
+                  </div>
+                </>
+              ) : carePhase === "started" ? (
+                <>
+                  <p className="text-[11px] font-semibold text-gray-500 mb-0.5">Returning Primary to their vehicle</p>
+                  <div className="flex items-start gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#131936] shrink-0 mt-0.5" />
+                    <p className="text-[12px] text-gray-600 leading-tight">{careAssignment.booking.pickup}</p>
                   </div>
                 </>
               ) : (
@@ -1494,20 +1519,31 @@ export default function DriverHomePage() {
                 </button>
               </div>
             )}
-            {carePhase === "arrived" && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => router.push(`/driver/home/finish/chat?bookingId=${careAssignment.booking.id}`)}
-                  className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                </button>
-                <button onClick={handleCareStart} disabled={careLoading}
-                  className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
-                  style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                  {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "Start Ride" : "Pick Up Driver A"}
-                </button>
-              </div>
-            )}
+            {carePhase === "arrived" && (() => {
+              const waitingOnPrimary = careAssignment.role === "SUPPORT" && coDriver?.status !== "COMPLETED";
+              return (
+                <div className="flex flex-col gap-2">
+                  {waitingOnPrimary && (
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin shrink-0" />
+                      <p className="text-[11px] text-gray-500">Waiting for the Primary chauffeur to complete the ride…</p>
+                    </div>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => router.push(`/driver/home/finish/chat?bookingId=${careAssignment.booking.id}`)}
+                      className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </button>
+                    <button onClick={handleCareStart} disabled={careLoading || waitingOnPrimary}
+                      className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
+                      style={{ background: (careLoading || waitingOnPrimary) ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                      {careLoading ? "…" : careAssignment.role === "PRIMARY" ? "Start Ride" : "Pick Up Primary Chauffeur"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
             {carePhase === "started" && (
               <div className="flex flex-col gap-2">
                 <div className="flex gap-3">
@@ -1519,7 +1555,7 @@ export default function DriverHomePage() {
                   <button onClick={handleCareComplete} disabled={careLoading}
                     className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
                     style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                    {careLoading ? "Saving…" : "Complete Assignment"}
+                    {careLoading ? "Saving…" : careAssignment.role === "SUPPORT" ? "Complete — Dropped Off Primary" : "Complete Assignment"}
                   </button>
                 </div>
               </div>

@@ -10,11 +10,20 @@
  *   STARTED    → COMPLETED
  *   any active → CANCELLED  (admin force-cancel or driver cancels)
  *
+ * PRIMARY drives the customer + their car to the destination (ACCEPTED →
+ * ARRIVED at pickup → STARTED the ride → COMPLETED at destination). SUPPORT
+ * drives straight to the destination and waits (ACCEPTED → ARRIVED); once
+ * PRIMARY is COMPLETED, SUPPORT is cleared to pick them up and drive them
+ * back to the original pickup — that's SUPPORT's own STARTED → COMPLETED.
+ *
  * Side-effects:
  *   PRIMARY  ACCEPTED  → triggers SUPPORT dispatch
  *   SUPPORT  ACCEPTED  → cancels all other SUPPORT PENDING for same booking
- *   PRIMARY  COMPLETED → checks if SUPPORT is also COMPLETED → closes booking
- *   SUPPORT  COMPLETED → checks if PRIMARY is also COMPLETED → closes booking
+ *   PRIMARY  COMPLETED → captures PRIMARY's location, notifies SUPPORT they're
+ *                        clear to start the return leg
+ *   SUPPORT  STARTED   → gated on PRIMARY being COMPLETED first
+ *   PRIMARY/SUPPORT COMPLETED → checks if the other is also COMPLETED/CANCELLED
+ *                        → closes booking + credits earnings
  *   any      CANCELLED → re-dispatch if no other active assignment of same role
  */
 
@@ -23,6 +32,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { dispatchSupport } from "@/lib/care/dispatch";
 import { normalizeCommissionRate } from "@/lib/earnings";
+import { sendNotification } from "@/lib/notifications";
 import {
   dispatchCarePrimaryAccepted,
   dispatchCareSupportAccepted,
@@ -30,6 +40,7 @@ import {
   dispatchCareBookingConfirmed,
   dispatchCareBookingClosed,
   dispatchDriverArrived,
+  dispatchCareSupportPickupReady,
 } from "@/lib/socket/dispatcher";
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -223,6 +234,59 @@ export async function PATCH(
           { error: "Cannot start: Support chauffeur has not yet accepted" },
           { status: 422 },
         );
+      }
+    }
+
+    /* Gate: SUPPORT cannot pick up PRIMARY (the return leg) until PRIMARY has
+       completed the customer trip — this is what "STARTED" now means for the
+       SUPPORT role, instead of a second, independent trip. */
+    if (newStatus === "STARTED" && assignment.role === "SUPPORT") {
+      const primaryDone = await prisma.careAssignment.findFirst({
+        where: { bookingId: booking.id, role: "PRIMARY", status: "COMPLETED" },
+      });
+      if (!primaryDone) {
+        return NextResponse.json(
+          { error: "Cannot start pickup: Primary chauffeur has not completed the ride yet" },
+          { status: 422 },
+        );
+      }
+    }
+
+    /* PRIMARY has dropped the customer and car off — automatically kick off
+       the return leg: capture where they are (their last live GPS ping, since
+       they may have drifted slightly from the exact dropoff pin) and alert
+       whichever SUPPORT assignment is currently active. */
+    if (newStatus === "COMPLETED" && assignment.role === "PRIMARY") {
+      const lastPing = await prisma.tripLocation.findFirst({
+        where: { bookingId: booking.id },
+        orderBy: { timestamp: "desc" },
+        select: { lat: true, lng: true },
+      });
+      const readyLat = lastPing?.lat ?? booking.dropoffLat ?? null;
+      const readyLng = lastPing?.lng ?? booking.dropoffLng ?? null;
+
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { primaryReadyLat: readyLat, primaryReadyLng: readyLng, primaryReadyAt: new Date() },
+      });
+
+      const activeSupport = await prisma.careAssignment.findFirst({
+        where: { bookingId: booking.id, role: "SUPPORT", status: { in: ["ACCEPTED", "ARRIVED"] } },
+        select: { driverId: true },
+      });
+      if (activeSupport?.driverId) {
+        sendNotification({
+          eventType: "CHAUFFEUR_CARE_PICKUP_READY",
+          recipient: { type: "driver", id: activeSupport.driverId },
+          data: { bookingId: booking.id },
+        }).catch((e) => console.error("[care pickup-ready notify]", e));
+
+        dispatchCareSupportPickupReady({
+          bookingId: booking.id,
+          supportDriverId: activeSupport.driverId,
+          lat: readyLat,
+          lng: readyLng,
+        });
       }
     }
 

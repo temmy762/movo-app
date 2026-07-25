@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const {
       type, currentStep, completedSteps,
       profilePhotoUrl, dob, licenseNumber,
-      vehicleMake, vehicleModel, vehicleYear, vehiclePlate, vehicleTier, vehicleColor,
+      vehicleOption, vehicleMake, vehicleModel, vehicleYear, vehiclePlate, vehicleTier, vehicleColor,
       companyName, legalForm, country, city, street, postalCode, taxId, vatId, registrationNumber, fleetSize, vehicleDescriptions,
       firstVehicleYear, firstVehicleBrand, firstVehicleModel, firstVehicleClass, firstVehicleColor, firstVehiclePlate, firstVehicleVin,
       firstChauffeurFirstName, firstChauffeurLastName, firstChauffeurEmail, firstChauffeurPhone,
@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
     if (profilePhotoUrl !== undefined) data.profilePhotoUrl = profilePhotoUrl;
     if (dob             !== undefined) data.dob             = dob;
     if (licenseNumber   !== undefined) data.licenseNumber   = licenseNumber;
+    if (vehicleOption   !== undefined) data.vehicleOption   = vehicleOption;
     if (vehicleMake     !== undefined) data.vehicleMake     = vehicleMake;
     if (vehicleModel    !== undefined) data.vehicleModel    = vehicleModel;
     if (vehicleYear     !== undefined) data.vehicleYear     = vehicleYear;
@@ -172,7 +173,7 @@ export async function PATCH(req: NextRequest) {
     const {
       type, currentStep, completedSteps,
       profilePhotoUrl, dob, licenseNumber,
-      vehicleMake, vehicleModel, vehicleYear, vehiclePlate, vehicleTier, vehicleColor,
+      vehicleOption, vehicleMake, vehicleModel, vehicleYear, vehiclePlate, vehicleTier, vehicleColor,
       bankAccountName, bankInstitution, bankAccountNumber, bankRoutingNumber,
       signature,
       gpsConsent, privacyPolicy, legalNotice, termsAccepted, contractSigned,
@@ -188,6 +189,7 @@ export async function PATCH(req: NextRequest) {
     if (profilePhotoUrl !== undefined) data.profilePhotoUrl = profilePhotoUrl;
     if (dob             !== undefined) data.dob             = dob;
     if (licenseNumber   !== undefined) data.licenseNumber   = licenseNumber;
+    if (vehicleOption   !== undefined) data.vehicleOption   = vehicleOption;
     if (vehicleMake     !== undefined) data.vehicleMake     = vehicleMake;
     if (vehicleModel    !== undefined) data.vehicleModel    = vehicleModel;
     if (vehicleYear     !== undefined) data.vehicleYear     = vehicleYear;

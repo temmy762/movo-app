@@ -37,14 +37,19 @@ export async function GET(req: NextRequest) {
             total: true,
             paymentStatus: true,
             status: true,
+            primaryReadyLat: true,
+            primaryReadyLng: true,
           },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    /* Fetch the co-driver's active assignment on the same booking so each
-       driver can see the other's status (name, role, status, vehicle). */
+    /* Fetch the co-driver's assignment on the same booking so each driver can
+       see the other's status (name, role, status, vehicle). COMPLETED is
+       included (not just the "still active" statuses) so a SUPPORT chauffeur
+       waiting at the destination can see the moment PRIMARY completes and
+       they're cleared to start the return leg. */
     let coDriver: {
       id: string;
       role: "PRIMARY" | "SUPPORT";
@@ -58,7 +63,7 @@ export async function GET(req: NextRequest) {
           bookingId: assignment.bookingId,
           id: { not: assignment.id },
           role: assignment.role === "PRIMARY" ? "SUPPORT" : "PRIMARY",
-          status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"] },
+          status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "COMPLETED"] },
         },
         include: {
           driver: {

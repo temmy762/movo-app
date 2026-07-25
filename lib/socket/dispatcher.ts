@@ -289,3 +289,15 @@ export function dispatchCareDispatchFailed(payload: {
     payload,
   );
 }
+
+/* Primary has completed the customer leg — Support is cleared to pick them up
+   and drive them back to where their own vehicle is parked. */
+export function dispatchCareSupportPickupReady(payload: {
+  bookingId: string; supportDriverId: string; lat: number | null; lng: number | null;
+}) {
+  emitMany(
+    ["admin", `booking:${payload.bookingId}`, `driver:${payload.supportDriverId}`],
+    SOCKET_EVENTS.CARE_SUPPORT_PICKUP_READY,
+    payload,
+  );
+}

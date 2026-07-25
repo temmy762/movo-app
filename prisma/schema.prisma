@@ -93,6 +93,11 @@ enum OnboardingType {
   FLEET
 }
 
+enum VehicleOption {
+  OWN
+  RENT
+}
+
 enum BookingType {
   NORMAL
   AIRPORT
@@ -391,6 +396,9 @@ model Booking {
   assignmentType        AssignmentType?
   parentBookingId       String?
   recoveryDriverId      String?
+  primaryReadyLat       Float?
+  primaryReadyLng       Float?
+  primaryReadyAt        DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -506,6 +514,7 @@ model DriverOnboarding {
   profilePhotoUrl   String?
   dob               String?
   licenseNumber     String?
+  vehicleOption     VehicleOption?
   vehicleMake       String?
   vehicleModel      String?
   vehicleYear       String?

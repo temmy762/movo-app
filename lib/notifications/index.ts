@@ -56,6 +56,7 @@ const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationType[]> = {
   CHAUFFEUR_TOPUP_NOTIFICATION: ["IN_APP"],
   CHAUFFEUR_RENTAL_APPROVED: ["EMAIL", "IN_APP"],
   CHAUFFEUR_RENTAL_DECLINED: ["EMAIL", "IN_APP"],
+  CHAUFFEUR_CARE_PICKUP_READY: ["IN_APP"],
   // Admin events: In-app only (email for emergencies)
   ADMIN_NEW_DRIVER_APPLICATION: ["IN_APP"],
   ADMIN_NEW_INCIDENT_REPORT: ["EMAIL", "IN_APP"],
