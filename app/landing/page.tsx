@@ -250,6 +250,21 @@ export default function LandingPage() {
     router.push(`/user/login?redirect=${encodeURIComponent(targetUrl)}`);
   };
 
+  /* Generic "Book Now" CTAs (nav, corporate section, closing banner) aren't
+     ambiguous about who they're for — only "Sign in" is. Route straight into
+     the rider flow (or rider login, bouncing back afterward) instead of the
+     rider/chauffeur picker, mirroring handleGetStarted's own pattern above. */
+  const goToRiderFlow = async (targetUrl: string) => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.role === "USER") { router.push(targetUrl); return; }
+      }
+    } catch { /* not logged in */ }
+    router.push(`/user/login?redirect=${encodeURIComponent(targetUrl)}`);
+  };
+
   return (
     <div className="min-h-screen flex flex-col" style={{ fontFamily: "var(--font-body, 'DM Sans', sans-serif)", background: "#FAFAF8" }}>
 
@@ -278,7 +293,7 @@ export default function LandingPage() {
               {chauffeursMenuOpen && (
                 <div className="absolute top-full left-0 pt-3 -ml-1">
                   <div className="rounded-xl overflow-hidden border border-white/10 shadow-xl min-w-[160px]" style={{ background: NAVY }}>
-                    <Link href="/auth/select"
+                    <Link href="/driver/onboarding"
                       className="block px-4 py-3 text-[13px] font-medium text-white/80 hover:text-white hover:bg-white/5 transition-colors">
                       Rent a Car
                     </Link>
@@ -291,11 +306,11 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-3">
             <Link href="/auth/select" className="hidden md:block text-[13px] font-medium text-white/70 hover:text-white transition-colors">Sign in</Link>
-            <Link href="/auth/select"
+            <button type="button" onClick={() => goToRiderFlow("/home")}
               className="px-4 py-2 rounded-full text-[13px] font-bold text-white"
               style={{ background: `linear-gradient(135deg,${DARK},${NAVY},#2A3055)` }}>
               Book Now
-            </Link>
+            </button>
             <button className="md:hidden text-white" onClick={() => setNavOpen(v => !v)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 {navOpen ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></> : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>}
@@ -308,7 +323,7 @@ export default function LandingPage() {
             <a href="#services" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">Services</a>
             <a href="#services" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Business</a>
             <a href="#chauffeurs" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Chauffeurs</a>
-            <Link href="/auth/select" onClick={() => setNavOpen(false)} className="text-left text-[13px] font-medium text-white/50 py-1 pl-4">↳ Rent a Car</Link>
+            <Link href="/driver/onboarding" onClick={() => setNavOpen(false)} className="text-left text-[13px] font-medium text-white/50 py-1 pl-4">↳ Rent a Car</Link>
             <a href="#why-movo" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">About Us</a>
             <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">Sign in</Link>
           </div>
@@ -719,10 +734,10 @@ export default function LandingPage() {
               ))}
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link href="/auth/select" className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
+              <button type="button" onClick={() => goToRiderFlow("/home")} className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
                 style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
                 Book Now
-              </Link>
+              </button>
               <Link href="/user/login" className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
                 style={{ borderColor: NAVY, color: NAVY }}>
                 Sign In
@@ -843,11 +858,11 @@ export default function LandingPage() {
             Vehicles must be returned clean. Full rental terms are shown when requesting a vehicle from your chauffeur dashboard.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
-            <Link href="/auth/select" className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
+            <Link href="/driver/onboarding/type" className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
               style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
               Become a Chauffeur
             </Link>
-            <Link href="/auth/select" className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
+            <Link href="/driver/onboarding/login" className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
               style={{ borderColor: NAVY, color: NAVY }}>
               Sign In to Rent a Vehicle
             </Link>
@@ -909,11 +924,11 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-[28px] md:text-[38px] font-extrabold text-white mb-4">Ready for a premium ride?</h2>
           <p className="text-white/80 text-[15px] mb-8">Join thousands of clients who trust Movo for every journey.</p>
-          <Link href="/auth/select"
+          <button type="button" onClick={() => goToRiderFlow("/home")}
             className="inline-block px-10 py-4 rounded-full font-bold text-[15px]"
             style={{ background: "white", color: NAVY }}>
             Book Now
-          </Link>
+          </button>
         </div>
       </section>
 
