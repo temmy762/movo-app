@@ -144,7 +144,9 @@ function DriverRegisterStep2Content() {
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 409) {
-          setError("This email address is already registered. Please log in or use a different email.");
+          /* The API distinguishes email vs phone conflicts — surface its
+             message rather than always blaming the email address. */
+          setError(data.error || "That email or phone number is already registered. Please log in or use different details.");
         } else if (res.status === 400) {
           setError(data.error || "Please check your information and try again.");
         } else if (res.status === 500) {

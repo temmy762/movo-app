@@ -48,6 +48,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /* Check the phone up front too. Without this, a duplicate phone only
+       surfaced as a P2002 from the insert, and the constraint metadata isn't
+       reliably shaped across drivers — so the conflict could be reported
+       against the wrong field. */
+    const normalizedPhone = phone ? toE164(phone.trim()) : null;
+    if (normalizedPhone) {
+      const phoneTaken = await prisma.driver.findUnique({ where: { phone: normalizedPhone } });
+      if (phoneTaken) {
+        return NextResponse.json(
+          { error: "This phone number is already linked to another driver account." },
+          { status: 409 }
+        );
+      }
+    }
+
     const hashed = await bcrypt.hash(password, 12);
 
     const driver = await prisma.driver.create({
@@ -55,7 +70,7 @@ export async function POST(req: NextRequest) {
         firstName,
         lastName,
         email,
-        phone: phone ? toE164(phone.trim()) : null,
+        phone: normalizedPhone,
         password: hashed,
         country,
         city,
