@@ -258,7 +258,9 @@ function BookingDetailContent() {
               {/* Driver info */}
               {booking.bookingType === "CARE" && careAssignments.length > 0 ? (
                 <div className="px-5 py-4">
-                  <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3">Chauffeurs</p>
+                  {/* Singular — the customer only ever sees their Primary
+                      chauffeur; SUPPORT is stripped from rider API responses. */}
+                  <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-3">Chauffeur</p>
                   <div className="flex flex-col gap-3">
                     {careAssignments.map((a) => {
                       const name = a.driver
@@ -268,15 +270,12 @@ function BookingDetailContent() {
                         <div key={a.id} className="flex items-center gap-3">
                           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#131936] to-[#2A3055] flex items-center justify-center shrink-0">
                             <span className="text-white text-[14px] font-bold">
-                              {a.role === "PRIMARY" ? "A" : "B"}
+                              {(name?.[0] ?? "C").toUpperCase()}
                             </span>
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-1.5">
                               <p className="text-[13px] font-semibold text-gray-900">{name}</p>
-                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                                {a.role === "PRIMARY" ? "Primary" : "Support"}
-                              </span>
                             </div>
                             {a.driver?.avgRating != null && (
                               <p className="text-[12px] font-semibold" style={{ color: "#f59e0b" }}>

@@ -258,9 +258,11 @@ function RideCompletedContent() {
           ) : isCare && careAssignments.length > 0 ? (
             /* Care: dual-chauffeur rating */
             <div className="w-full mb-5">
+              {/* No "dual chauffeur" badge — Safe Ride's Support chauffeur is an
+                  internal operational resource the customer never sees. The API
+                  already strips SUPPORT assignments from rider responses. */}
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#C6BFB2]">Safe Ride</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-semibold">Dual Chauffeur</span>
               </div>
               {careAssignments.map((a) => {
                 const name = a.driver
@@ -272,9 +274,7 @@ function RideCompletedContent() {
                       <DriverAvatar photoUrl={a.driver?.photoUrl ?? null} name={name} />
                     </div>
                     <p className="text-[13px] font-bold text-gray-900">{name}</p>
-                    <p className="text-[10px] text-gray-400 mb-2">
-                      {a.role === "PRIMARY" ? "Primary Chauffeur" : "Support Chauffeur"}
-                    </p>
+                    <p className="text-[10px] text-gray-400 mb-2">Chauffeur</p>
                     <StarRating rating={ratings[a.id] ?? 0} onRate={(n) => setRatings((prev) => ({ ...prev, [a.id]: n }))} />
                     <textarea
                       value={reviews[a.id] ?? ""}

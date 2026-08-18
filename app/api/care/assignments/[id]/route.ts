@@ -40,6 +40,7 @@ import {
   dispatchCareBookingConfirmed,
   dispatchCareBookingClosed,
   dispatchDriverArrived,
+  dispatchTripStarted,
   dispatchCareSupportPickupReady,
   dispatchCarePrimaryPickupEnRoute,
 } from "@/lib/socket/dispatcher";
@@ -236,6 +237,28 @@ export async function PATCH(
           { status: 422 },
         );
       }
+
+      /* Stamp the BOOKING as started and announce it. Without this the
+         customer's tracking screen never leaves "on the way" — it flips to
+         "Ride in progress" on TRIP_STARTED, which nothing was emitting for
+         Safe Ride. Also keeps admin in sync in real time.
+
+         Mirrors the normal-ride flow (app/api/bookings/[id]/start): status
+         stays CONFIRMED and "started" is represented by startedAt — there is
+         no STARTED member of the BookingStatus enum. */
+      const startedAt = booking.startedAt ?? new Date();
+      if (!booking.startedAt) {
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { startedAt },
+        });
+      }
+      dispatchTripStarted({
+        bookingId: booking.id,
+        userId,
+        driverId: driver?.id ?? null,
+        startedAt: startedAt.toISOString(),
+      });
     }
 
     /* Gate: SUPPORT cannot pick up PRIMARY (the return leg) until PRIMARY has

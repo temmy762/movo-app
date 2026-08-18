@@ -740,9 +740,11 @@ function RideTrackingContent() {
                 : etaText}
             </p>
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
-              {rideStatus === "PENDING"    ? (scheduledForLabel ? "We'll line up your chauffeur ahead of pickup." : isCareRide ? "Finding your chauffeurs…" : "We're contacting nearby chauffeurs — hang tight.") :
+              {/* Safe Ride dispatches an internal Support chauffeur too, but the
+                  customer must only ever be aware of their Primary chauffeur. */}
+              {rideStatus === "PENDING"    ? (scheduledForLabel ? "We'll line up your chauffeur ahead of pickup." : "We're contacting nearby chauffeurs — hang tight.") :
                awaitingSetOff              ? `Your chauffeur is confirmed for ${scheduledForLabel}. You'll be notified when they set off.` :
-               rideStatus === "CONFIRMED"  ? (isCareRide ? "Both chauffeurs are on the way" : "Your chauffeur is on the way to you") :
+               rideStatus === "CONFIRMED"  ? "Your chauffeur is on the way to you" :
                rideStatus === "STARTED"    ? "Ride in progress — arriving at your destination" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
                "Ride in progress"}
