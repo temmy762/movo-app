@@ -49,14 +49,20 @@ export async function GET(req: NextRequest) {
     const activeIds = bookings.filter((b) => b.status === "CONFIRMED").map((b) => b.id);
 
     /* Two flat lookups, batched — not one per booking. */
-    const [drivers, latestLocs] = await Promise.all([
+    const [drivers, vehicles_, latestLocs] = await Promise.all([
       prisma.driver.findMany({
         where: { id: { in: driverIds } },
-        select: {
-          id: true, firstName: true, lastName: true, lat: true, lng: true, isOnline: true,
-          vehicle: { select: { make: true, model: true, plate: true, tier: true, photoUrl: true } },
-        },
+        select: { id: true, firstName: true, lastName: true, lat: true, lng: true, isOnline: true },
       }),
+      /* photoUrl is deliberately NOT selected. Vehicle photos are stored as
+         base64 data URIs in the column (12MB across 6 rows, one is 5MB), so
+         selecting it made this request transfer megabytes and took ~12s
+         against a 0.04ms query. The selected vehicle's photo is served
+         separately by ./[bookingId]/photo, which the browser can cache. */
+      prisma.$queryRaw<{ driverId: string; make: string | null; model: string | null; plate: string | null; tier: string | null; hasPhoto: boolean }[]>`
+        SELECT "driverId", "make", "model", "plate", "tier", ("photoUrl" IS NOT NULL) AS "hasPhoto"
+        FROM "Vehicle" WHERE "driverId" = ANY(${driverIds})
+      `,
       /* Only the newest point per active booking is needed to place the marker.
          Bounded by active trip count, not by trail length. */
       activeIds.length > 0
@@ -70,6 +76,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     const driverMap = new Map(drivers.map((d) => [d.id, d]));
+    const vehicleMap = new Map(vehicles_.map((v) => [v.driverId, v]));
 
     /* Rows arrive newest-first, so the first hit per booking is its latest. */
     const latestMap = new Map<string, { lat: number; lng: number; heading?: number }>();
@@ -85,8 +92,8 @@ export async function GET(req: NextRequest) {
     const vehicles = bookings
       .map((b) => {
         const d = b.driverId ? driverMap.get(b.driverId) : undefined;
-        if (!d || !d.vehicle) return null; /* no driver or no vehicle → not trackable */
-        const v = d.vehicle;
+        const v = b.driverId ? vehicleMap.get(b.driverId) : undefined;
+        if (!d || !v) return null; /* no driver or no vehicle → not trackable */
 
         const live = latestMap.get(b.id);
         const hasLocationData = !!live;
@@ -116,7 +123,8 @@ export async function GET(req: NextRequest) {
           route: [[lat, lng]] as [number, number][], /* seed; real trail loads on selection */
           heading: live?.heading ?? 0,
           driverName: `${d.firstName ?? "Unknown"} ${d.lastName ?? ""}`.trim(),
-          vehiclePhoto: v.photoUrl ?? null,
+          /* URL, not the image bytes — see the photoUrl note above. */
+          vehiclePhoto: v.hasPhoto ? `/api/admin/tracking/${b.id}/photo` : null,
           driverId: d.id,
           isOnline: d.isOnline ?? false,
           pickupLat: b.pickupLat ?? 0,
