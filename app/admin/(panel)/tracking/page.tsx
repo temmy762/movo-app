@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 
 const TrackingMap = dynamic(() => import("./TrackingMap"), {
   ssr: false,
@@ -113,21 +114,15 @@ export default function TrackingPage() {
   const[mobileView,setMobileView]=useState<"list"|"map">("map");
   const[lastUpdated,setLastUpdated]=useState<Date|null>(null);
   const[isRefreshing,setIsRefreshing]=useState(false);
-  const[autoRefresh,setAutoRefresh]=useState(true);
-  const pollRef=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const[showHistory,setShowHistory]=useState(false);
   const cancelledRef=useRef(false);
-  const refreshRef=useRef<()=>void>(()=>{});
+  const{join,on,connected}=useSocket();
 
-  const scheduleNext = useCallback((data: Vehicle[]) => {
-    if (cancelledRef.current || !autoRefresh) return;
-    const hasActive = data.some((v: Vehicle) => v.status === "Active Trip");
-    pollRef.current = setTimeout(() => refreshRef.current(), hasActive ? 5000 : 15000);
-  }, [autoRefresh]);
-
+  /* Roster load. Live positions arrive over the socket, so this runs on mount
+     and on scope change — not on a timer. */
   const load=useCallback(()=>{
     setIsRefreshing(true);
-    if (pollRef.current) clearTimeout(pollRef.current);
-    fetch("/api/admin/tracking")
+    fetch(`/api/admin/tracking?scope=${showHistory?"all":"live"}`)
       .then(r=>{
         if(!r.ok) throw new Error(`API error: ${r.status}`);
         return r.json();
@@ -138,22 +133,16 @@ export default function TrackingPage() {
           setVehicles(data);
           setLastUpdated(new Date());
           setActiveId(prev=>prev??(data.length>0?data[0].id:null));
-          scheduleNext(data);
         }else{
           setVehicles([]);
-          scheduleNext([]);
         }
       })
       .catch(()=>{
         if(cancelledRef.current) return;
         setVehicles([]);
-        scheduleNext([]);
       })
       .finally(()=>setIsRefreshing(false));
-  },[autoRefresh, scheduleNext]);
-
-  // Store load in ref so useEffect can access latest version
-  refreshRef.current=load;
+  },[showHistory]);
 
   // Fetch available drivers for the Add Car modal
   useEffect(()=>{
@@ -168,11 +157,65 @@ export default function TrackingPage() {
   useEffect(()=>{
     cancelledRef.current=false;
     load();
-    return()=>{
-      cancelledRef.current=true;
-      if(pollRef.current) clearTimeout(pollRef.current);
-    };
+    return()=>{ cancelledRef.current=true; };
   },[load]);
+
+  /* Join the admin room so DRIVER_LOCATION and booking lifecycle events reach
+     this board. */
+  useEffect(()=>{ join({ role:"admin" }); },[join,connected]);
+
+  /* Live marker movement — replaces the old 5s poll entirely. */
+  useEffect(()=>{
+    const unsubLoc=on(SOCKET_EVENTS.DRIVER_LOCATION,(data)=>{
+      const d=data as {bookingId:string;lat:number;lng:number;heading?:number};
+      setVehicles(prev=>{
+        let changed=false;
+        const next:Vehicle[]=prev.map(v=>{
+          if(v.id!==d.bookingId) return v;
+          changed=true;
+          return {
+            ...v,
+            pos:[d.lat,d.lng] as [number,number],
+            heading:d.heading??v.heading,
+            /* Extend the drawn trail so the selected vehicle's path grows live */
+            route:[...(v.route??[]),[d.lat,d.lng] as [number,number]].slice(-150),
+            status:(v.status==="Returned"?"Returned":"Active Trip") as TripStatus,
+          };
+        });
+        if(!changed) return prev;
+        return next;
+      });
+      setLastUpdated(new Date());
+    });
+
+    /* Roster changes: a trip starting or ending should appear/disappear without
+       a manual refresh. These are low-frequency, so a targeted reload is fine. */
+    const reload=()=>load();
+    const unsubCreated=on(SOCKET_EVENTS.BOOKING_CREATED,reload);
+    const unsubAccepted=on(SOCKET_EVENTS.BOOKING_ACCEPTED,reload);
+    const unsubCompleted=on(SOCKET_EVENTS.BOOKING_COMPLETED,reload);
+    const unsubCancelled=on(SOCKET_EVENTS.BOOKING_CANCELLED,reload);
+
+    return()=>{
+      unsubLoc(); unsubCreated(); unsubAccepted(); unsubCompleted(); unsubCancelled();
+    };
+  },[on,load]);
+
+  /* Load the real GPS trail only for the vehicle actually being viewed. */
+  useEffect(()=>{
+    if(!activeId) return;
+    let cancelled=false;
+    fetch(`/api/admin/tracking/${activeId}/trail`)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        if(cancelled||!d||!Array.isArray(d.route)||d.route.length===0) return;
+        setVehicles(prev=>prev.map(v=>v.id===activeId
+          ?{...v,route:d.route,distance:d.distance??v.distance,heading:d.heading??v.heading}
+          :v));
+      })
+      .catch(()=>{});
+    return()=>{ cancelled=true; };
+  },[activeId]);
 
   const filtered=vehicles.filter(v=>
     v.client.toLowerCase().includes(search.toLowerCase())||
@@ -269,39 +312,27 @@ export default function TrackingPage() {
         <div className="px-3 pb-2 shrink-0 border-t border-gray-100 pt-2">
           <div className="flex items-center justify-between text-[10px] text-gray-400">
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-green-400' : 'bg-gray-400'}`}></span>
-              <span>{autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}</span>
+              <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-gray-400'}`}></span>
+              <span>{connected ? 'Live' : 'Reconnecting…'}</span>
               {lastUpdated && (
                 <span className="text-gray-300">
                   • {lastUpdated.toLocaleTimeString()}
                 </span>
               )}
             </div>
-            {isRefreshing && <span className="text-blue-400">Updating...</span>}
+            {isRefreshing && <span className="text-blue-400">Loading…</span>}
           </div>
           <div className="flex gap-2 mt-2">
-            <button 
-              onClick={()=>setAutoRefresh(!autoRefresh)}
+            <button
+              onClick={()=>setShowHistory(v=>!v)}
               className="flex-1 py-1.5 rounded-lg text-[11px] font-medium border border-gray-200 text-gray-600 hover:bg-gray-50">
-              {autoRefresh ? 'Pause' : 'Resume'}
+              {showHistory ? 'Live only' : 'Show completed'}
             </button>
-            <button 
-              onClick={()=>{
-                if(pollRef.current) clearTimeout(pollRef.current);
-                if(autoRefresh) {
-                  // Reschedule after manual refresh
-                  const scheduleNext = () => {
-                    pollRef.current = setTimeout(() => {
-                      load();
-                      scheduleNext();
-                    }, 5000);
-                  };
-                }
-                load();
-              }}
+            <button
+              onClick={load}
               disabled={isRefreshing}
               className="flex-1 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50">
-              Refresh Now
+              Reload list
             </button>
           </div>
         </div>

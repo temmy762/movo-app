@@ -151,7 +151,9 @@ export function dispatchDriverArrived(payload: {
 export function dispatchDriverLocation(payload: {
   bookingId: string; lat: number; lng: number; heading?: number;
 }) {
-  emit(`booking:${payload.bookingId}`, SOCKET_EVENTS.DRIVER_LOCATION, payload);
+  /* Also goes to "admin" so the live tracking board moves in real time —
+     without it the board has no source of live positions and has to poll. */
+  emitMany([`booking:${payload.bookingId}`, "admin"], SOCKET_EVENTS.DRIVER_LOCATION, payload);
 }
 
 /* Rider's live position → the assigned chauffeur, for easier pickup */

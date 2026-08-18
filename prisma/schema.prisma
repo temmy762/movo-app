@@ -415,6 +415,10 @@ model Booking {
   careAssignments CareAssignment[]
   complaints      Complaint[]
   lostFoundItems  LostFoundItem[]
+
+  @@index([status, createdAt])
+  @@index([driverId])
+  @@index([userId])
 }
 
 // ─── Care Ride Assignments ────────────────────────────────────────────────────

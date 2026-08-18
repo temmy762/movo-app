@@ -1,118 +1,103 @@
+/**
+ * GET /api/admin/tracking?scope=live|all
+ *
+ * Roster for the admin live-tracking board. Live positions arrive over the
+ * socket (DRIVER_LOCATION → "admin" room); this endpoint only seeds the list
+ * and each vehicle's CURRENT position.
+ *
+ * Deliberately avoids Prisma's nested `include` (booking → driver → vehicle):
+ * that expands into a cascade of round-trips and measured ~3.3s against the
+ * pooler, versus ~0.2ms of actual SQL. Three flat batched queries instead.
+ *
+ * Full GPS trails are NOT returned here — 50 vehicles × 150 points was sent on
+ * every poll while only the selected vehicle's trail is ever drawn. The trail
+ * is fetched per-vehicle from ./[bookingId]/trail on selection.
+ */
+
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify admin access
     const session = await getSession(req);
     if (session?.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Fetch all active bookings with drivers
+    /* Default to live trips only. Completed trips are history and would other-
+       wise dominate the 50-row window and push active trips out of view. */
+    const scope = req.nextUrl.searchParams.get("scope") === "all" ? "all" : "live";
+    const statuses = scope === "all"
+      ? (["CONFIRMED", "COMPLETED"] as const)
+      : (["CONFIRMED"] as const);
+
     const bookings = await prisma.booking.findMany({
-      where: {
-        status: { in: ["CONFIRMED", "COMPLETED"] },
-        driverId: { not: null }, // Only show bookings with assigned drivers
-      },
+      where: { status: { in: [...statuses] }, driverId: { not: null } },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: {
-        driver: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            lat: true,
-            lng: true,
-            isOnline: true,
-            vehicle: {
-              select: {
-                make: true,
-                model: true,
-                plate: true,
-                tier: true,
-                photoUrl: true,
-              },
-            },
-          },
-        },
+      select: {
+        id: true, clientName: true, status: true, driverId: true,
+        createdAt: true, updatedAt: true, startedAt: true,
+        pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true,
       },
     });
 
-    // For active trips, batch-fetch their GPS trail (last 150 points each)
-    const activeIds = bookings
-      .filter(b => b.status === "CONFIRMED")
-      .map(b => b.id);
+    if (bookings.length === 0) return NextResponse.json([]);
 
-    // Map: bookingId → chronological [lat,lng] trail
-    const routeMap = new Map<string, [number, number][]>();
-    const latestMap = new Map<string, { lat: number; lng: number; heading?: number; speed?: number }>();
+    const driverIds = [...new Set(bookings.map((b) => b.driverId!).filter(Boolean))];
+    const activeIds = bookings.filter((b) => b.status === "CONFIRMED").map((b) => b.id);
 
-    if (activeIds.length > 0) {
-      // Fetch most-recent 150 points per active booking
-      const locs = await prisma.tripLocation.findMany({
-        where: { bookingId: { in: activeIds } },
-        orderBy: { timestamp: "desc" },
-        take: 150 * activeIds.length,
-        select: { bookingId: true, lat: true, lng: true, heading: true, speed: true },
-      });
+    /* Two flat lookups, batched — not one per booking. */
+    const [drivers, latestLocs] = await Promise.all([
+      prisma.driver.findMany({
+        where: { id: { in: driverIds } },
+        select: {
+          id: true, firstName: true, lastName: true, lat: true, lng: true, isOnline: true,
+          vehicle: { select: { make: true, model: true, plate: true, tier: true, photoUrl: true } },
+        },
+      }),
+      /* Only the newest point per active booking is needed to place the marker.
+         Bounded by active trip count, not by trail length. */
+      activeIds.length > 0
+        ? prisma.tripLocation.findMany({
+            where: { bookingId: { in: activeIds } },
+            orderBy: { timestamp: "desc" },
+            take: 400,
+            select: { bookingId: true, lat: true, lng: true, heading: true, timestamp: true },
+          })
+        : Promise.resolve([] as { bookingId: string; lat: number; lng: number; heading: number | null; timestamp: Date }[]),
+    ]);
 
-      // Group by bookingId (points arrive newest-first; cap at 150 per booking)
-      for (const loc of locs) {
-        if (!routeMap.has(loc.bookingId)) {
-          routeMap.set(loc.bookingId, []);
-          latestMap.set(loc.bookingId, {
-            lat: loc.lat,
-            lng: loc.lng,
-            heading: loc.heading ?? undefined,
-            speed: loc.speed ?? undefined,
-          });
-        }
-        const arr = routeMap.get(loc.bookingId)!;
-        if (arr.length < 150) arr.push([loc.lat, loc.lng]);
-      }
+    const driverMap = new Map(drivers.map((d) => [d.id, d]));
 
-      // Reverse so routes are chronological (oldest → newest)
-      for (const [k, v] of routeMap) {
-        routeMap.set(k, v.reverse());
+    /* Rows arrive newest-first, so the first hit per booking is its latest. */
+    const latestMap = new Map<string, { lat: number; lng: number; heading?: number }>();
+    for (const loc of latestLocs) {
+      if (!latestMap.has(loc.bookingId)) {
+        latestMap.set(loc.bookingId, { lat: loc.lat, lng: loc.lng, heading: loc.heading ?? undefined });
       }
     }
 
-    // Format response - filter out invalid bookings
+    const fmtDate = (d: Date) =>
+      new Date(d).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+
     const vehicles = bookings
-      .filter(b => {
-        // Skip if no driver
-        if (!b.driver) {
-          console.warn(`[Admin Tracking] Booking ${b.id} has no driver assigned`);
-          return false;
-        }
-        // Skip if driver has no vehicle
-        if (!b.driver.vehicle) {
-          console.warn(`[Admin Tracking] Booking ${b.id} (driver: ${b.driver.id}) has no vehicle assigned`);
-          return false;
-        }
-        return true;
-      })
-      .map(b => {
-        const d = b.driver!;
-        const v = d.vehicle!;
-        const hasLocationData = latestMap.has(b.id);
+      .map((b) => {
+        const d = b.driverId ? driverMap.get(b.driverId) : undefined;
+        if (!d || !d.vehicle) return null; /* no driver or no vehicle → not trackable */
+        const v = d.vehicle;
 
-        let tripStatus: "On Way" | "Active Trip" | "Returned";
-        if (b.status === "COMPLETED") tripStatus = "Returned";
-        else if (b.startedAt || hasLocationData) tripStatus = "Active Trip";
-        else tripStatus = "On Way";
+        const live = latestMap.get(b.id);
+        const hasLocationData = !!live;
 
-        // Live position: prefer latest TripLocation, fall back to Driver.lat/lng, fall back to booking coordinates
-        const livePos = latestMap.get(b.id);
-        const lat = livePos?.lat ?? d.lat ?? b.pickupLat ?? 0;
-        const lng = livePos?.lng ?? d.lng ?? b.pickupLng ?? 0;
-        const heading = livePos?.heading ?? 0;
+        let status: "On Way" | "Active Trip" | "Returned";
+        if (b.status === "COMPLETED") status = "Returned";
+        else if (b.startedAt || hasLocationData) status = "Active Trip";
+        else status = "On Way";
 
-        // Route trail: real GPS points for active trips, single-point otherwise
-        const trail = routeMap.get(b.id) ?? [[lat, lng]];
+        const lat = live?.lat ?? d.lat ?? b.pickupLat ?? 0;
+        const lng = live?.lng ?? d.lng ?? b.pickupLng ?? 0;
 
         return {
           id: b.id,
@@ -120,43 +105,16 @@ export async function GET(req: NextRequest) {
           car: `${v.make ?? "Unknown"} ${v.model ?? ""}`.trim(),
           carType: v.tier ?? "Unknown",
           carNumber: v.plate ?? "—",
-          status: tripStatus,
-          startDate: new Date(b.createdAt).toLocaleDateString("en-US", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          }),
-          endDate: new Date(b.updatedAt).toLocaleDateString("en-US", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          }),
+          status,
+          startDate: fmtDate(b.createdAt),
+          endDate: fmtDate(b.updatedAt),
           tripTime: b.startedAt
-            ? `Started ${new Date(b.startedAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}`
+            ? `Started ${new Date(b.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
             : "—",
-          distance: (() => {
-          const pts = routeMap.get(b.id);
-          if (!pts || pts.length < 2) return "—";
-          let km = 0;
-          for (let i = 1; i < pts.length; i++) {
-            const [lat1, lng1] = pts[i - 1];
-            const [lat2, lng2] = pts[i];
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-            km += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          }
-          return km < 1 ? `${(km*1000).toFixed(0)} m` : `${km.toFixed(1)} km`;
-        })(),
+          distance: "—", /* computed from the trail, loaded per-vehicle on selection */
           pos: [lat, lng] as [number, number],
-          route: trail,
-          heading,
+          route: [[lat, lng]] as [number, number][], /* seed; real trail loads on selection */
+          heading: live?.heading ?? 0,
           driverName: `${d.firstName ?? "Unknown"} ${d.lastName ?? ""}`.trim(),
           vehiclePhoto: v.photoUrl ?? null,
           driverId: d.id,
@@ -166,11 +124,12 @@ export async function GET(req: NextRequest) {
           dropoffLat: b.dropoffLat ?? 0,
           dropoffLng: b.dropoffLng ?? 0,
         };
-      });
+      })
+      .filter(Boolean);
 
     return NextResponse.json(vehicles);
   } catch (e) {
-    console.error("Admin tracking error:", e);
+    console.error("[admin-tracking]", e);
     return NextResponse.json({ error: "Failed to fetch tracking" }, { status: 500 });
   }
 }
