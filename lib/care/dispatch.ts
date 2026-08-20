@@ -118,6 +118,13 @@ async function findNearbyDrivers(
       isOnline: true,
       vehicle:  { isNot: null },
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,
+      /* Skip anyone already mid-Safe-Ride. This matters most for a PRIMARY in
+         AWAITING_RETURN: they've delivered the customer but are stranded at the
+         destination without their own car, so they physically cannot take a new
+         job until SUPPORT returns them. */
+      careAssignments: {
+        none: { status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"] } },
+      },
     },
     select: { id: true, firstName: true, lastName: true, lat: true, lng: true, vehicle: { select: { tier: true } } },
   });

@@ -121,6 +121,11 @@ enum CareAssignmentStatus {
   ACCEPTED
   ARRIVED
   STARTED
+  /* PRIMARY only: the customer and their vehicle have been delivered, so the
+     customer-facing booking is complete — but the chauffeur is stranded at the
+     destination without their own car. The assignment stays open here until
+     SUPPORT returns them to where they parked. */
+  AWAITING_RETURN
   COMPLETED
   CANCELLED
 }
@@ -399,6 +404,9 @@ model Booking {
   primaryReadyLat       Float?
   primaryReadyLng       Float?
   primaryReadyAt        DateTime?
+  /* Where PRIMARY parked their own car — the destination of the return leg */
+  primaryParkedLat      Float?
+  primaryParkedLng      Float?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 

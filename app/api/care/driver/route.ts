@@ -19,7 +19,9 @@ export async function GET(req: NextRequest) {
     const assignment = await prisma.careAssignment.findFirst({
       where: {
         driverId,
-        status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"] },
+        /* AWAITING_RETURN keeps PRIMARY on the job after the customer is
+           delivered, until SUPPORT returns them to their parked vehicle. */
+        status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"] },
       },
       include: {
         booking: {
@@ -63,7 +65,7 @@ export async function GET(req: NextRequest) {
           bookingId: assignment.bookingId,
           id: { not: assignment.id },
           role: assignment.role === "PRIMARY" ? "SUPPORT" : "PRIMARY",
-          status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "COMPLETED"] },
+          status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN", "COMPLETED"] },
         },
         include: {
           driver: {

@@ -96,7 +96,10 @@ export default function DriverHomePage() {
   const [coDriver,         setCoDriver]         = useState<CoDriver | null>(null);
   const [careEarning,      setCareEarning]      = useState<number>(0);
   const [reservationConfirmed, setReservationConfirmed] = useState(false);
-  type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started";
+  /* awaiting_return: PRIMARY has delivered the customer (their trip is closed)
+     but is stranded at the destination until SUPPORT drives them back to their
+     own parked car. The assignment is still live for the chauffeur. */
+  type CarePhase = "idle" | "requesting" | "accepted" | "arrived" | "started" | "awaiting_return";
   const [carePhase,        setCarePhase]        = useState<CarePhase>("idle");
   const [careLoading,      setCareLoading]      = useState(false);
   const [careError,        setCareError]        = useState<string | null>(null);
@@ -437,6 +440,7 @@ export default function DriverHomePage() {
           if (s === "ACCEPTED") setCarePhase("accepted");
           if (s === "ARRIVED")  setCarePhase("arrived");
           if (s === "STARTED")  setCarePhase("started");
+          if (s === "AWAITING_RETURN") setCarePhase("awaiting_return");
         }
       })
       .catch(() => {});
@@ -895,16 +899,36 @@ export default function DriverHomePage() {
     if (ridePhase === "requesting" || carePhase === "requesting") setPanelSize("default");
   }, [ridePhase, carePhase]);
 
+  /* PRIMARY delivering the customer does NOT close their job — it closes the
+     customer's trip and moves them into the return leg, where they wait for
+     SUPPORT to bring them back to their own parked car. SUPPORT completing the
+     return leg is what finally closes both assignments. */
   async function handleCareComplete() {
     if (!careAssignment) return;
-    stopLocationTracking();
+    const isPrimary = careAssignment.role === "PRIMARY";
+    const nextStatus = isPrimary ? "AWAITING_RETURN" : "COMPLETED";
+
     setCareLoading(true);
-    await fetch(`/api/care/assignments/${careAssignment.id}`, {
+    const res = await fetch(`/api/care/assignments/${careAssignment.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "COMPLETED" }),
+      body: JSON.stringify({ status: nextStatus }),
     });
     setCareLoading(false);
+
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setCareError(d?.error ?? "Couldn't update the assignment. Please try again.");
+      return;
+    }
+
+    if (isPrimary) {
+      /* Stay on the job: keep broadcasting location so SUPPORT can find them. */
+      setCarePhase("awaiting_return");
+      return;
+    }
+
+    stopLocationTracking();
     /* Keep careAssignment alive so the modal can read booking.id for rating */
     setShowCareComplete(true);
   }
@@ -1427,7 +1451,8 @@ export default function DriverHomePage() {
                     {coDriver.driver.vehicle ? ` · ${coDriver.driver.vehicle.make ?? ""} ${coDriver.driver.vehicle.model ?? ""}` : ""}
                   </p>
                   <p className="text-[10px] font-medium" style={{
-                    color: coDriver.status === "COMPLETED" ? "#16a34a" :
+                    color: coDriver.status === "AWAITING_RETURN" ? "#16a34a" :
+                           coDriver.status === "COMPLETED" ? "#16a34a" :
                            coDriver.status === "STARTED" ? "#16a34a" :
                            coDriver.status === "ARRIVED" ? "#2563eb" :
                            coDriver.status === "ACCEPTED" ? "#d97706" :
@@ -1437,7 +1462,8 @@ export default function DriverHomePage() {
                      coDriver.status === "ACCEPTED" ? "En route" :
                      coDriver.status === "ARRIVED" ? "Arrived at rendezvous" :
                      coDriver.status === "STARTED" ? "In transit" :
-                     coDriver.status === "COMPLETED" ? (careAssignment.role === "SUPPORT" ? "Ready for pickup" : "Done") : coDriver.status}
+                     coDriver.status === "AWAITING_RETURN" ? "Customer delivered — ready for pickup" :
+                     coDriver.status === "COMPLETED" ? "Done" : coDriver.status}
                   </p>
                 </div>
                 {coDriver.driver.phone && (
@@ -1520,7 +1546,10 @@ export default function DriverHomePage() {
               </div>
             )}
             {carePhase === "arrived" && (() => {
-              const waitingOnPrimary = careAssignment.role === "SUPPORT" && coDriver?.status !== "COMPLETED";
+              /* SUPPORT may only collect PRIMARY once they've delivered the
+                 customer — that's AWAITING_RETURN, not COMPLETED (PRIMARY only
+                 completes once SUPPORT has returned them to their car). */
+              const waitingOnPrimary = careAssignment.role === "SUPPORT" && coDriver?.status !== "AWAITING_RETURN";
               return (
                 <div className="flex flex-col gap-2">
                   {waitingOnPrimary && (
@@ -1555,8 +1584,39 @@ export default function DriverHomePage() {
                   <button onClick={handleCareComplete} disabled={careLoading}
                     className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
                     style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                    {careLoading ? "Saving…" : careAssignment.role === "SUPPORT" ? "Complete — Dropped Off Primary" : "Complete Assignment"}
+                    {careLoading ? "Saving…" : careAssignment.role === "SUPPORT" ? "Complete — Returned Primary to Vehicle" : "Customer Delivered"}
                   </button>
+                </div>
+              </div>
+            )}
+            {/* PRIMARY: customer delivered, now waiting on the return leg. The
+                job stays open here — no Complete button, because only SUPPORT
+                dropping them back at their car closes it. */}
+            {carePhase === "awaiting_return" && (
+              <div className="flex flex-col gap-3">
+                <div className="rounded-xl px-3 py-3" style={{ background: "#f5f0ff", border: "1px solid #131936" }}>
+                  <p className="text-[12px] font-bold" style={{ color: "#131936" }}>Customer delivered ✓</p>
+                  <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                    {coDriver
+                      ? `${coDriver.driver.firstName} ${coDriver.driver.lastName} is on the way to pick you up and take you back to your vehicle.`
+                      : "Your support chauffeur has been notified and will collect you shortly."}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1.5">
+                    This Safe Ride stays open until you&apos;re back at your car.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => router.push(`/driver/home/finish/chat?bookingId=${careAssignment.booking.id}`)}
+                    className="no-hover-fx w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </button>
+                  {coDriver?.driver.phone && (
+                    <a href={`tel:${coDriver.driver.phone}`}
+                      className="no-hover-fx flex-1 py-3 rounded-xl font-bold text-[15px] text-center border border-gray-200 text-gray-700">
+                      Call Support Chauffeur
+                    </a>
+                  )}
                 </div>
               </div>
             )}

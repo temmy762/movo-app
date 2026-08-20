@@ -49,7 +49,12 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING:   ["ACCEPTED", "CANCELLED"],
   ACCEPTED:  ["ARRIVED",  "CANCELLED"],
   ARRIVED:   ["STARTED",  "CANCELLED"],
-  STARTED:   ["COMPLETED","CANCELLED"],
+  /* PRIMARY goes STARTED → AWAITING_RETURN when the customer is delivered.
+     SUPPORT goes STARTED → COMPLETED when it has returned PRIMARY to their car. */
+  STARTED:   ["AWAITING_RETURN", "COMPLETED", "CANCELLED"],
+  /* PRIMARY is stranded at the destination here; only the return leg closes it.
+     No CANCELLED — the customer's trip is already done and paid. */
+  AWAITING_RETURN: ["COMPLETED"],
   COMPLETED: [],
   CANCELLED: [],
 };
@@ -266,13 +271,16 @@ export async function PATCH(
        SUPPORT role, instead of a second, independent trip. Once cleared,
        let PRIMARY know Support is on the way to collect them. */
     if (newStatus === "STARTED" && assignment.role === "SUPPORT") {
+      /* AWAITING_RETURN, not COMPLETED — PRIMARY's assignment deliberately stays
+         open through the return leg and only completes once SUPPORT delivers
+         them back to their vehicle. */
       const primaryDone = await prisma.careAssignment.findFirst({
-        where: { bookingId: booking.id, role: "PRIMARY", status: "COMPLETED" },
+        where: { bookingId: booking.id, role: "PRIMARY", status: "AWAITING_RETURN" },
         select: { driverId: true },
       });
       if (!primaryDone) {
         return NextResponse.json(
-          { error: "Cannot start pickup: Primary chauffeur has not completed the ride yet" },
+          { error: "Cannot start pickup: Primary chauffeur has not delivered the customer yet" },
           { status: 422 },
         );
       }
@@ -290,11 +298,13 @@ export async function PATCH(
       }
     }
 
-    /* PRIMARY has dropped the customer and car off — automatically kick off
-       the return leg: capture where they are (their last live GPS ping, since
-       they may have drifted slightly from the exact dropoff pin) and alert
-       whichever SUPPORT assignment is currently active. */
-    if (newStatus === "COMPLETED" && assignment.role === "PRIMARY") {
+    /* PRIMARY has dropped the customer and car off. The customer's trip is over
+       — close the BOOKING so they get their receipt and rating immediately —
+       but PRIMARY's own assignment stays open (AWAITING_RETURN) because they're
+       stranded at the destination until SUPPORT returns them to their car.
+       Capture where they are (last live GPS ping — they may have drifted from
+       the exact dropoff pin) and alert the active SUPPORT assignment. */
+    if (newStatus === "AWAITING_RETURN" && assignment.role === "PRIMARY") {
       const lastPing = await prisma.tripLocation.findFirst({
         where: { bookingId: booking.id },
         orderBy: { timestamp: "desc" },
@@ -303,10 +313,17 @@ export async function PATCH(
       const readyLat = lastPing?.lat ?? booking.dropoffLat ?? null;
       const readyLng = lastPing?.lng ?? booking.dropoffLng ?? null;
 
+      /* Customer-facing completion happens HERE, not when the whole Safe Ride
+         operation closes. The return leg is internal and the customer must not
+         be made to wait on it for their receipt or rating. */
       await prisma.booking.update({
         where: { id: booking.id },
-        data: { primaryReadyLat: readyLat, primaryReadyLng: readyLng, primaryReadyAt: new Date() },
+        data: {
+          primaryReadyLat: readyLat, primaryReadyLng: readyLng, primaryReadyAt: new Date(),
+          status: "COMPLETED", completedAt: new Date(),
+        },
       });
+      dispatchCareBookingClosed({ bookingId: booking.id, userId });
 
       const activeSupport = await prisma.careAssignment.findFirst({
         where: { bookingId: booking.id, role: "SUPPORT", status: { in: ["ACCEPTED", "ARRIVED"] } },
@@ -328,6 +345,16 @@ export async function PATCH(
       }
     }
 
+    /* SUPPORT has returned PRIMARY to their parked vehicle — that closes
+       PRIMARY's assignment too. Without this PRIMARY would sit in
+       AWAITING_RETURN forever and never be released for new dispatch. */
+    if (newStatus === "COMPLETED" && assignment.role === "SUPPORT") {
+      await prisma.careAssignment.updateMany({
+        where: { bookingId: booking.id, role: "PRIMARY", status: "AWAITING_RETURN" },
+        data:  { status: "COMPLETED", completedAt: new Date() },
+      });
+    }
+
     if (newStatus === "COMPLETED") {
       const siblings = await prisma.careAssignment.findMany({
         where: { bookingId: booking.id, id: { not: id } },
@@ -338,11 +365,16 @@ export async function PATCH(
       );
 
       if (allDone) {
-        await prisma.booking.update({
-          where: { id: booking.id },
-          data:  { status: "COMPLETED", completedAt: new Date() },
-        });
-        dispatchCareBookingClosed({ bookingId: booking.id, userId });
+        /* The booking was already closed for the customer when PRIMARY reached
+           AWAITING_RETURN; only stamp it if that never happened (e.g. the
+           PRIMARY role was cancelled and SUPPORT closed things out). */
+        if (booking.status !== "COMPLETED") {
+          await prisma.booking.update({
+            where: { id: booking.id },
+            data:  { status: "COMPLETED", completedAt: new Date() },
+          });
+          dispatchCareBookingClosed({ bookingId: booking.id, userId });
+        }
 
         /* ── Credit chauffeur earnings — Safe Ride previously never credited
            anyone. Commission comes from the dedicated "care" pricing config;
@@ -403,7 +435,7 @@ export async function PATCH(
         where: {
           bookingId: booking.id,
           role:      assignment.role,
-          status:    { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"] },
+          status:    { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"] },
           id:        { not: id },
         },
       });
