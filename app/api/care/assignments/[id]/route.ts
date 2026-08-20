@@ -31,8 +31,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { dispatchSupport } from "@/lib/care/dispatch";
-import { normalizeCommissionRate } from "@/lib/earnings";
-import { sendNotification } from "@/lib/notifications";
+import { creditSafeRideEarning } from "@/lib/earnings";
+import { sendNotification, notifyAdmins } from "@/lib/notifications";
 import {
   dispatchCarePrimaryAccepted,
   dispatchCareSupportAccepted,
@@ -376,57 +376,29 @@ export async function PATCH(
           dispatchCareBookingClosed({ bookingId: booking.id, userId });
         }
 
-        /* ── Credit chauffeur earnings — Safe Ride previously never credited
-           anyone. Commission comes from the dedicated "care" pricing config;
-           the net is split evenly between PRIMARY and SUPPORT (adjust
-           CARE_PRIMARY_SHARE if the business wants a different split). */
-        const CARE_PRIMARY_SHARE = 0.5;
-        if (booking.paymentStatus === "PAID" && booking.fare > 0) {
-          const alreadyCredited = await prisma.walletTransaction.findFirst({
-            where: { type: "EARNING", note: { contains: `Care Ride — booking ${booking.id}` } },
-            select: { id: true },
-          });
-          if (!alreadyCredited) {
-            const careConfig = await prisma.vehicleTierConfig.findFirst({
-              where: { tier: { equals: "care", mode: "insensitive" } },
-              select: { commissionRate: true },
-            }).catch(() => null);
-            const commission = normalizeCommissionRate(careConfig?.commissionRate);
-            const net = booking.fare * (1 - commission);
-
-            const completedAssignments = [updated, ...siblings].filter(
-              (a) => a.status === "COMPLETED" && a.driverId,
-            );
-            const primaryDone = completedAssignments.find((a) => a.role === "PRIMARY");
-            const supportDone = completedAssignments.find((a) => a.role === "SUPPORT");
-
-            const credits: { driverId: string; amount: number; role: string }[] = [];
-            if (primaryDone?.driverId && supportDone?.driverId) {
-              credits.push(
-                { driverId: primaryDone.driverId, amount: net * CARE_PRIMARY_SHARE, role: "PRIMARY" },
-                { driverId: supportDone.driverId, amount: net * (1 - CARE_PRIMARY_SHARE), role: "SUPPORT" },
-              );
-            } else if (primaryDone?.driverId) {
-              /* Support role cancelled/never filled — primary keeps the full net */
-              credits.push({ driverId: primaryDone.driverId, amount: net, role: "PRIMARY" });
-            }
-
-            await Promise.all(
-              credits.map((c) =>
-                prisma.walletTransaction.create({
-                  data: {
-                    driverId: c.driverId,
-                    type:     "EARNING",
-                    status:   "COMPLETED",
-                    amount:   parseFloat(c.amount.toFixed(2)),
-                    note:     `${c.role} earning, Care Ride — booking ${booking.id} (${Math.round(commission * 100)}% platform fee)`,
-                  },
-                }),
-              ),
-            ).catch((e) => console.error("[care earnings credit]", e));
-          }
-        }
       }
+    }
+
+    /* ── Earnings ──────────────────────────────────────────────────────────
+       Each role is credited when ITS OWN work is done, not when the whole
+       operation closes:
+         PRIMARY  → on AWAITING_RETURN (customer + vehicle delivered), so their
+                    pay never depends on the internal return leg succeeding.
+         SUPPORT  → on COMPLETED (PRIMARY returned to their parked car).
+       Both are idempotent per-role, so replays and retries are safe. */
+    if (newStatus === "AWAITING_RETURN" && assignment.role === "PRIMARY") {
+      creditSafeRideEarning(booking.id, "PRIMARY")
+        .catch((e) => console.error("[safe-ride earnings PRIMARY]", e));
+    }
+    if (newStatus === "COMPLETED" && assignment.role === "SUPPORT") {
+      creditSafeRideEarning(booking.id, "SUPPORT")
+        .catch((e) => console.error("[safe-ride earnings SUPPORT]", e));
+    }
+    /* A PRIMARY that completes without ever passing through AWAITING_RETURN
+       (legacy rows, or an admin force-completing) still gets paid. */
+    if (newStatus === "COMPLETED" && assignment.role === "PRIMARY") {
+      creditSafeRideEarning(booking.id, "PRIMARY")
+        .catch((e) => console.error("[safe-ride earnings PRIMARY]", e));
     }
 
     if (newStatus === "CANCELLED") {
@@ -459,10 +431,40 @@ export async function PATCH(
           ).catch(() => {});
         }
         if (assignment.role === "SUPPORT") {
+          /* If PRIMARY is already waiting at the destination, losing SUPPORT
+             leaves a real person stranded with no car. Search for a
+             replacement automatically AND raise it to Admin, who can dispatch
+             someone manually from the Safe Ride panel if the search fails. */
+          const strandedPrimary = await prisma.careAssignment.findFirst({
+            where: { bookingId: booking.id, role: "PRIMARY", status: "AWAITING_RETURN" },
+            include: { driver: { select: { firstName: true, lastName: true, phone: true } } },
+          });
+
+          if (strandedPrimary) {
+            const pName = strandedPrimary.driver
+              ? `${strandedPrimary.driver.firstName} ${strandedPrimary.driver.lastName}`
+              : "A chauffeur";
+            notifyAdmins(
+              "ADMIN_CARE_SUPPORT_STRANDED",
+              {
+                bookingId: booking.id,
+                title: "Safe Ride: chauffeur awaiting pickup",
+                message:
+                  `${pName} has delivered the customer on booking ${booking.id.slice(0, 8)} ` +
+                  `but their support chauffeur dropped off. A replacement search has started ` +
+                  `automatically — dispatch one manually if it doesn't fill.` +
+                  (strandedPrimary.driver?.phone ? ` Contact: ${strandedPrimary.driver.phone}` : ""),
+              },
+              ["IN_APP", "SMS"],
+            ).catch((e) => console.error("[safe-ride stranded alert]", e));
+          }
+
           dispatchSupport(
             booking.id,
-            booking.dropoffLat ?? null,
-            booking.dropoffLng ?? null,
+            /* Target where PRIMARY actually is when they're already waiting —
+               they may not be exactly on the customer's dropoff pin. */
+            strandedPrimary ? (booking.primaryReadyLat ?? booking.dropoffLat ?? null) : (booking.dropoffLat ?? null),
+            strandedPrimary ? (booking.primaryReadyLng ?? booking.dropoffLng ?? null) : (booking.dropoffLng ?? null),
             userId, usedDriverIds,
           ).catch(() => {});
         }

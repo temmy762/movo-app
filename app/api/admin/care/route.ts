@@ -157,7 +157,10 @@ export async function PATCH(req: NextRequest) {
       const oppositeRole = assignment.role === "PRIMARY" ? "SUPPORT" : "PRIMARY";
       const conflicting = booking.careAssignments.find(
         (a) => a.role === oppositeRole && a.driverId === newDriverId &&
-          ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"].includes(a.status),
+          /* AWAITING_RETURN included: a PRIMARY waiting to be collected is
+             still on this booking, and must never be dispatched as its own
+             SUPPORT (i.e. sent to pick themselves up). */
+          ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"].includes(a.status),
       );
       if (conflicting) {
         return NextResponse.json({ error: `This driver is already assigned as ${oppositeRole} on this booking` }, { status: 409 });
@@ -198,7 +201,10 @@ export async function PATCH(req: NextRequest) {
       const oppositeRole = role === "PRIMARY" ? "SUPPORT" : "PRIMARY";
       const conflicting = booking.careAssignments.find(
         (a) => a.role === oppositeRole && a.driverId === newDriverId &&
-          ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"].includes(a.status),
+          /* AWAITING_RETURN included: a PRIMARY waiting to be collected is
+             still on this booking, and must never be dispatched as its own
+             SUPPORT (i.e. sent to pick themselves up). */
+          ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"].includes(a.status),
       );
       if (conflicting) {
         return NextResponse.json({ error: `This driver is already assigned as ${oppositeRole} on this booking` }, { status: 409 });
