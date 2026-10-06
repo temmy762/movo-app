@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { VEHICLE_RENTAL_ENABLED } from "@/lib/launchConfig";
 
 type NavItem = {
   label: string;
@@ -215,10 +216,12 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
       .then((d: { count: number }) => { if (typeof d.count === "number") setPendingOnboarding(d.count); })
       .catch(() => {});
 
-    fetch("/api/admin/rentals/pending-count")
-      .then(r => r.json())
-      .then((d: { count: number }) => { if (typeof d.count === "number") setPendingRentals(d.count); })
-      .catch(() => {});
+    if (VEHICLE_RENTAL_ENABLED) {
+      fetch("/api/admin/rentals/pending-count")
+        .then(r => r.json())
+        .then((d: { count: number }) => { if (typeof d.count === "number") setPendingRentals(d.count); })
+        .catch(() => {});
+    }
   }, [pathname]); // re-check on navigation
 
   useEffect(() => {
@@ -243,7 +246,7 @@ export default function AdminSidebar({ open, onClose }: { open: boolean; onClose
       {/* Nav — scrolls vertically when the item list is taller than the viewport
           (min-h-0 lets this flex child actually shrink so overflow-y works) */}
       <nav className="flex flex-col gap-0.5 px-3 flex-1 min-h-0 overflow-y-auto">
-        {navItems.map((entry) => {
+        {navItems.filter((entry) => VEHICLE_RENTAL_ENABLED || entry.label !== "Rentals").map((entry) => {
           if (entry.kind === "group") {
             const groupActive = entry.groupMatch(pathname);
             const open = expanded[entry.label] ?? groupActive;

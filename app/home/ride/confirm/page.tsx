@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { IN_CITY_RIDES_ENABLED, AIRPORT_TRANSFER_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
 
 const STRIPE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : Promise.resolve(null);
@@ -28,6 +29,8 @@ type FareEstimate = {
   freeWaitingMinutes: number; waitingRatePerMin: number;
   stops: number; isAirport: boolean;
   hourly?: { rate: number; billedHours: number; minHours: number };
+  /* Server-signed price — booking creation only trusts amounts inside it */
+  quote: string;
 };
 
 type CheckoutFormProps = {
@@ -51,8 +54,8 @@ async function createBookingAfterPayment(opts: {
   intentId: string; estimate: FareEstimate; scheduledAt?: string | null;
   push: (url: string) => void;
 }) {
-  const { isCare, pickup, dropoff, carName, tier, carImg, clientName, intentId, estimate, scheduledAt, push } = opts;
-  const { fare, serviceFee, gst, additionalStopFee, airportFee, total } = estimate;
+  const { isCare, pickup, dropoff, carName, tier, carImg, intentId, estimate, scheduledAt, push } = opts;
+  const { quote } = estimate;
   const resolvedTier = isCare ? "care" : (tier || carTierMap[carName] || "classic");
 
   if (isCare) {
@@ -60,9 +63,7 @@ async function createBookingAfterPayment(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        clientName, pickup, dropoff,
-        fare, serviceFee, gst, total,
-        paymentStatus: "PAID",
+        pickup, dropoff, quote,
         stripePaymentIntentId: intentId,
         ...(scheduledAt ? { scheduledAt } : {}),
       }),
@@ -78,10 +79,8 @@ async function createBookingAfterPayment(opts: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      clientName, pickup, dropoff,
+      pickup, dropoff, quote,
       carTier: resolvedTier, carName,
-      fare, serviceFee, gst, additionalStopFee, airportFee, total,
-      paymentStatus: "PAID",
       stripePaymentIntentId: intentId,
       ...(scheduledAt ? { scheduledAt } : {}),
     }),
@@ -179,11 +178,13 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, clientName, inte
       fare: fare.toString(), serviceFee: serviceFee.toString(),
       gst: gst.toString(), additionalStopFee: additionalStopFee.toString(),
       airportFee: airportFee.toString(), total: total.toString(),
-      intentId,
+      intentId, quote: estimate.quote,
     };
-    if (tier)        rp.tier        = tier;
+    /* Same tier the quote was priced for, so the post-3DS booking matches it */
+    rp.tier = isCare ? "care" : (tier || carTierMap[carName] || "classic");
     if (carImg && !carImg.startsWith("data:")) rp.carImg = carImg;
     if (scheduledAt) rp.scheduledAt = scheduledAt;
+    if (isCare)      { rp.service = "care"; rp.car = "Safe Ride"; }
     const returnUrl = `${window.location.origin}/home/ride/tracking?${new URLSearchParams(rp).toString()}`;
 
     const { error: stripeError } = await stripe.confirmPayment({
@@ -246,8 +247,10 @@ function ConfirmPayContent() {
   const carName   = searchParams.get("car")      || "Standard Ride";
   const tier      = searchParams.get("tier")     || "";
   const carImg    = searchParams.get("carImg")   || "";
-  const isCare    = searchParams.get("service")  === "care";
-  const mode      = searchParams.get("mode")     || "";
+  /* Never take payment for a ride that can't be booked: with In-City switched
+     off, everything here is a Safe Ride, and switched-off modes are dropped */
+  const isCare    = !IN_CITY_RIDES_ENABLED || searchParams.get("service") === "care";
+  const mode      = allowedBookingMode(searchParams.get("mode"));
 
   /* Scheduling — carried from the pickup widget's date/time pickers */
   const dateParam = searchParams.get("date") || "";
@@ -284,6 +287,8 @@ function ConfirmPayContent() {
      addresses look like an airport ever see the toggle. Default it ON only
      when the PICKUP is an airport (the fee applies to airport pickups). */
   useEffect(() => {
+    /* Airport Transfer switched off: no airport fee, so no toggle either */
+    if (!AIRPORT_TRANSFER_ENABLED) return;
     const pickupIsAirport = isAirportLocation(pickup);
     if (mode === "airport" || pickupIsAirport || isAirportLocation(dropoff)) setAirportRelevant(true);
     if (pickupIsAirport) setAirportPickup(true);
@@ -306,7 +311,7 @@ function ConfirmPayContent() {
     /* Reset payment intent so a fresh one is created for the new fare */
     setClientSecret(null);
     setIntentId(null);
-    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${airportPickup}${mode === "hourly" ? "&mode=hourly" : ""}`;
+    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${!isCare && airportPickup}${!isCare && mode === "hourly" ? "&mode=hourly" : ""}`;
     fetch(url)
       .then((r) => r.json())
       .then((d) => {

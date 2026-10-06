@@ -21,6 +21,7 @@ import { dispatchCareBookingCreated } from "@/lib/socket/dispatcher";
 import { dispatchPrimary } from "@/lib/care/dispatch";
 import { scheduleCareDispatch } from "@/lib/care/scheduledDispatch";
 import { pushToAllDriversByTier } from "@/lib/webpush";
+import { verifyBookingPayment } from "@/lib/bookingPayment";
 
 /* A Safe Ride whose pickup is further out than this is "scheduled" rather than
    ASAP — chauffeurs get an advance heads-up now and the real targeted dispatch
@@ -31,19 +32,40 @@ const SCHEDULED_THRESHOLD_MS = 25 * 60 * 1000;
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession(req);
-    const userId  = session?.userId ?? null;
+    if (!session?.userId) {
+      return NextResponse.json({ error: "Please log in to book a ride" }, { status: 401 });
+    }
+    const userId = session.userId;
 
     const body = await req.json();
     const {
-      clientName, pickup, dropoff,
-      fare, serviceFee, gst, total,
-      paymentStatus, stripePaymentIntentId,
+      pickup, dropoff,
+      quote: quoteToken, stripePaymentIntentId,
       customerVehicle, scheduledAt,
     } = body;
 
-    if (!clientName || !pickup || !dropoff) {
+    if (!pickup || !dropoff) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    /* Price and payment status come only from the signed "care" quote and a
+       verified Stripe payment — never from the request body. */
+    const verified = await verifyBookingPayment({
+      userId, quoteToken, paymentIntentId: stripePaymentIntentId, pickup, dropoff, tier: "care",
+    });
+    if (!verified.ok) {
+      return NextResponse.json({ error: verified.error }, { status: verified.status });
+    }
+    if (verified.existingBookingId) {
+      return NextResponse.json({ bookingId: verified.existingBookingId }, { status: 200 });
+    }
+    const { fare, serviceFee, gst, total } = verified.quote;
+
+    const clientUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+    const clientName = `${clientUser?.firstName ?? ""} ${clientUser?.lastName ?? ""}`.trim() || "Guest";
 
     const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
     const isValidSchedule = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime());
@@ -51,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     const coordinates = await geocodeAddresses(pickup, dropoff).catch(() => null);
 
-    const resolvedPaymentStatus = paymentStatus === "PAID" ? "PAID" : "UNPAID";
+    const resolvedPaymentStatus = "PAID";
     /* Booking stays PENDING until both chauffeurs accept — do NOT confirm at payment time */
     const resolvedStatus = "PENDING";
 
@@ -74,8 +96,8 @@ export async function POST(req: NextRequest) {
         paymentStatus: resolvedPaymentStatus as never,
         status:        resolvedStatus        as never,
         bookingType:   "CARE",
-        stripePaymentIntentId: stripePaymentIntentId ?? null,
-        ...(userId ? { userId } : {}),
+        stripePaymentIntentId: verified.paymentIntentId,
+        userId,
         ...(isValidSchedule ? { scheduledAt: parsedScheduledAt } : {}),
       },
     });

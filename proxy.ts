@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookieHeader } from "./lib/session";
+import { VEHICLE_RENTAL_ENABLED } from "./lib/launchConfig";
 
 // ─── Route configuration ──────────────────────────────────────────────────────
 
@@ -33,6 +34,13 @@ const USER_ROUTES = ["/user/dashboard", "/home"];
 const CHAUFFEUR_ROUTES = ["/chauffeur", "/driver/home"];
 const ADMIN_ROUTES = ["/admin"];
 
+/* Vehicle rental is switched off for the Safe Ride-only launch — see lib/launchConfig.ts */
+const RENTAL_API_ROUTES = ["/api/rentals", "/api/driver/rental", "/api/admin/rentals"];
+const RENTAL_PAGE_REDIRECTS: [string, string][] = [
+  ["/driver/home/rentals", "/driver/home"],
+  ["/admin/rentals", "/admin"],
+];
+
 // Helper: check if path starts with any of the prefixes
 function matchesPrefix(path: string, prefixes: string[]): boolean {
   return prefixes.some((p) => path === p || path.startsWith(`${p}/`));
@@ -51,6 +59,14 @@ function isPublicRoute(path: string): boolean {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (!VEHICLE_RENTAL_ENABLED) {
+    if (matchesPrefix(pathname, RENTAL_API_ROUTES)) {
+      return NextResponse.json({ error: "Vehicle rental is not currently available" }, { status: 404 });
+    }
+    const redirect = RENTAL_PAGE_REDIRECTS.find(([from]) => matchesPrefix(pathname, [from]));
+    if (redirect) return NextResponse.redirect(new URL(redirect[1], req.url));
+  }
 
   // Skip public routes (static assets, API, auth pages)
   if (isPublicRoute(pathname)) {

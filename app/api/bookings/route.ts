@@ -8,6 +8,8 @@ import { pushToOnlineDriversByTier, pushToAllDriversByTier } from "@/lib/webpush
 import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
 import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
 import { computeDriverEarning } from "@/lib/earnings";
+import { verifyBookingPayment } from "@/lib/bookingPayment";
+import { IN_CITY_RIDES_ENABLED } from "@/lib/launchConfig";
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,18 +56,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(enriched);
     }
 
-    /* ── Admin / general query ── */
+    /* ── Admin query — every booking, with rider names and addresses ── */
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     const bookings = await prisma.booking.findMany({
       where: status ? { status: status as never } : undefined,
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(bookings);
-  } catch {
+  } catch (e) {
+    console.error("[bookings GET]", e);
     return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
   }
 }
-
-const VALID_PAYMENT_STATUSES: PaymentStatus[] = ["UNPAID", "PAID", "FAILED", "REFUNDED"];
 
 /* A ride whose requested time is further out than this is treated as
    "scheduled" rather than ASAP — offline drivers get pushed too, and the
@@ -74,26 +81,52 @@ const SCHEDULED_THRESHOLD_MS = 25 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { clientName, pickup, dropoff, carTier, carName, fare, serviceFee, gst, additionalStopFee, airportFee, total, paymentStatus, stripePaymentIntentId, scheduledAt } = body;
+    /* Launch scope: standard rides can only be booked while In-City is on
+       (Airport/Hourly are refused earlier — the estimate won't quote them) */
+    if (!IN_CITY_RIDES_ENABLED) {
+      return NextResponse.json({ error: "This service is not currently available. Please book a Safe Ride." }, { status: 403 });
+    }
 
-    if (!clientName || !pickup || !dropoff || !carTier || !carName) {
+    const session = await getSession(req);
+    if (!session?.userId) {
+      return NextResponse.json({ error: "Please log in to book a ride" }, { status: 401 });
+    }
+    const userId = session.userId;
+
+    const body = await req.json();
+    const { pickup, dropoff, carTier, carName, quote: quoteToken, stripePaymentIntentId, scheduledAt } = body;
+
+    if (!pickup || !dropoff || !carTier || !carName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    /* Price and payment status come only from the signed quote and a verified
+       Stripe payment — never from the request body. */
+    const verified = await verifyBookingPayment({
+      userId, quoteToken, paymentIntentId: stripePaymentIntentId, pickup, dropoff, tier: carTier,
+    });
+    if (!verified.ok) {
+      return NextResponse.json({ error: verified.error }, { status: verified.status });
+    }
+    if (verified.existingBookingId) {
+      const existing = await prisma.booking.findUnique({ where: { id: verified.existingBookingId } });
+      return NextResponse.json(existing, { status: 200 });
+    }
+    const { fare, serviceFee, gst, additionalStopFee, airportFee, total } = verified.quote;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true },
+    });
+    const clientName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Guest";
 
     // Geocode addresses to get coordinates (non-fatal — booking proceeds even without coords)
     const coordinates = await geocodeAddresses(pickup, dropoff).catch(() => null);
 
-    const resolvedPaymentStatus: PaymentStatus =
-      paymentStatus && VALID_PAYMENT_STATUSES.includes(paymentStatus)
-        ? paymentStatus
-        : "UNPAID";
+    const resolvedPaymentStatus: PaymentStatus = "PAID";
 
     /* Auto-confirm bookings the moment payment is received — no admin approval needed */
-    const resolvedStatus = resolvedPaymentStatus === "PAID" ? "CONFIRMED" : "PENDING";
-
-    const session = await getSession(req);
-    const userId = session?.userId ?? null;
+    const resolvedStatus = "CONFIRMED";
 
     const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
     const isValidSchedule = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime());
@@ -112,16 +145,16 @@ export async function POST(req: NextRequest) {
         dropoffLng: coordinates?.dropoffLng ?? null,
         carTier,
         carName,
-        fare: Number(fare),
-        serviceFee: Number(serviceFee),
-        gst: gst != null ? Number(gst) : null,
-        additionalStopFee: additionalStopFee != null ? Number(additionalStopFee) : null,
-        airportFee: airportFee != null ? Number(airportFee) : null,
-        total: Number(total),
+        fare,
+        serviceFee,
+        gst,
+        additionalStopFee,
+        airportFee,
+        total,
         paymentStatus: resolvedPaymentStatus,
         status: resolvedStatus,
-        stripePaymentIntentId: stripePaymentIntentId ?? null,
-        ...(userId ? { userId } : {}),
+        stripePaymentIntentId: verified.paymentIntentId,
+        userId,
         ...(isValidSchedule ? { scheduledAt: parsedScheduledAt } : {}),
       },
     });

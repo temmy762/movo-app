@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeTier } from "@/lib/normalizeTier";
+import { signFareQuote } from "@/lib/fareQuote";
+import { AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED } from "@/lib/launchConfig";
 
 /* Prefer a dedicated server key: NEXT_PUBLIC_* keys are often HTTP-referrer
    restricted for the browser, which makes server-side Distance Matrix calls
@@ -33,8 +35,12 @@ export async function GET(req: NextRequest) {
        the canonical config keys so the admin-configured rates actually match. */
     const tier      = normalizeTier(searchParams.get("tier"));
     const stops     = Math.max(0, parseInt(searchParams.get("stops") ?? "0", 10) || 0);
-    const isAirport = searchParams.get("isAirport") === "true";
+    /* Switched-off services are never quoted, so they can't be paid for or booked */
+    const isAirport = AIRPORT_TRANSFER_ENABLED && searchParams.get("isAirport") === "true";
     const isHourly  = searchParams.get("mode") === "hourly";
+    if (isHourly && !HOURLY_CHARTER_ENABLED) {
+      return NextResponse.json({ error: "Hourly bookings are not currently available" }, { status: 400 });
+    }
     const hours     = Math.max(1, parseInt(searchParams.get("hours") ?? "2", 10) || 2);
 
     if (!pickup || (!dropoff && !isHourly)) {
@@ -72,7 +78,10 @@ export async function GET(req: NextRequest) {
       const taxableAmount   = fare + additionalStopFee + airportFee + serviceFee;
       const gst             = parseFloat((taxableAmount * gstRate).toFixed(2));
       const total           = parseFloat((taxableAmount + gst).toFixed(2));
-      return { fare, additionalStopFee, airportFee, serviceFee, gst, total };
+      const amounts = { fare, additionalStopFee, airportFee, serviceFee, gst, total };
+      /* Signed so booking creation can trust these amounts, not the browser's */
+      const quote = signFareQuote({ pickup, dropoff: dropoff ?? "", tier, ...amounts });
+      return { ...amounts, quote };
     };
 
     const calcFares = (distKm: number, durMin: number) => {

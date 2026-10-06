@@ -6,17 +6,32 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import BottomNav from "./components/BottomNav";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { IN_CITY_RIDES_ENABLED, AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED } from "@/lib/launchConfig";
 
 /* Per MOVO Team: selecting a service goes STRAIGHT to address entry — no
    intermediate "here's the service, tap Book now" screen in between. Safe
    Ride keeps its own page since it's a substantive explainer (how it works,
    two-chauffeur flow), not a single-button interstitial. */
-const services = [
-  { id: 1, title: "In-City Rides",    desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",     href: "/home/pickup" },
-  { id: 2, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/pickup?mode=airport" },
-  { id: 3, title: "Hourly Chauffeur", desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",      href: "/home/pickup?mode=hourly" },
-  { id: 4, title: "Safe Ride",        desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",     href: "/home/care-ride" },
+/* Launch scope (lib/launchConfig.ts): switched-off services are hidden */
+const ALL_SERVICES = [
+  { id: 1, title: "In-City Rides",    desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",     href: "/home/pickup",              enabled: IN_CITY_RIDES_ENABLED },
+  { id: 2, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/pickup?mode=airport", enabled: AIRPORT_TRANSFER_ENABLED },
+  { id: 3, title: "Hourly Chauffeur", desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",      href: "/home/pickup?mode=hourly",  enabled: HOURLY_CHARTER_ENABLED },
+  { id: 4, title: "Safe Ride",        desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",     href: "/home/care-ride",           enabled: true },
 ];
+const services = ALL_SERVICES.filter((s) => s.enabled);
+
+/* "Where to?" books an In-City ride, or a Safe Ride if In-City is switched off */
+const WHERE_TO_HREF = IN_CITY_RIDES_ENABLED ? "/home/pickup" : "/home/pickup?service=care";
+
+const ALL_PROMOS = [
+  { title: "Luxury travel",      desc: "Private, discreet rides in a class of their own.",   img: "/images/slider card 1.png", imgClass: "object-cover",              enabled: true },
+  { title: "The ease of travel", desc: "Hourly chauffeur, airport transfer & Care Ride.",    img: "/images/Group 6.png",       imgClass: "object-cover",              enabled: AIRPORT_TRANSFER_ENABLED && HOURLY_CHARTER_ENABLED },
+  { title: "Safe Ride",          desc: "We drive you and your car home safely.",             img: "/images/Group 6.png",       imgClass: "object-cover",              enabled: !(AIRPORT_TRANSFER_ENABLED && HOURLY_CHARTER_ENABLED) },
+  { title: "In-City Rides",      desc: "Cruise the city in comfort and class.",              img: "/images/home banner.png",   imgClass: "object-cover",              enabled: IN_CITY_RIDES_ENABLED },
+  { title: "Airport Transfer",   desc: "From doorstep to departure gate—effortlessly.",      img: "/images/slider card 1.png", imgClass: "object-cover object-right", enabled: AIRPORT_TRANSFER_ENABLED },
+];
+const promos = ALL_PROMOS.filter((p) => p.enabled);
 
 export default function HomePage() {
   const router = useRouter();
@@ -53,7 +68,7 @@ export default function HomePage() {
             {/* Animated gradient border wrapper */}
             <div className="search-bar-border" style={{ boxShadow: "0 0 18px rgba(198,191,178,0.35), 0 4px 20px rgba(0,0,0,0.4)" }}>
               <div
-                onClick={() => router.push("/home/pickup")}
+                onClick={() => router.push(WHERE_TO_HREF)}
                 role="button"
                 className="flex items-center px-5 py-3 rounded-full gap-3 cursor-pointer no-hover-fx"
                 style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
@@ -65,7 +80,7 @@ export default function HomePage() {
                   type="text"
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                  onFocus={() => router.push("/home/pickup")}
+                  onFocus={() => router.push(WHERE_TO_HREF)}
                   readOnly
                   placeholder="Where to?"
                   className="flex-1 bg-transparent text-white text-[15px] font-medium placeholder-white/60 focus:outline-none cursor-pointer"
@@ -140,42 +155,16 @@ export default function HomePage() {
         <div className="mt-5">
           <p className="text-[16px] font-bold text-gray-900 mb-3 px-4">Explore</p>
           <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 pb-2">
-            {/* Card 1 */}
-            <div className="relative rounded-xl overflow-hidden h-44 shrink-0 snap-start w-[72%] sm:w-[32%] lg:w-[23%]">
-              <Image src="/images/slider card 1.png" alt="Luxury travel" fill className="object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-3 right-2">
-                <p className="text-white text-[13px] font-bold leading-tight">Luxury travel</p>
-                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Private, discreet rides in a class of their own.</p>
+            {promos.map((p) => (
+              <div key={p.title} className="relative rounded-xl overflow-hidden h-44 shrink-0 snap-start w-[72%] sm:w-[32%] lg:w-[23%]">
+                <Image src={p.img} alt={p.title} fill className={p.imgClass} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-3 left-3 right-2">
+                  <p className="text-white text-[13px] font-bold leading-tight">{p.title}</p>
+                  <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">{p.desc}</p>
+                </div>
               </div>
-            </div>
-            {/* Card 2 */}
-            <div className="relative rounded-xl overflow-hidden h-44 shrink-0 snap-start w-[72%] sm:w-[32%] lg:w-[23%]">
-              <Image src="/images/Group 6.png" alt="The ease of travel" fill className="object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-3 right-2">
-                <p className="text-white text-[13px] font-bold leading-tight">The ease of travel</p>
-                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Hourly chauffeur, airport transfer & Care Ride.</p>
-              </div>
-            </div>
-            {/* Card 3 */}
-            <div className="relative rounded-xl overflow-hidden h-44 shrink-0 snap-start w-[72%] sm:w-[32%] lg:w-[23%]">
-              <Image src="/images/home banner.png" alt="City rides" fill className="object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-3 right-2">
-                <p className="text-white text-[13px] font-bold leading-tight">In-City Rides</p>
-                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">Cruise the city in comfort and class.</p>
-              </div>
-            </div>
-            {/* Card 4 */}
-            <div className="relative rounded-xl overflow-hidden h-44 shrink-0 snap-start w-[72%] sm:w-[32%] lg:w-[23%]">
-              <Image src="/images/slider card 1.png" alt="Airport transfer" fill className="object-cover object-right" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-              <div className="absolute bottom-3 left-3 right-2">
-                <p className="text-white text-[13px] font-bold leading-tight">Airport Transfer</p>
-                <p className="text-gray-300 text-[12px] mt-0.5 leading-tight">From doorstep to departure gate—effortlessly.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

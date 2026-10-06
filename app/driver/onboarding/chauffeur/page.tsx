@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { VEHICLE_RENTAL_ENABLED } from "@/lib/launchConfig";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface DocState { fileName: string; uploaded: boolean }
@@ -248,7 +249,8 @@ export default function ChauffeurOnboardingPage() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [driverName, setDriverName] = useState("Chauffeur");
-  const [vehicleOption, setVehicleOption] = useState<"OWN" | "RENT" | "">("");
+  /* With vehicle rental switched off, every chauffeur brings their own vehicle */
+  const [vehicleOption, setVehicleOption] = useState<"OWN" | "RENT" | "">(VEHICLE_RENTAL_ENABLED ? "" : "OWN");
 
   const [form, setForm] = useState<FormData>({
     dob: "", licenseNumber: "",
@@ -279,7 +281,7 @@ export default function ChauffeurOnboardingPage() {
           const o = data.onboarding;
           if (o.currentStep > 1) setStep(o.currentStep);
           if (o.submittedAt) setSubmitted(true);
-          if (o.vehicleOption) setVehicleOption(o.vehicleOption);
+          if (o.vehicleOption) setVehicleOption(VEHICLE_RENTAL_ENABLED ? o.vehicleOption : "OWN");
           setForm(prev => ({
             ...prev,
             dob:             o.dob             ?? "",
@@ -553,13 +555,15 @@ export default function ChauffeurOnboardingPage() {
                 title="I Have My Own Vehicle"
                 description="Provide your vehicle details and documents for verification."
               />
-              <OptionCard
-                selected={vehicleOption === "RENT"}
-                onClick={() => setVehicleOption("RENT")}
-                icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><circle cx="8" cy="15" r="4" /><path d="M10.5 12.5L19 4l2 2-1.5 1.5L21 9l-2.5 2.5-2-2L15 11" /></svg>}
-                title="Rent a Vehicle from Movo"
-                description="No car of your own? Rent an approved vehicle from Movo once your application is approved."
-              />
+              {VEHICLE_RENTAL_ENABLED && (
+                <OptionCard
+                  selected={vehicleOption === "RENT"}
+                  onClick={() => setVehicleOption("RENT")}
+                  icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><circle cx="8" cy="15" r="4" /><path d="M10.5 12.5L19 4l2 2-1.5 1.5L21 9l-2.5 2.5-2-2L15 11" /></svg>}
+                  title="Rent a Vehicle from Movo"
+                  description="No car of your own? Rent an approved vehicle from Movo once your application is approved."
+                />
+              )}
             </div>
 
             {vehicleOption === "OWN" && (

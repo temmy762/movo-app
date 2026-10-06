@@ -18,8 +18,10 @@ export async function POST(req: NextRequest) {
 
     /* Attach Stripe customer if user is authenticated */
     let customerId: string | undefined;
+    let userId: string | undefined;
     try {
       const session = await getSession(req);
+      userId = session?.userId ?? undefined;
       if (session?.userId) {
         const user = await prisma.user.findUnique({
           where: { id: session.userId },
@@ -43,6 +45,8 @@ export async function POST(req: NextRequest) {
         amount: Math.round(amount * 100),
         currency: "cad",
         automatic_payment_methods: { enabled: true },
+        /* Lets booking creation prove this rider owns the payment */
+        ...(userId ? { metadata: { userId } } : {}),
         /* Save the card to the customer for future bookings + mid-ride charges
            (additional stops). Without this, cards were never attached and the
            "saved payment methods" list stayed empty forever. */

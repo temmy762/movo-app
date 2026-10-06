@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED } from "@/lib/launchConfig";
 
 type FilterState = {
   vehicleClass: string[];
@@ -93,6 +94,9 @@ function FilterPanel({
           <div className="h-px bg-gray-100 mt-1" />
         </div>
 
+        {/* Airport and hourly filters only apply while those services are on */}
+        {(AIRPORT_TRANSFER_ENABLED || HOURLY_CHARTER_ENABLED) && (
+          <>
         {/* Location */}
         <div className="mb-4">
           <p className="text-[13px] font-bold text-gray-800 mb-1">Location</p>
@@ -109,6 +113,8 @@ function FilterPanel({
             <CheckRow key={r} label={r} checked={filters.rideType.includes(r)} onChange={() => toggle("rideType", r)} />
           ))}
         </div>
+          </>
+        )}
       </div>
 
       <div className="px-4 py-4 border-t border-gray-100">

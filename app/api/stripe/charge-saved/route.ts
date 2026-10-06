@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       confirm: true,
       off_session: false,
       automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+      metadata: { userId: session.userId },
     });
 
     return NextResponse.json({

@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { saveBookingDraft, getBookingDraft, clearBookingDraft } from "@/lib/booking-draft";
 import { useJsApiLoader, Autocomplete as GPlacesAuto } from "@react-google-maps/api";
+import { IN_CITY_RIDES_ENABLED, AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED, VEHICLE_RENTAL_ENABLED } from "@/lib/launchConfig";
 
 const GMAPS_KEY  = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const GMAPS_LIBS: ("places")[] = ["places"];
@@ -33,7 +34,7 @@ const WHY_ITEMS = [
 ];
 
 const HOW_IT_WORKS = [
-  { step: "01", title: "Choose your service",   desc: "Select Standard, Executive, Concierge, or Safe Ride from the booking widget." },
+  { step: "01", title: "Choose your service",   desc: IN_CITY_RIDES_ENABLED ? "Select Standard, Executive, Concierge, or Safe Ride from the booking widget." : "Choose Book Now for an immediate pickup, or Reserve Ride to schedule ahead." },
   { step: "02", title: "Enter trip details",    desc: "Set your pickup and destination. Our system calculates the fare instantly." },
   { step: "03", title: "Review & pay securely", desc: "Confirm the price breakdown and pay via card, Apple Pay, or Google Pay." },
   { step: "04", title: "Your chauffeur arrives", desc: "Track your driver live. Sit back and enjoy the ride." },
@@ -41,19 +42,19 @@ const HOW_IT_WORKS = [
 
 const RIDE_TIERS = [
   {
-    label: "Standard", img: "/images/movo classic.png", from: 18, href: "/home/pickup?tier=classic",
+    standard: true, label: "Standard", img: "/images/movo classic.png", from: 18, href: "/home/pickup?tier=classic",
     desc: "Reliable, comfortable rides for everyday travel.",
     specs: [["user", "1–4 passengers"], ["bag", "2 suitcases"], ["clock", "30 min advance booking"]],
     premium: false,
   },
   {
-    label: "Executive", img: "/images/movo premium.png", from: 25, href: "/home/pickup?tier=premium",
+    standard: true, label: "Executive", img: "/images/movo premium.png", from: 25, href: "/home/pickup?tier=premium",
     desc: "More space, more comfort, perfect for business or leisure.",
     specs: [["user", "1–4 passengers"], ["bag", "3 suitcases"], ["clock", "30 min advance booking"]],
     premium: false,
   },
   {
-    label: "Concierge", img: "/images/prive black.png", from: 35, href: "/home/pickup?tier=black",
+    standard: true, label: "Concierge", img: "/images/prive black.png", from: 35, href: "/home/pickup?tier=black",
     desc: "Top-tier luxury with refined vehicles and exceptional service.",
     specs: [["user", "1–3 passengers"], ["bag", "3 suitcases"], ["clock", "30 min advance booking"]],
     premium: false,
@@ -65,6 +66,10 @@ const RIDE_TIERS = [
     premium: true,
   },
 ];
+const rideTiers = RIDE_TIERS.filter((t) => IN_CITY_RIDES_ENABLED || !("standard" in t));
+
+/* Booking-widget tabs whose service is switched on (Safe Ride always is) */
+const TAB_ENABLED = { oneway: IN_CITY_RIDES_ENABLED, hourly: HOURLY_CHARTER_ENABLED, airport: AIRPORT_TRANSFER_ENABLED, care: true } as const;
 
 const FAQS = [
   { q: "What is Safe Ride?",         a: "Safe Ride sends two professional chauffeurs to your location. The primary driver takes the wheel of your own vehicle and drives you home, while the support driver follows in a Movo car to return both chauffeurs. You keep your car, you arrive safely." },
@@ -124,7 +129,7 @@ export default function LandingPage() {
   const router = useRouter();
   const [pickup,  setPickup]  = useState("");
   const [dropoff, setDropoff] = useState("");
-  const [tab,     setTab]     = useState<"oneway" | "hourly" | "airport" | "care">("oneway");
+  const [tab,     setTab]     = useState<"oneway" | "hourly" | "airport" | "care">(IN_CITY_RIDES_ENABLED ? "oneway" : "care");
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [chauffeursMenuOpen, setChauffeursMenuOpen] = useState(false);
@@ -178,7 +183,7 @@ export default function LandingPage() {
   const restoreDraft = () => {
     const draft = getBookingDraft();
     if (!draft) return;
-    setTab(draft.tab);
+    setTab(TAB_ENABLED[draft.tab] ? draft.tab : "care");
     setPickup(draft.pickup);
     setDropoff(draft.dropoff);
     setDate(draft.date);
@@ -279,6 +284,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-8">
             <a href="#services"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">Services</a>
             <a href="#services" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Business</a>
+            {VEHICLE_RENTAL_ENABLED ? (
             <div className="relative"
               onMouseEnter={() => setChauffeursMenuOpen(true)}
               onMouseLeave={() => setChauffeursMenuOpen(false)}>
@@ -301,6 +307,9 @@ export default function LandingPage() {
                 </div>
               )}
             </div>
+            ) : (
+              <a href="#chauffeurs" className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">For Chauffeurs</a>
+            )}
             <a href="#why-movo"  className="text-[13px] font-medium text-white/70 hover:text-white transition-colors">About Us</a>
           </div>
 
@@ -323,7 +332,9 @@ export default function LandingPage() {
             <a href="#services" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">Services</a>
             <a href="#services" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Business</a>
             <a href="#chauffeurs" onClick={() => setNavOpen(false)} className="text-left text-[14px] font-medium text-white/70 py-1">For Chauffeurs</a>
-            <Link href="/driver/onboarding" onClick={() => setNavOpen(false)} className="text-left text-[13px] font-medium text-white/50 py-1 pl-4">↳ Rent a Car</Link>
+            {VEHICLE_RENTAL_ENABLED && (
+              <Link href="/driver/onboarding" onClick={() => setNavOpen(false)} className="text-left text-[13px] font-medium text-white/50 py-1 pl-4">↳ Rent a Car</Link>
+            )}
             <a href="#why-movo" onClick={() => setNavOpen(false)} className="text-[14px] font-medium text-white/70 py-1">About Us</a>
             <Link href="/auth/select" className="text-[14px] font-medium text-white/70 py-1">Sign in</Link>
           </div>
@@ -368,11 +379,11 @@ export default function LandingPage() {
             {/* Tabs */}
             <div className="flex border-b border-white/10">
               {([
-                { key: "oneway",  label: "One Way" },
+                { key: "oneway",  label: "In-City Ride" },
                 { key: "hourly",  label: "Hourly" },
                 { key: "airport", label: "Airport Transfer" },
                 { key: "care",    label: "Safe Ride", badge: "New" },
-              ] as const).map(t => (
+              ] as const).filter(t => TAB_ENABLED[t.key]).map(t => (
                 <button key={t.key} onClick={() => setTab(t.key)}
                   className="flex-1 py-3 text-[11px] font-semibold transition-colors relative"
                   style={{ color: tab === t.key ? "white" : "rgba(255,255,255,0.4)", borderBottom: tab === t.key ? `2px solid ${GOLD}` : "2px solid transparent" }}>
@@ -598,12 +609,12 @@ export default function LandingPage() {
       <section id="services" className="py-20 px-5 md:px-10 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <SectionLabel>Ride Tiers</SectionLabel>
-            <SectionHeading>Choose the experience that suits you</SectionHeading>
+            <SectionLabel>{IN_CITY_RIDES_ENABLED ? "Ride Tiers" : "Our Service"}</SectionLabel>
+            <SectionHeading>{IN_CITY_RIDES_ENABLED ? "Choose the experience that suits you" : "You, and your car, home safely"}</SectionHeading>
             <p className="text-gray-500 text-[14px] mt-3">All rides include professional chauffeurs, premium vehicles, and real-time tracking.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {RIDE_TIERS.map(f => (
+          <div className={rideTiers.length === 1 ? "grid grid-cols-1 gap-5 max-w-sm mx-auto" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"}>
+            {rideTiers.map(f => (
               <div key={f.label} className="rounded-2xl overflow-hidden flex flex-col border"
                 style={f.premium
                   ? { background: "linear-gradient(160deg,#0A0A0F 0%,#131936 70%)", borderColor: "rgba(198,191,178,0.4)" }
@@ -752,6 +763,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── AIRPORT TRANSFER HIGHLIGHT ── */}
+      {AIRPORT_TRANSFER_ENABLED && (
       <section className="py-20 px-5 md:px-10 bg-white">
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div className="order-2 md:order-1 rounded-3xl overflow-hidden h-64 relative bg-gray-100">
@@ -771,6 +783,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── MOVO CARE HIGHLIGHT ── */}
       <section className="py-20 px-5 md:px-10" style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
@@ -833,11 +846,24 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <SectionLabel>For Chauffeurs</SectionLabel>
-            <SectionHeading>Drive with Movo —<br />no car? Rent one.</SectionHeading>
-            <p className="text-gray-500 text-[14px] leading-relaxed mt-4 max-w-2xl mx-auto">
-              Approved chauffeurs who don&apos;t have a qualifying vehicle can rent one directly from Movo — daily, weekly, or monthly — and start accepting trips as soon as it&apos;s assigned.
-            </p>
+            {VEHICLE_RENTAL_ENABLED ? (
+              <>
+                <SectionHeading>Drive with Movo —<br />no car? Rent one.</SectionHeading>
+                <p className="text-gray-500 text-[14px] leading-relaxed mt-4 max-w-2xl mx-auto">
+                  Approved chauffeurs who don&apos;t have a qualifying vehicle can rent one directly from Movo — daily, weekly, or monthly — and start accepting trips as soon as it&apos;s assigned.
+                </p>
+              </>
+            ) : (
+              <>
+                <SectionHeading>Drive with Movo</SectionHeading>
+                <p className="text-gray-500 text-[14px] leading-relaxed mt-4 max-w-2xl mx-auto">
+                  Join Movo&apos;s network of professional chauffeurs. Apply online, complete your verification and training, and start accepting Safe Ride trips once you&apos;re approved.
+                </p>
+              </>
+            )}
           </div>
+          {VEHICLE_RENTAL_ENABLED && (
+            <>
           <div className="grid md:grid-cols-2 gap-5 mb-8">
             {[
               { path: "M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10", label: "Commercial-use approved" },
@@ -857,6 +883,8 @@ export default function LandingPage() {
           <p className="text-center text-[12px] text-gray-400 mb-8">
             Vehicles must be returned clean. Full rental terms are shown when requesting a vehicle from your chauffeur dashboard.
           </p>
+            </>
+          )}
           <div className="flex flex-wrap gap-3 justify-center">
             <Link href="/driver/onboarding/type" className="inline-block px-6 py-3 rounded-full text-white font-bold text-[13px]"
               style={{ background: `linear-gradient(135deg,${DARK},${NAVY})` }}>
@@ -864,7 +892,7 @@ export default function LandingPage() {
             </Link>
             <Link href="/driver/onboarding/login" className="inline-block px-6 py-3 rounded-full font-bold text-[13px] border"
               style={{ borderColor: NAVY, color: NAVY }}>
-              Sign In to Rent a Vehicle
+              {VEHICLE_RENTAL_ENABLED ? "Sign In to Rent a Vehicle" : "Chauffeur Sign In"}
             </Link>
           </div>
         </div>
@@ -944,9 +972,15 @@ export default function LandingPage() {
           <div>
             <p className="text-white font-semibold text-[13px] mb-4">Services</p>
             <div className="flex flex-col gap-2">
-              <Link href="/home/pickup?tier=classic" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">In-City Rides</Link>
-              <Link href="/home/pickup?tier=all&mode=airport" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Airport Transfer</Link>
-              <Link href="/home/pickup?tier=all&mode=hourly" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Hourly Chauffeur</Link>
+              {IN_CITY_RIDES_ENABLED && (
+                <Link href="/home/pickup?tier=classic" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">In-City Rides</Link>
+              )}
+              {AIRPORT_TRANSFER_ENABLED && (
+                <Link href="/home/pickup?tier=all&mode=airport" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Airport Transfer</Link>
+              )}
+              {HOURLY_CHARTER_ENABLED && (
+                <Link href="/home/pickup?tier=all&mode=hourly" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Hourly Chauffeur</Link>
+              )}
               <Link href="/home/care-ride" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Safe Ride</Link>
             </div>
           </div>

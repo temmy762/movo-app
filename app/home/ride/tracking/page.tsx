@@ -28,9 +28,8 @@ function RideTrackingContent() {
   const bookingIdParam = searchParams.get("bookingId") || null;
   const paidFlag       = searchParams.get("paid");
   const intentId       = searchParams.get("intentId");
-  const farePm         = searchParams.get("fare");
-  const serviceFeePm   = searchParams.get("serviceFee");
-  const totalPm        = searchParams.get("total");
+  const quotePm        = searchParams.get("quote");
+  const isCareReturn   = searchParams.get("service") === "care";
   const scheduledAtPm  = searchParams.get("scheduledAt") || "";
 
   const [bookingId, setBookingId] = useState<string | null>(bookingIdParam);
@@ -176,25 +175,25 @@ function RideTrackingContent() {
   /* ── 3DS redirect: no bookingId yet — create booking as PAID from URL params ── */
   useEffect(() => {
     if (paidFlag !== "1" || bookingId) return;
-    if (!intentId || !farePm || !totalPm) return;
+    if (!intentId || !quotePm) return;
     const resolvedT = tier.toLowerCase() || "classic";
-    fetch("/api/bookings", {
+    /* Safe Ride bookings must go through the Care route, or they'd be created
+       as standard rides (and refused while standard rides are switched off) */
+    fetch(isCareReturn ? "/api/bookings/care" : "/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        clientName: "Guest",
-        pickup, dropoff,
-        carTier: resolvedT, carName: car,
-        fare: parseFloat(farePm),
-        serviceFee: parseFloat(serviceFeePm ?? "0"),
-        total: parseFloat(totalPm),
-        paymentStatus: "PAID",
+        pickup, dropoff, quote: quotePm,
+        ...(isCareReturn ? {} : { carTier: resolvedT, carName: car }),
         stripePaymentIntentId: intentId,
         ...(scheduledAtPm ? { scheduledAt: scheduledAtPm } : {}),
       }),
     })
       .then(r => r.json())
-      .then(data => { if (data?.id) setBookingId(data.id); })
+      .then(data => {
+        const id = isCareReturn ? data?.bookingId : data?.id;
+        if (id) setBookingId(id);
+      })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

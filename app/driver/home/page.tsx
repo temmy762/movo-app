@@ -7,6 +7,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
+import { VEHICLE_RENTAL_ENABLED } from "@/lib/launchConfig";
 
 const DriverMap = dynamic(() => import("./DriverMap"), { ssr: false, loading: () => <div className="absolute inset-0" style={{ background: "#1a1e3c" }} /> });
 
@@ -201,12 +202,14 @@ export default function DriverHomePage() {
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (Array.isArray(d)) setReserved(d); })
       .catch(() => {});
-    fetch("/api/driver/rental")
-      .then((r) => r.ok ? r.json() : null)
-      /* Available to every chauffeur, not just vehicle-less ones — only
-         suppressed while they already have an open request/active rental. */
-      .then((d) => { if (d) setRentalPrompt(!d.active); })
-      .catch(() => {});
+    if (VEHICLE_RENTAL_ENABLED) {
+      fetch("/api/driver/rental")
+        .then((r) => r.ok ? r.json() : null)
+        /* Available to every chauffeur, not just vehicle-less ones — only
+           suppressed while they already have an open request/active rental. */
+        .then((d) => { if (d) setRentalPrompt(!d.active); })
+        .catch(() => {});
+    }
   }, []);
 
   /* Poll for unclaimed SCHEDULED requests while the chauffeur is OFFLINE and
@@ -1829,7 +1832,9 @@ export default function DriverHomePage() {
                 { label: "Inbox",   href: "/driver/home/news",    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7L22 6"/></svg> },
                 { label: "Report Found Item", href: "/driver/home/report-found-item", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> },
                 { label: "Profile", href: "/driver/home/profile", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> },
-              ] as { label: string; href: string; icon: React.ReactNode }[]).map(item => (
+              ] as { label: string; href: string; icon: React.ReactNode }[])
+                .filter(item => VEHICLE_RENTAL_ENABLED || item.href !== "/driver/home/rentals")
+                .map(item => (
                 <button
                   key={item.href}
                   className="no-hover-fx flex items-center gap-3 px-3 py-2.5 rounded-xl text-left w-full"

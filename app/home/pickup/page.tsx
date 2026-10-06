@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
+import { IN_CITY_RIDES_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
 
 const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
 
@@ -21,7 +22,8 @@ function PickupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier    = searchParams.get("tier")    ?? "all";
-  const service = searchParams.get("service") ?? "";
+  /* With In-City switched off, every trip booked from here is a Safe Ride */
+  const service = IN_CITY_RIDES_ENABLED ? (searchParams.get("service") ?? "") : "care";
 
   const { isLoaded } = useJsApiLoader({
     id: "movo-google-maps",
@@ -176,7 +178,7 @@ function PickupContent() {
        After the address screen, EVERY standard booking lands on available-cars
        — the tier list with live per-trip pricing — where the rider chooses
        exactly once. (Care Ride keeps its dedicated shortcut above.) */
-    const mode = searchParams.get("mode");
+    const mode = allowedBookingMode(searchParams.get("mode"));
     const params = new URLSearchParams({
       tier, pickup, dropoff,
       ...schedule,

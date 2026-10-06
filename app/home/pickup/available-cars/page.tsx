@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { IN_CITY_RIDES_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
 
 const TIER_IMAGES: Record<string, string> = {
   classic: "/images/movo classic.png",
@@ -26,6 +27,7 @@ const FALLBACK_MIN_FARES: Record<string, number> = {
   classic: 18,
   premium: 25,
   black:   35,
+  care:    129,
 };
 
 const TIERS = ["classic", "premium", "black"] as const;
@@ -36,7 +38,7 @@ function AvailableCarsContent() {
   const pickup      = searchParams.get("pickup")  ?? "";
   const dropoff     = searchParams.get("dropoff") ?? "";
   const service     = searchParams.get("service") ?? "";
-  const mode        = searchParams.get("mode")    ?? "";
+  const mode        = allowedBookingMode(searchParams.get("mode"));
   const date        = searchParams.get("date")    ?? "";
   const time        = searchParams.get("time")    ?? "";
   const passengers  = searchParams.get("passengers") ?? "";
@@ -52,10 +54,13 @@ function AvailableCarsContent() {
   /* Instant fare estimates — one per tier as soon as pickup + dropoff are known
      (or hourly mode, which needs no destination). Uses admin-configured rates. */
   useEffect(() => {
+    if (!IN_CITY_RIDES_ENABLED) return;
     if (!pickup || (!dropoff && mode !== "hourly")) return;
     let stale = false;
+    /* Safe Ride arrivals also need the Safe Ride ("care") price for its card */
+    const tiers: string[] = isCare ? [...TIERS, "care"] : [...TIERS];
     Promise.all(
-      TIERS.map(t => {
+      tiers.map(t => {
         const p = new URLSearchParams({ pickup, dropoff, tier: t });
         if (mode === "hourly") p.set("mode", "hourly");
         return fetch(`/api/bookings/estimate?${p.toString()}`)
@@ -72,7 +77,7 @@ function AvailableCarsContent() {
       setTierEstimates(next);
     });
     return () => { stale = true; };
-  }, [pickup, dropoff, mode]);
+  }, [pickup, dropoff, mode, isCare]);
 
   const anyEstimate = tierEstimates.classic ?? tierEstimates.premium ?? tierEstimates.black;
 
@@ -121,6 +126,22 @@ function AvailableCarsContent() {
     if (passengers) params.set("passengers", passengers);
     router.push(`/home/ride/confirm?${params.toString()}`);
   };
+
+  /* With In-City switched off there are no tiers to pick, so go straight to
+     the Safe Ride review screen with whatever trip details were carried here. */
+  useEffect(() => {
+    if (IN_CITY_RIDES_ENABLED) return;
+    const params = new URLSearchParams({ pickup, dropoff, service: "care", tier: "care", car: "Safe Ride" });
+    if (date)       params.set("date", date);
+    if (time)       params.set("time", time);
+    if (passengers) params.set("passengers", passengers);
+    router.replace(`/home/ride/confirm?${params.toString()}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!IN_CITY_RIDES_ENABLED) {
+    return <div className="min-h-screen bg-white" />;
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: "var(--font-body)" }}>
@@ -188,7 +209,7 @@ function AvailableCarsContent() {
                           {tierEstimates.care ? (
                             <span className="text-[11px] text-white/70 font-medium">~${tierEstimates.care.total.toFixed(2)} est.</span>
                           ) : (
-                            <span className="text-[11px] text-white/70 font-medium">From ${minFares["black"]}</span>
+                            <span className="text-[11px] text-white/70 font-medium">From ${minFares["care"]}</span>
                           )}
                         </div>
                       </div>
