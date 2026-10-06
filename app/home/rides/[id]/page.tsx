@@ -193,7 +193,7 @@ function BookingDetailContent() {
               <div className="px-5 py-4 border-b border-gray-100 flex flex-col gap-2">
                 <p className="text-[12px] font-bold text-gray-400 uppercase tracking-wider mb-1">Fare Breakdown</p>
                 <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-600">Ride Fare</span>
+                  <span className="text-gray-600">{booking.bookingType === "CARE" ? "Safe Ride fare" : "Ride Fare"}</span>
                   <span className="font-semibold text-gray-900">${booking.fare.toFixed(2)}</span>
                 </div>
                 {(booking.additionalStopFee ?? 0) > 0 && (
@@ -208,10 +208,12 @@ function BookingDetailContent() {
                     <span className="font-semibold text-gray-900">+${booking.airportFee!.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-gray-600">Service Fee</span>
-                  <span className="font-semibold text-gray-900">${booking.serviceFee.toFixed(2)}</span>
-                </div>
+                {booking.serviceFee > 0 && (
+                  <div className="flex justify-between text-[13px]">
+                    <span className="text-gray-600">Service Fee</span>
+                    <span className="font-semibold text-gray-900">${booking.serviceFee.toFixed(2)}</span>
+                  </div>
+                )}
                 {(booking.gst ?? 0) > 0 && (
                   <div className="flex justify-between text-[13px]">
                     <span className="text-gray-600">GST</span>

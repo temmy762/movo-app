@@ -15,6 +15,27 @@ type GlobalConfig = {
   freeWaitingMinutes: number; waitingRatePerMin: number;
 };
 
+type SafeRideConfig = {
+  id?: string;
+  returnBaseFare: number; returnPerKm: number; returnPerMin: number;
+  returnBookingFee: number; returnMinimum: number;
+  returnBufferRate: number; lateNightBufferRate: number;
+  lateNightStartHour: number; lateNightEndHour: number;
+  demandMultiplier: number;
+  chauffeurPayoutRate: number; supportPayout: number;
+  freeWaitingMinutes: number; waitingRatePerMin: number;
+  defaultReturnMode: string;
+};
+
+const SAFE_RIDE_FALLBACK: SafeRideConfig = {
+  returnBaseFare: 3.5, returnPerKm: 0.9, returnPerMin: 0.3, returnBookingFee: 2.5, returnMinimum: 10,
+  returnBufferRate: 0.15, lateNightBufferRate: 0.10, lateNightStartHour: 22, lateNightEndHour: 6,
+  demandMultiplier: 1, chauffeurPayoutRate: 0.70, supportPayout: 40,
+  freeWaitingMinutes: 3, waitingRatePerMin: 1, defaultReturnMode: "UBER",
+};
+
+const hourLabel = (h: number) => `${((h + 11) % 12) + 1}:00 ${h < 12 ? "AM" : "PM"}`;
+
 function Field({ label, value, onChange, step = "0.01", prefix = "$", suffix = "" }: {
   label: string; value: number; onChange: (v: number) => void;
   step?: string; prefix?: string; suffix?: string;
@@ -51,6 +72,7 @@ export default function PricingPage() {
     gstRate: 0.05, serviceFeeRate: 0.12, additionalStopFee: 5,
     airportPickupFee: 10, freeWaitingMinutes: 5, waitingRatePerMin: 0.75,
   });
+  const [safeRide, setSafeRide] = useState<SafeRideConfig>(SAFE_RIDE_FALLBACK);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
@@ -63,6 +85,7 @@ export default function PricingPage() {
       .then(d => {
         if (d.tiers) setTiers(d.tiers);
         if (d.global) setGlobal(d.global);
+        if (d.safeRide) setSafeRide(d.safeRide);
       })
       .catch(() => setError("Failed to load pricing config."))
       .finally(() => setLoading(false));
@@ -81,7 +104,7 @@ export default function PricingPage() {
     const res = await fetch("/api/admin/pricing", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tiers, global }),
+      body: JSON.stringify({ tiers, global, safeRide }),
     });
     if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 3000); }
     else setError("Failed to save. Please try again.");
@@ -186,6 +209,102 @@ export default function PricingPage() {
             />
           </div>
         </div>
+
+        {/* Safe Ride pricing engine */}
+        {(() => {
+          const sr = safeRide;
+          const set = (k: keyof SafeRideConfig, v: number | string) => setSafeRide(p => ({ ...p, [k]: v }));
+          const pct = (k: keyof SafeRideConfig) => ({
+            value: +((sr[k] as number) * 100).toFixed(2),
+            onChange: (v: number) => set(k, v / 100),
+            prefix: "", suffix: "%", step: "0.5",
+          });
+          const care = tiers.find(t => t.tier === "care");
+          /* Example: 12 km / 18 min trip, same route back */
+          const preview = (lateNight: boolean) => {
+            const service = care ? Math.max(care.minFare, care.baseFare + 12 * care.ratePerKm + 18 * care.ratePerMin) : 0;
+            const back    = Math.max(sr.returnMinimum, sr.returnBaseFare + 12 * sr.returnPerKm + 18 * sr.returnPerMin + sr.returnBookingFee);
+            const rla     = back * (1 + sr.returnBufferRate + (lateNight ? sr.lateNightBufferRate : 0)) * Math.max(1, sr.demandMultiplier);
+            const fare    = service + rla;
+            const gst     = fare * global.gstRate;
+            return { service, back, rla, fare, gst, total: fare + gst, payout: service * sr.chauffeurPayoutRate, movo: service * (1 - sr.chauffeurPayoutRate) };
+          };
+          return (
+            <>
+              <h2 className="text-[14px] font-bold text-gray-700 mt-8 mb-1 uppercase tracking-wider">Safe Ride</h2>
+              <p className="text-[12px] text-gray-400 mb-3">
+                Fare = service portion (Safe Ride tier rates above, ${care?.minFare ?? 129} minimum) + Return Logistics Allowance + GST. No service fee.
+              </p>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5 flex flex-col gap-6">
+                <div>
+                  <p className="text-[13px] font-bold text-gray-800 mb-1">Return Logistics Allowance</p>
+                  <p className="text-[11px] text-gray-400 mb-3">Estimated Uber cost for the chauffeur&apos;s return (destination → original pickup). Calibrate these from real Uber Central quotes for Winnipeg routes.</p>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <Field label="Uber base fare" value={sr.returnBaseFare} onChange={v => set("returnBaseFare", v)} />
+                    <Field label="Uber per km" value={sr.returnPerKm} onChange={v => set("returnPerKm", v)} suffix="/km" />
+                    <Field label="Uber per minute" value={sr.returnPerMin} onChange={v => set("returnPerMin", v)} suffix="/min" />
+                    <Field label="Uber booking fee" value={sr.returnBookingFee} onChange={v => set("returnBookingFee", v)} />
+                    <Field label="Minimum return" value={sr.returnMinimum} onChange={v => set("returnMinimum", v)} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[13px] font-bold text-gray-800 mb-3">Buffers</p>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <Field label="Base buffer" {...pct("returnBufferRate")} />
+                    <Field label="Late-night extra" {...pct("lateNightBufferRate")} />
+                    <Field label="Late night from (hour 0–23)" value={sr.lateNightStartHour} onChange={v => set("lateNightStartHour", Math.round(v))} prefix="" step="1" />
+                    <Field label="Late night until (hour 0–23)" value={sr.lateNightEndHour} onChange={v => set("lateNightEndHour", Math.round(v))} prefix="" step="1" />
+                    <Field label="High-demand multiplier" value={sr.demandMultiplier} onChange={v => set("demandMultiplier", v)} prefix="×" step="0.05" />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-2">
+                    Late night is {hourLabel(sr.lateNightStartHour)} – {hourLabel(sr.lateNightEndHour)} Winnipeg time, judged on when the return happens.
+                    Set the multiplier above 1 for events or busy periods, then back to 1 afterwards.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-[13px] font-bold text-gray-800 mb-3">Chauffeur pay</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Chauffeur payout" {...pct("chauffeurPayoutRate")} />
+                      <Field label="Support chauffeur payout" value={sr.supportPayout} onChange={v => set("supportPayout", v)} />
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-2">Payout is a % of the service portion (and of waiting charges), locked when the ride is booked. Support payout applies only when Dispatch uses a Support Chauffeur.</p>
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-bold text-gray-800 mb-3">Waiting time &amp; return</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Free waiting" value={sr.freeWaitingMinutes} onChange={v => set("freeWaitingMinutes", Math.round(v))} prefix="" suffix="min" step="1" />
+                      <Field label="Waiting rate" value={sr.waitingRatePerMin} onChange={v => set("waitingRatePerMin", v)} suffix="/min" />
+                    </div>
+                    <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-3 mb-1">New bookings return the chauffeur by</label>
+                    <select value={sr.defaultReturnMode} onChange={e => set("defaultReturnMode", e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936]">
+                      <option value="UBER">Uber (Dispatch books it)</option>
+                      <option value="SUPPORT">Movo Support Chauffeur</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[false, true].map(night => {
+                    const p = preview(night);
+                    return (
+                      <div key={String(night)} className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-[12px]">
+                        <p className="font-bold text-gray-500 mb-2">Example · 12 km / 18 min · {night ? "late night" : "daytime"}</p>
+                        <div className="flex justify-between"><span className="text-gray-500">Service portion</span><span className="font-medium">${p.service.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Return allowance (Uber est. ${p.back.toFixed(2)})</span><span className="font-medium">${p.rla.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">GST</span><span className="font-medium">${p.gst.toFixed(2)}</span></div>
+                        <div className="h-px bg-gray-200 my-1" />
+                        <div className="flex justify-between font-bold"><span>Customer pays</span><span>${p.total.toFixed(2)}</span></div>
+                        <div className="flex justify-between mt-1"><span className="text-gray-500">Chauffeur payout</span><span className="font-medium">${p.payout.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span className="text-gray-500">Movo keeps</span><span className="font-medium">${p.movo.toFixed(2)} + allowance − Uber cost</span></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          );
+        })()}
 
         {/* Pricing Preview */}
         <h2 className="text-[14px] font-bold text-gray-700 mt-8 mb-3 uppercase tracking-wider">Live Preview (10 km · 15 min trip)</h2>

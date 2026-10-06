@@ -19,6 +19,14 @@ export type FareQuote = {
   additionalStopFee: number;
   airportFee: number;
   total: number;
+  /* Safe Ride only: internal breakdown + the chauffeur's locked payout,
+     signed with the price so the booking stores exactly what was quoted */
+  safeRide?: {
+    servicePortion: number;
+    returnAllowance: number;
+    chauffeurPayout: number;
+    snapshot: Record<string, unknown>;
+  };
   exp: number;
 };
 

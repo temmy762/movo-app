@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { computeCareEarning } from "@/lib/earnings";
+import { safeRideEarningFor } from "@/lib/earnings";
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,6 +41,14 @@ export async function GET(req: NextRequest) {
             status: true,
             primaryReadyLat: true,
             primaryReadyLng: true,
+            /* Payout inputs + the Uber return leg (chauffeur sees the booking
+               reference, not what Movo paid for it) */
+            chauffeurPayout: true,
+            waitingFee: true,
+            pricingSnapshot: true,
+            returnMode: true,
+            uberReturnRef: true,
+            uberReturnBookedAt: true,
           },
         },
       },
@@ -95,12 +103,21 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    /* Per-chauffeur Safe Ride payout (net after care commission, split 50/50) */
+    /* This chauffeur's Safe Ride payout — shown before they accept, and the
+       exact amount credited when their part of the job is done */
     const earning = assignment?.booking
-      ? await computeCareEarning(assignment.booking.fare)
+      ? await safeRideEarningFor(assignment.booking, assignment.role as "PRIMARY" | "SUPPORT")
       : 0;
 
-    return NextResponse.json({ assignment: assignment ?? null, coDriver, earning });
+    /* Strip internal pricing fields before sending to the chauffeur */
+    const safeAssignment = assignment
+      ? {
+          ...assignment,
+          booking: { ...assignment.booking, chauffeurPayout: undefined, pricingSnapshot: undefined, waitingFee: undefined, fare: undefined },
+        }
+      : null;
+
+    return NextResponse.json({ assignment: safeAssignment, coDriver, earning });
   } catch (e) {
     console.error("[care driver GET]", e);
     return NextResponse.json({ error: "Failed to fetch assignment" }, { status: 500 });

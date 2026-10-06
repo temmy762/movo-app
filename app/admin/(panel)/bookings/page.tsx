@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import SafeRideManageModal, { needsUberBooking, type SafeRideAdminBooking } from "../components/SafeRideManageModal";
 
 // ── Sparklines ────────────────────────────────────────────────────────────
 function UpWave() {
@@ -642,7 +643,7 @@ type CareBooking = {
   createdAt: string;
   careAssignments: CareAssignmentRow[];
   user?: { firstName: string; lastName: string; email: string; phone: string | null } | null;
-};
+} & Omit<SafeRideAdminBooking, "careAssignments">;
 
 const careStatusColor: Record<string, string> = {
   SEARCHING:  "#d97706",
@@ -650,6 +651,7 @@ const careStatusColor: Record<string, string> = {
   ACCEPTED:   "#0284c7",
   ARRIVED:    "#7c3aed",
   STARTED:    "#059669",
+  AWAITING_RETURN: "#b45309",
   COMPLETED:  "#1e2d45",
   CANCELLED:  "#dc2626",
 };
@@ -666,6 +668,8 @@ function CareBookingsTable() {
   const [confirmModal, setConfirmModal] = useState<{ bookingId: string; action: "force_complete" | "cancel" } | null>(null);
   const [statusFilter, setStatusFilter] = useState<CareStatusFilter>("ALL");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [manageId, setManageId] = useState<string | null>(null);
+  const [returnCostDeduction, setReturnCostDeduction] = useState("");
   const LIMIT = 10;
 
   const load = useCallback((p = page, sf = statusFilter) => {
@@ -692,7 +696,10 @@ function CareBookingsTable() {
       const res = await fetch("/api/admin/care", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, action }),
+        body: JSON.stringify({
+          bookingId, action,
+          ...(action === "cancel" && parseFloat(returnCostDeduction) > 0 ? { returnCostDeduction: parseFloat(returnCostDeduction) } : {}),
+        }),
         signal: controller.signal,
       });
       if (!res.ok) {
@@ -701,6 +708,7 @@ function CareBookingsTable() {
         return;
       }
       setConfirmModal(null);
+      setReturnCostDeduction("");
       await load(page);
     } catch (e) {
       setActionError(e instanceof Error && e.name === "AbortError" ? "Request timed out \u2014 please try again." : "Network error \u2014 please try again.");
@@ -801,6 +809,13 @@ function CareBookingsTable() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {needsUberBooking(b) && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-red-500 animate-pulse">Book Uber</span>
+                      )}
+                      <button onClick={() => setManageId(b.id)}
+                        className="no-hover-fx px-2.5 py-1 rounded-lg text-[10px] font-semibold border border-gray-300 text-gray-700">
+                        Manage
+                      </button>
                       {b.status !== "COMPLETED" && b.status !== "CANCELLED" && (
                         <>
                           {/* Manual driver assignment removed — dispatch is fully automatic.
@@ -860,6 +875,15 @@ function CareBookingsTable() {
                 <p className="text-[11px] text-gray-500 truncate">↑ {b.pickup}</p>
                 <p className="text-[11px] text-gray-500 truncate">↓ {b.dropoff}</p>
               </div>
+              <div className="flex items-center gap-2">
+                {needsUberBooking(b) && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white bg-red-500">Book Uber</span>
+                )}
+                <button onClick={() => setManageId(b.id)}
+                  className="no-hover-fx px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-gray-300 text-gray-700">
+                  Manage
+                </button>
+              </div>
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-bold text-gray-900">${b.total.toFixed(2)}
                   <span className="ml-1.5 text-[11px] font-normal" style={{ color: b.paymentStatus === "PAID" ? "#16a34a" : "#d97706" }}>{b.paymentStatus}</span>
@@ -890,8 +914,15 @@ function CareBookingsTable() {
             <p className="text-[13px] text-gray-500 mb-5">
               {confirmModal.action === "force_complete"
                 ? "This will mark all assignments and the booking as COMPLETED."
-                : "This will cancel all active assignments and the booking."}
+                : "This will cancel all active assignments and the booking. The customer is refunded in full unless you enter a real return cost Movo already paid."}
             </p>
+            {confirmModal.action === "cancel" && (
+              <div className="mb-4">
+                <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Deduct actual return cost (CAD)</label>
+                <input value={returnCostDeduction} onChange={e => setReturnCostDeduction(e.target.value)} placeholder="0.00" inputMode="decimal"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:border-[#131936]" />
+              </div>
+            )}
             {actionError && (
               <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">
                 {actionError}
@@ -913,6 +944,13 @@ function CareBookingsTable() {
           </div>
         </div>
       )}
+
+      {manageId && (() => {
+        const b = rows.find(r => r.id === manageId);
+        return b ? (
+          <SafeRideManageModal booking={b} onClose={() => setManageId(null)} onChanged={() => load(page)} />
+        ) : null;
+      })()}
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">

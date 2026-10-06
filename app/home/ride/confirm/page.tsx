@@ -311,7 +311,7 @@ function ConfirmPayContent() {
     /* Reset payment intent so a fresh one is created for the new fare */
     setClientSecret(null);
     setIntentId(null);
-    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${!isCare && airportPickup}${!isCare && mode === "hourly" ? "&mode=hourly" : ""}`;
+    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${!isCare && airportPickup}${!isCare && mode === "hourly" ? "&mode=hourly" : ""}${isCare && scheduledAt ? `&pickupTime=${encodeURIComponent(scheduledAt)}` : ""}`;
     fetch(url)
       .then((r) => r.json())
       .then((d) => {
@@ -321,7 +321,7 @@ function ConfirmPayContent() {
       .catch(() => setEstimateError("Failed to calculate fare. Please try again."))
       .finally(() => setEstimating(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, dropoff, resolvedTier, stops, airportPickup, retryKey]);
+  }, [pickup, dropoff, resolvedTier, stops, airportPickup, retryKey, scheduledAt]);
 
   /* Step 2 — Once estimate + user ready, create ONLY the payment intent */
   useEffect(() => {
@@ -377,7 +377,7 @@ function ConfirmPayContent() {
           {/* Title */}
           <h1 className="text-center text-[22px] md:text-[28px] font-bold text-gray-900">Confirm &amp; Pay</h1>
           {isCare && (
-            <p className="text-center text-[12px] text-gray-400 mt-1">Safe Ride · Two chauffeurs included</p>
+            <p className="text-center text-[12px] text-gray-400 mt-1">Safe Ride · Your car, our chauffeur</p>
           )}
 
           {/* Care info banner */}
@@ -387,7 +387,7 @@ function ConfirmPayContent() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2" className="shrink-0 mt-0.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               <div>
                 <p className="text-[12px] font-bold text-white mb-0.5">Safe Ride</p>
-                <p className="text-[11px] text-white/60 leading-snug">A primary chauffeur will drive you home in your vehicle. A support chauffeur follows separately and is dispatched once the primary accepts.</p>
+                <p className="text-[11px] text-white/60 leading-snug">A professional chauffeur will meet you and drive you home in your own vehicle.</p>
               </div>
             </div>
           )}
@@ -604,7 +604,7 @@ function ConfirmPayContent() {
             ) : (
               <>
                 <div className="flex justify-between items-center">
-                  <span className="text-[13px] md:text-[14px] text-gray-600">Ride Fare</span>
+                  <span className="text-[13px] md:text-[14px] text-gray-600">{isCare ? "Safe Ride fare" : "Ride Fare"}</span>
                   <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.fare.toFixed(2)}` : "—"}</span>
                 </div>
                 {estimate?.distanceKm != null && (
@@ -625,10 +625,13 @@ function ConfirmPayContent() {
                     <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">+${estimate!.airportFee.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center">
-                  <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee ({Math.round((estimate?.serviceFeeRate ?? 0.12) * 100)}%)</span>
-                  <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}</span>
-                </div>
+                {/* Safe Ride is all-inclusive — no separate service fee */}
+                {!isCare && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee ({Math.round((estimate?.serviceFeeRate ?? 0.12) * 100)}%)</span>
+                    <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}</span>
+                  </div>
+                )}
                 <div className="h-px bg-gray-100 my-0.5" />
                 <div className="flex justify-between items-center">
                   <span className="text-[13px] md:text-[14px] text-gray-600">GST ({Math.round((estimate?.gstRate ?? 0.05) * 100)}%)</span>

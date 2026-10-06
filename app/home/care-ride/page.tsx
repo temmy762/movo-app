@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 const features = [
   { icon: "🚗", title: "Your car, our driver", desc: "Your personal chauffeur drives you home in your own vehicle." },
-  { icon: "👥", title: "Two-chauffeur team", desc: "A recovery driver follows to bring your primary driver back." },
-  { icon: "📍", title: "One seamless booking", desc: "Book once. We coordinate both chauffeurs behind the scenes." },
+  { icon: "🌙", title: "Perfect for late nights", desc: "Enjoy your evening — we’ll get you and your car home." },
+  { icon: "📍", title: "One seamless booking", desc: "Book once. We handle everything behind the scenes." },
   { icon: "🔒", title: "Safe & premium", desc: "Fully vetted Movo Black-tier chauffeurs only." },
 ];
 
@@ -85,7 +85,7 @@ export default function CareRidePage() {
         >
           Book Care Ride
         </button>
-        <p className="text-center text-[11px] text-gray-400 mt-2">Movo Black tier · Two chauffeurs included</p>
+        <p className="text-center text-[11px] text-gray-400 mt-2">Your car, our chauffeur</p>
       </div>
 
     </div>

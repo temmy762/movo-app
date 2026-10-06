@@ -83,14 +83,16 @@ function RideTrackingContent() {
   const riderLocPushRef = useRef<number>(0);
   /* Wait-time clock: chauffeur arrived, free window then accruing charges */
   const [arrivedAtMs, setArrivedAtMs] = useState<number | null>(null);
-  const [waitCfg, setWaitCfg] = useState<{ freeMin: number; rate: number }>({ freeMin: 5, rate: 0.75 });
+  const [stdWaitCfg, setStdWaitCfg] = useState<{ freeMin: number; rate: number }>({ freeMin: 5, rate: 0.75 });
+  const [careWaitCfg, setCareWaitCfg] = useState<{ freeMin: number; rate: number }>({ freeMin: 3, rate: 1 });
   const [waitNow, setWaitNow] = useState(Date.now());
 
   useEffect(() => {
     fetch("/api/admin/pricing")
       .then(r => (r.ok ? r.json() : null))
       .then(d => {
-        if (d?.global) setWaitCfg({ freeMin: d.global.freeWaitingMinutes ?? 5, rate: d.global.waitingRatePerMin ?? 0.75 });
+        if (d?.global) setStdWaitCfg({ freeMin: d.global.freeWaitingMinutes ?? 5, rate: d.global.waitingRatePerMin ?? 0.75 });
+        if (d?.safeRideWaiting) setCareWaitCfg({ freeMin: d.safeRideWaiting.freeWaitingMinutes ?? 3, rate: d.safeRideWaiting.waitingRatePerMin ?? 1 });
       })
       .catch(() => {});
   }, []);
@@ -772,6 +774,7 @@ function RideTrackingContent() {
 
           {/* Wait-time clock — chauffeur is waiting at pickup */}
           {arrivedAtMs && (() => {
+            const waitCfg     = isCareRide ? careWaitCfg : stdWaitCfg;
             const elapsedSec  = Math.max(0, Math.floor((waitNow - arrivedAtMs) / 1000));
             const freeRemain  = Math.max(0, waitCfg.freeMin * 60 - elapsedSec);
             const billableMin = Math.max(0, Math.floor(elapsedSec / 60) - waitCfg.freeMin);
@@ -886,7 +889,7 @@ function RideTrackingContent() {
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 mb-4">
               <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
               <p className="text-[13px] font-semibold text-amber-700">
-                Searching for your primary and support chauffeurs…
+                Searching for your Safe Ride chauffeur…
               </p>
             </div>
           )}

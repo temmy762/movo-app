@@ -407,6 +407,19 @@ model Booking {
   /* Where PRIMARY parked their own car — the destination of the return leg */
   primaryParkedLat      Float?
   primaryParkedLng      Float?
+  /* Safe Ride pricing (set at booking from the server-signed quote). The
+     customer sees one fare; admin sees this breakdown. chauffeurPayout is the
+     PRIMARY's guaranteed take-home, locked when the booking is paid. */
+  careServicePortion    Float?
+  careReturnAllowance   Float?
+  chauffeurPayout       Float?
+  pricingSnapshot       Json?
+  /* Safe Ride return leg: "UBER" (Dispatch books an Uber for PRIMARY back to
+     the original pickup) or "SUPPORT" (a Movo Support Chauffeur collects them) */
+  returnMode            String?
+  uberReturnRef         String?
+  uberReturnCost        Float?
+  uberReturnBookedAt    DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -702,6 +715,23 @@ enum NotificationEventType {
   SUPPORT_TICKET_CREATED
   SUPPORT_TICKET_UPDATED
   SUPPORT_TICKET_RESOLVED
+
+  // Added after the original enum (were missing from the DB, so their in-app
+  // notifications failed silently) + Safe Ride Uber return events
+  RIDER_BOOKING_CANCELLED
+  RIDER_RIDE_UNAVAILABLE_REFUNDED
+  CHAUFFEUR_TOPUP_NOTIFICATION
+  CHAUFFEUR_RENTAL_APPROVED
+  CHAUFFEUR_RENTAL_DECLINED
+  CHAUFFEUR_CARE_PICKUP_READY
+  CHAUFFEUR_CARE_SUPPORT_EN_ROUTE
+  CHAUFFEUR_UBER_RETURN_BOOKED
+  ADMIN_CARE_DISPATCH_FAILED
+  ADMIN_CARE_SUPPORT_STRANDED
+  ADMIN_RIDE_DISPATCH_FAILED
+  ADMIN_RENTAL_REQUEST
+  ADMIN_RENTAL_RETURN_REQUESTED
+  ADMIN_SAFE_RIDE_BOOK_UBER
 }
 
 enum NotificationStatus {
@@ -836,6 +866,34 @@ model VehicleTierConfig {
   commissionRate Float    @default(0.20)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+/* Safe Ride pricing engine + payout settings (single row, admin-editable).
+   Service portion rates (base / km / min / minimum) live on the "care"
+   VehicleTierConfig row; this holds everything Safe Ride-specific. */
+model SafeRideConfig {
+  id                  String   @id @default(cuid())
+  /* Return Logistics Allowance — estimated Uber cost, destination → pickup */
+  returnBaseFare      Float    @default(3.50)
+  returnPerKm         Float    @default(0.90)
+  returnPerMin        Float    @default(0.30)
+  returnBookingFee    Float    @default(2.50)
+  returnMinimum       Float    @default(10.00)
+  returnBufferRate    Float    @default(0.15)
+  lateNightBufferRate Float    @default(0.10)
+  lateNightStartHour  Int      @default(22)
+  lateNightEndHour    Int      @default(6)
+  demandMultiplier    Float    @default(1.0)
+  /* Chauffeur pay */
+  chauffeurPayoutRate Float    @default(0.70)
+  supportPayout       Float    @default(40.00)
+  /* Waiting time */
+  freeWaitingMinutes  Int      @default(3)
+  waitingRatePerMin   Float    @default(1.00)
+  /* How new bookings return the chauffeur: "UBER" or "SUPPORT" */
+  defaultReturnMode   String   @default("UBER")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model PricingConfig {

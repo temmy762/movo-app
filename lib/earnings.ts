@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getSafeRideSettings, chauffeurWaitingShare } from "@/lib/safeRide";
 
 const DEFAULT_COMMISSION = 0.20;
 
@@ -64,6 +65,27 @@ export async function computeCareEarning(fare: number): Promise<number> {
 export const SAFE_RIDE_PRIMARY_SHARE = 0.5;
 
 /**
+ * What one Safe Ride chauffeur is paid for a booking.
+ *
+ * Bookings priced by the Safe Ride engine (chauffeurPayout set) pay:
+ *   PRIMARY → the payout locked at booking + their share of any waiting charge
+ *   SUPPORT → the admin-configured Support Chauffeur payout (backup only)
+ * Older bookings keep the original 50/50 split of the net fare.
+ */
+export async function safeRideEarningFor(
+  booking: { fare: number; chauffeurPayout: number | null; waitingFee: number | null; pricingSnapshot: unknown },
+  role: "PRIMARY" | "SUPPORT",
+): Promise<number> {
+  if (booking.chauffeurPayout == null) return computeCareEarning(booking.fare);
+  const settings = await getSafeRideSettings();
+  if (role === "SUPPORT") return settings.supportPayout;
+  /* Use the payout % in force when the booking was priced, not today's */
+  const snapRate = (booking.pricingSnapshot as { payoutRate?: number } | null)?.payoutRate;
+  const rate = typeof snapRate === "number" ? snapRate : settings.chauffeurPayoutRate;
+  return parseFloat((booking.chauffeurPayout + chauffeurWaitingShare(booking.waitingFee, rate)).toFixed(2));
+}
+
+/**
  * Credit ONE Safe Ride chauffeur their share, idempotently.
  *
  * The two roles are paid at different moments: PRIMARY as soon as the customer
@@ -77,12 +99,15 @@ export async function creditSafeRideEarning(
 ): Promise<void> {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    select: { id: true, fare: true, paymentStatus: true },
+    select: { id: true, fare: true, paymentStatus: true, chauffeurPayout: true, waitingFee: true, pricingSnapshot: true },
   });
   if (!booking || booking.paymentStatus !== "PAID" || booking.fare <= 0) return;
 
   const assignment = await prisma.careAssignment.findFirst({
-    where: { bookingId, role, driverId: { not: null } },
+    /* Only the chauffeur who actually took the job — dispatch offers the role
+       to several chauffeurs at once and cancels the losing offers, which still
+       carry a driverId. */
+    where: { bookingId, role, driverId: { not: null }, status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN", "COMPLETED"] } },
     orderBy: { createdAt: "desc" },
     select: { driverId: true },
   });
@@ -96,22 +121,15 @@ export async function creditSafeRideEarning(
   });
   if (already) return;
 
-  const careConfig = await prisma.vehicleTierConfig
-    .findFirst({
-      where: { tier: { equals: "care", mode: "insensitive" } },
-      select: { commissionRate: true },
-    })
-    .catch(() => null);
-  const commission = normalizeCommissionRate(careConfig?.commissionRate);
-  const net = booking.fare * (1 - commission);
-  const share = role === "PRIMARY" ? SAFE_RIDE_PRIMARY_SHARE : 1 - SAFE_RIDE_PRIMARY_SHARE;
+  const amount = await safeRideEarningFor(booking, role);
+  if (amount <= 0) return;
 
   await prisma.walletTransaction.create({
     data: {
       driverId: assignment.driverId,
       type:     "EARNING",
       status:   "COMPLETED",
-      amount:   parseFloat((net * share).toFixed(2)),
+      amount,
       /* Chauffeur-facing: no commission breakdown. The buyer asked that the
          chauffeur see their take-home, with the Movo cut visible to Admin only
          (it remains derivable from the booking fare). */

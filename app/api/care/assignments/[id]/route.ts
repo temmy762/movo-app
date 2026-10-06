@@ -32,6 +32,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { dispatchSupport } from "@/lib/care/dispatch";
 import { creditSafeRideEarning } from "@/lib/earnings";
+import { getSafeRideSettings } from "@/lib/safeRide";
+import { settleWaitingCharge } from "@/lib/waitingCharge";
 import { sendNotification, notifyAdmins } from "@/lib/notifications";
 import {
   dispatchCarePrimaryAccepted,
@@ -123,6 +125,54 @@ export async function PATCH(
       }
     }
 
+    /* Return leg: "UBER" bookings have no Support Chauffeur — Dispatch books an
+       Uber for PRIMARY instead. Bookings from before return modes existed
+       (null) keep the original two-chauffeur flow. */
+    const isUberReturn = assignment.booking.returnMode === "UBER";
+
+    /* Gates run BEFORE the status is written, so a refused transition never
+       leaves the assignment half-updated. */
+    if (newStatus === "STARTED" && assignment.role === "PRIMARY" && !isUberReturn) {
+      /* PRIMARY cannot START until a SUPPORT assignment is active */
+      const supportActive = await prisma.careAssignment.findFirst({
+        where: {
+          bookingId: assignment.bookingId,
+          role:      "SUPPORT",
+          status:    { in: ["ACCEPTED", "ARRIVED", "STARTED"] },
+        },
+      });
+      if (!supportActive) {
+        return NextResponse.json(
+          { error: "Cannot start: Support chauffeur has not yet accepted" },
+          { status: 422 },
+        );
+      }
+    }
+    if (newStatus === "STARTED" && assignment.role === "SUPPORT") {
+      /* SUPPORT cannot pick up PRIMARY (the return leg) until PRIMARY has
+         delivered the customer (AWAITING_RETURN). */
+      const primaryDelivered = await prisma.careAssignment.findFirst({
+        where: { bookingId: assignment.bookingId, role: "PRIMARY", status: "AWAITING_RETURN" },
+        select: { id: true },
+      });
+      if (!primaryDelivered) {
+        return NextResponse.json(
+          { error: "Cannot start pickup: Primary chauffeur has not delivered the customer yet" },
+          { status: 422 },
+        );
+      }
+    }
+    if (
+      newStatus === "COMPLETED" && assignment.role === "PRIMARY" &&
+      assignment.status === "AWAITING_RETURN" && !isUberReturn && !isAdmin
+    ) {
+      /* With a Support Chauffeur, only SUPPORT returning PRIMARY closes it */
+      return NextResponse.json(
+        { error: "Your Support Chauffeur will close this job once you are back at your vehicle" },
+        { status: 422 },
+      );
+    }
+
     /* Timestamp field for the new status */
     const timestampField: Record<string, string> = {
       ACCEPTED:  "acceptedAt",
@@ -174,14 +224,21 @@ export async function PATCH(
         driverId: driver!.id, driverName, userId,
       });
 
-      /* Trigger SUPPORT dispatch from the dropoff location (null if geocoding failed) */
-      dispatchSupport(
-        booking.id,
-        booking.dropoffLat ?? null,
-        booking.dropoffLng ?? null,
-        userId,
-        [driver!.id],
-      ).catch((e) => console.error("[care dispatch support]", e));
+      if (isUberReturn) {
+        /* No Support Chauffeur to wait for — the booking is confirmed now.
+           Dispatch books PRIMARY's Uber back once the customer is delivered. */
+        await prisma.booking.update({ where: { id: booking.id }, data: { status: "CONFIRMED", acceptedAt: new Date() } });
+        dispatchCareBookingConfirmed({ bookingId: booking.id, userId });
+      } else {
+        /* Trigger SUPPORT dispatch from the dropoff location (null if geocoding failed) */
+        dispatchSupport(
+          booking.id,
+          booking.dropoffLat ?? null,
+          booking.dropoffLng ?? null,
+          userId,
+          [driver!.id],
+        ).catch((e) => console.error("[care dispatch support]", e));
+      }
     }
 
     if (newStatus === "ACCEPTED" && assignment.role === "SUPPORT") {
@@ -220,6 +277,8 @@ export async function PATCH(
 
     /* Emit DRIVER_ARRIVED for primary Care driver so the customer banner fires */
     if (newStatus === "ARRIVED" && assignment.role === "PRIMARY") {
+      /* The customer's waiting clock and receipt read the BOOKING's arrival */
+      await prisma.booking.update({ where: { id: booking.id }, data: { arrivedAt: updated.arrivedAt ?? new Date() } });
       dispatchDriverArrived({
         bookingId: booking.id,
         userId,
@@ -227,22 +286,7 @@ export async function PATCH(
       });
     }
 
-    /* Gate: PRIMARY driver cannot START until a SUPPORT assignment is active */
     if (newStatus === "STARTED" && assignment.role === "PRIMARY") {
-      const supportActive = await prisma.careAssignment.findFirst({
-        where: {
-          bookingId: booking.id,
-          role:      "SUPPORT",
-          status:    { in: ["ACCEPTED", "ARRIVED", "STARTED"] },
-        },
-      });
-      if (!supportActive) {
-        return NextResponse.json(
-          { error: "Cannot start: Support chauffeur has not yet accepted" },
-          { status: 422 },
-        );
-      }
-
       /* Stamp the BOOKING as started and announce it. Without this the
          customer's tracking screen never leaves "on the way" — it flips to
          "Ride in progress" on TRIP_STARTED, which nothing was emitting for
@@ -264,6 +308,19 @@ export async function PATCH(
         driverId: driver?.id ?? null,
         startedAt: startedAt.toISOString(),
       });
+
+      /* Safe Ride waiting time: free for the first few minutes after PRIMARY
+         taps "Arrived", then charged per minute (admin-configurable) */
+      Promise.all([getSafeRideSettings(), prisma.pricingConfig.findFirst().catch(() => null)])
+        .then(([settings, pricing]) => settleWaitingCharge({
+          booking,
+          arrivedAt:   assignment.arrivedAt,
+          startedAt,
+          freeMinutes: settings.freeWaitingMinutes,
+          ratePerMin:  settings.waitingRatePerMin,
+          gstRate:     pricing?.gstRate ?? 0.05,
+        }))
+        .catch((e) => console.error("[care waiting charge]", e));
     }
 
     /* Gate: SUPPORT cannot pick up PRIMARY (the return leg) until PRIMARY has
@@ -271,20 +328,12 @@ export async function PATCH(
        SUPPORT role, instead of a second, independent trip. Once cleared,
        let PRIMARY know Support is on the way to collect them. */
     if (newStatus === "STARTED" && assignment.role === "SUPPORT") {
-      /* AWAITING_RETURN, not COMPLETED — PRIMARY's assignment deliberately stays
-         open through the return leg and only completes once SUPPORT delivers
-         them back to their vehicle. */
+      /* Gate already passed above — tell PRIMARY Support is on the way */
       const primaryDone = await prisma.careAssignment.findFirst({
         where: { bookingId: booking.id, role: "PRIMARY", status: "AWAITING_RETURN" },
         select: { driverId: true },
       });
-      if (!primaryDone) {
-        return NextResponse.json(
-          { error: "Cannot start pickup: Primary chauffeur has not delivered the customer yet" },
-          { status: 422 },
-        );
-      }
-      if (primaryDone.driverId) {
+      if (primaryDone?.driverId) {
         sendNotification({
           eventType: "CHAUFFEUR_CARE_SUPPORT_EN_ROUTE",
           recipient: { type: "driver", id: primaryDone.driverId },
@@ -325,7 +374,32 @@ export async function PATCH(
       });
       dispatchCareBookingClosed({ bookingId: booking.id, userId });
 
-      const activeSupport = await prisma.careAssignment.findFirst({
+      if (isUberReturn) {
+        /* Dispatch books PRIMARY an Uber back to the original pickup (where
+           they left their own car) in Uber Central, then records it in the
+           admin Safe Ride panel. */
+        const primary = await prisma.driver.findUnique({
+          where: { id: driver!.id },
+          select: { phone: true },
+        });
+        const from = booking.dropoff;
+        const to   = booking.pickup;
+        notifyAdmins(
+          "ADMIN_SAFE_RIDE_BOOK_UBER",
+          {
+            bookingId: booking.id,
+            driverName, from, to,
+            title: "Safe Ride: book the chauffeur's Uber return",
+            message:
+              `${driverName} has delivered the customer on booking ${booking.id.slice(0, 8)}. ` +
+              `Book an Uber in Uber Central from ${from} to ${to}, then record it in the Safe Ride panel.` +
+              (primary?.phone ? ` Chauffeur phone: ${primary.phone}` : ""),
+          },
+          ["IN_APP", "SMS"],
+        ).catch((e) => console.error("[safe-ride uber return alert]", e));
+      }
+
+      const activeSupport = isUberReturn ? null : await prisma.careAssignment.findFirst({
         where: { bookingId: booking.id, role: "SUPPORT", status: { in: ["ACCEPTED", "ARRIVED"] } },
         select: { driverId: true },
       });

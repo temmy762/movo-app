@@ -12,6 +12,8 @@ const SMS_TEMPLATES: Record<string, string> = {
   RIDER_EMAIL_VERIFICATION: "Your MOVO verification code is: {{code}}. Valid for 10 minutes.",
   ADMIN_CARE_DISPATCH_FAILED: "MOVO ALERT: No {{role}} chauffeur found for Care Ride booking {{bookingId}}. Manual dispatch needed.",
   ADMIN_CARE_SUPPORT_STRANDED: "MOVO ALERT: Safe Ride {{bookingId}} — chauffeur delivered the customer but has no support chauffeur to return them. Auto-search running; dispatch manually if it doesn't fill.",
+  ADMIN_SAFE_RIDE_BOOK_UBER: "MOVO DISPATCH: Safe Ride {{bookingId}} delivered. Book an Uber for {{driverName}} from {{from}} to {{to}}, then record it in the admin Safe Ride panel.",
+  CHAUFFEUR_UBER_RETURN_BOOKED: "MOVO: Your Uber back to your vehicle is booked{{refText}}. Pickup at {{from}}.",
   ADMIN_RIDE_DISPATCH_FAILED: "MOVO ALERT: No driver accepted booking {{bookingId}} in time. Rider has been refunded.",
   RIDER_RIDE_UNAVAILABLE_REFUNDED: "MOVO: We couldn't find a driver for your ride. You've been fully refunded — sorry for the inconvenience.",
   RIDER_BOOKING_CANCELLED: "MOVO: Your ride has been cancelled. {{refundMsg}}",

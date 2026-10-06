@@ -198,11 +198,11 @@ function AvailableCarsContent() {
                         <span className="text-[16px] font-bold text-white">Safe Ride</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">Premium</span>
                       </div>
-                      <p className="text-[12px] text-white/70 leading-snug mb-2">We drive you home in your own car — two vetted chauffeurs, one seamless booking.</p>
+                      <p className="text-[12px] text-white/70 leading-snug mb-2">We drive you home safely in your own car — one seamless booking.</p>
                       <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-1">
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                          <span className="text-[11px] text-white/70 font-medium">2 chauffeurs included</span>
+                          <span className="text-[11px] text-white/70 font-medium">Your car, our chauffeur</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>

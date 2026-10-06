@@ -61,8 +61,8 @@ const RIDE_TIERS = [
   },
   {
     label: "Safe Ride", img: "/images/prive black.png", from: 129, href: "/home/care-ride",
-    desc: "Two chauffeurs. You relax, we drive you and your car home.",
-    specs: [["users", "2 chauffeurs"], ["car", "Your vehicle, safely driven"], ["clock", "45 min advance booking"]],
+    desc: "You relax — we drive you and your car home.",
+    specs: [["user", "Professional chauffeur"], ["car", "Your vehicle, safely driven"], ["clock", "45 min advance booking"]],
     premium: true,
   },
 ];
@@ -72,7 +72,7 @@ const rideTiers = RIDE_TIERS.filter((t) => IN_CITY_RIDES_ENABLED || !("standard"
 const TAB_ENABLED = { oneway: IN_CITY_RIDES_ENABLED, hourly: HOURLY_CHARTER_ENABLED, airport: AIRPORT_TRANSFER_ENABLED, care: true } as const;
 
 const FAQS = [
-  { q: "What is Safe Ride?",         a: "Safe Ride sends two professional chauffeurs to your location. The primary driver takes the wheel of your own vehicle and drives you home, while the support driver follows in a Movo car to return both chauffeurs. You keep your car, you arrive safely." },
+  { q: "What is Safe Ride?",         a: "A professional Movo chauffeur meets you and drives you home in your own vehicle, so you and your car both get home safely. We take care of getting your chauffeur back afterwards." },
   { q: "How is pricing calculated?",      a: "Fares are calculated from base fare, distance, duration, and applicable fees (service, GST, airport if relevant). You see the full breakdown before you pay — no surprises." },
   { q: "Can I book for someone else?",    a: "Yes. During booking you can specify the passenger name. The booking confirmation and receipt are sent to your registered account." },
   { q: "What areas do you cover?",        a: "We currently operate across major cities. Live driver availability is shown at the time of booking." },
@@ -545,12 +545,12 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <SectionLabel>Premium Service</SectionLabel>
             <SectionHeading light>How Safe Ride works</SectionHeading>
-            <p className="text-white/50 mt-3 text-[14px]">Two chauffeurs. One mission: get you and your vehicle home safely.</p>
+            <p className="text-white/50 mt-3 text-[14px]">One mission: get you and your vehicle home safely.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { n: 1, title: "Book Safe Ride",            desc: "Enter your pickup and destination.",                               icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
-              { n: 2, title: "We assign chauffeurs",      desc: "A primary chauffeur drives your vehicle, a support follows.",     icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" },
+              { n: 2, title: "We assign a chauffeur",     desc: "A vetted chauffeur meets you and takes the wheel of your car.",     icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" },
               { n: 3, title: "Enjoy your ride",           desc: "Relax while we drive you safely to your destination.",             icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" },
               { n: 4, title: "Trip complete",             desc: "You arrive safely. Your car is parked. We handle the rest.",       icon: "M22 11.08V12a10 10 0 1 1-5.93-9.14" },
             ].map((s, i) => (
@@ -792,12 +792,12 @@ export default function LandingPage() {
             <SectionLabel>Exclusive Service</SectionLabel>
             <SectionHeading light>Safe Ride</SectionHeading>
             <p className="text-white/60 text-[14px] leading-relaxed mt-4 mb-6">
-              Had a long evening? Let us take care of everything. Our primary chauffeur drives you home in <em>your own vehicle</em> while a support driver follows to bring them back. You arrive safely. Your car stays with you.
+              Had a long evening? Let us take care of everything. Our chauffeur drives you home in <em>your own vehicle</em>. You arrive safely. Your car stays with you.
             </p>
             <div className="grid grid-cols-2 gap-3 mb-8">
               {[
                 { path: "M19 17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11l5 5v5a2 2 0 0 1-2 2z", label: "Your car, our driver" },
-                { path: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75", label: "Two-chauffeur team" },
+                { path: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75", label: "Vetted chauffeur" },
                 { path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z", label: "One seamless booking" },
                 { path: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", label: "Safe & professional" },
               ].map(f => (

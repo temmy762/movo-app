@@ -107,6 +107,7 @@ const navItems: NavEntry[] = [
       { label: "Expenses",  href: "/admin/financials/expenses" },
       { label: "Payouts",   href: "/admin/financials/payouts" },
       { label: "Analytics", href: "/admin/financials/analytics" },
+      { label: "Safe Ride Returns", href: "/admin/financials/safe-ride-returns" },
     ],
   },
   {

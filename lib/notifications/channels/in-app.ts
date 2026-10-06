@@ -33,6 +33,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   CHAUFFEUR_RENTAL_DECLINED: "Rental request update",
   CHAUFFEUR_CARE_PICKUP_READY: "Primary chauffeur is ready for pickup",
   CHAUFFEUR_CARE_SUPPORT_EN_ROUTE: "Support chauffeur is on the way to pick you up",
+  CHAUFFEUR_UBER_RETURN_BOOKED: "Your Uber back to your vehicle is booked",
   // Admin events
   ADMIN_NEW_DRIVER_APPLICATION: "New driver application",
   ADMIN_NEW_INCIDENT_REPORT: "New incident report",
@@ -41,6 +42,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   ADMIN_PAYOUT_REQUEST: "Driver payout request",
   ADMIN_CARE_DISPATCH_FAILED: "Care Ride dispatch failed",
   ADMIN_CARE_SUPPORT_STRANDED: "Safe Ride: chauffeur awaiting pickup",
+  ADMIN_SAFE_RIDE_BOOK_UBER: "Safe Ride: book the chauffeur's Uber return",
   ADMIN_RIDE_DISPATCH_FAILED: "Ride dispatch failed",
   ADMIN_RENTAL_REQUEST: "New vehicle rental request",
   ADMIN_RENTAL_RETURN_REQUESTED: "Chauffeur returning rental vehicle",
@@ -78,6 +80,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   CHAUFFEUR_RENTAL_DECLINED: "Your vehicle rental request was declined and your payment has been refunded in full.",
   CHAUFFEUR_CARE_PICKUP_READY: "The Primary chauffeur has completed the Safe Ride and is ready for pickup. Head over to bring them back to their vehicle.",
   CHAUFFEUR_CARE_SUPPORT_EN_ROUTE: "The Support chauffeur is on their way to pick you up and drive you back to your vehicle.",
+  CHAUFFEUR_UBER_RETURN_BOOKED: "Movo has booked an Uber to take you back to your vehicle. Check the Safe Ride panel for the details.",
   // Admin events
   ADMIN_NEW_DRIVER_APPLICATION: "A new driver application requires review.",
   ADMIN_NEW_INCIDENT_REPORT: "A new incident report has been submitted.",
@@ -86,6 +89,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   ADMIN_PAYOUT_REQUEST: "A driver has requested a payout. Please review and approve.",
   ADMIN_CARE_DISPATCH_FAILED: "No chauffeur could be found for a Care Ride booking. Manual dispatch needed.",
   ADMIN_CARE_SUPPORT_STRANDED: "A Safe Ride chauffeur has delivered the customer but has no support chauffeur to return them to their vehicle. A replacement search is running — dispatch one manually if it doesn't fill.",
+  ADMIN_SAFE_RIDE_BOOK_UBER: "A Safe Ride customer has been delivered. Book an Uber in Uber Central to return the chauffeur to the original pickup, then record it in the Safe Ride panel.",
   ADMIN_RIDE_DISPATCH_FAILED: "No driver accepted a ride in time. The rider has been refunded.",
   ADMIN_RENTAL_REQUEST: "A chauffeur has requested to rent a Movo vehicle. Review and approve or decline in the Rentals section.",
   ADMIN_RENTAL_RETURN_REQUESTED: "A chauffeur has flagged their rental vehicle as ready for return. Inspect and finalize it in the Rentals section.",

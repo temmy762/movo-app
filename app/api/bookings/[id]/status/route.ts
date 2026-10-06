@@ -12,6 +12,7 @@ import {
   dispatchBookingCancelled,
   dispatchBookingCompleted,
   dispatchBookingStatus,
+  dispatchCareBookingClosed,
 } from "@/lib/socket/dispatcher";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -110,6 +111,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (!VALID_STATUSES.includes(status)) {
       return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+    }
+
+    /* ── Who may do what ──
+       This route used to accept any caller: anyone could cancel any booking
+       (claiming to be "admin" via the body) or mark it COMPLETED repeatedly,
+       crediting the chauffeur's wallet each time. */
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const isAdmin = session.role === "ADMIN";
+    const target = await prisma.booking.findUnique({ where: { id }, select: { userId: true, driverId: true } });
+    if (!target) {
+      return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+    }
+    const isRider          = !!session.userId && target.userId === session.userId;
+    const isAssignedDriver = !!session.driverId && target.driverId === session.driverId;
+    const allowed =
+      isAdmin ||
+      (status === "CONFIRMED" && !!session.driverId) ||          /* chauffeur claiming a ride */
+      (status === "CANCELLED" && (isRider || isAssignedDriver)) ||
+      (status === "COMPLETED" && isAssignedDriver);
+    if (!allowed) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     /* ── Atomic claim: only succeeds if booking is unclaimed + still available ── */
@@ -243,7 +267,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
 
       const now = new Date();
-      const caller = cancelledBy ?? (session?.driverId ? "driver" : session?.userId ? "user" : "admin");
+      /* Derived from the session — never trusted from the request body */
+      const caller = isAdmin ? (cancelledBy === "system_timeout" ? "system_timeout" : "admin") : session.driverId ? "driver" : "user";
+
+      /* Safe Ride: release the chauffeurs on this booking */
+      if (existing.bookingType === "CARE") {
+        await prisma.careAssignment.updateMany({
+          where: { bookingId: id, status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED"] } },
+          data:  { status: "CANCELLED", cancelledAt: now },
+        });
+        dispatchCareBookingClosed({ bookingId: id, userId: existing.userId });
+      }
 
       if (existing.stripePaymentIntentId && existing.paymentStatus === "PAID") {
         try {
@@ -258,12 +292,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
           let policyRefundAmount: number | undefined;
 
-          if (isAdminForce || isDriverFault || refundAmount !== undefined) {
-            /* Admin-specified amount overrides policy */
-            policyRefundAmount = refundAmount;
+          if (isAdminForce || isDriverFault) {
+            /* Admin-specified amount overrides policy (admins only) */
+            policyRefundAmount = isAdminForce ? refundAmount : undefined;
           } else if (within5Min || noDriver) {
             /* Full refund — free cancellation window or unassigned */
             policyRefundAmount = undefined;
+          } else if (existing.bookingType === "CARE" && existing.careReturnAllowance && existing.fare > 0) {
+            /* Safe Ride: the Return Logistics Allowance (and its GST) is always
+               refunded before the trip starts — no Uber has been booked yet.
+               The service portion follows the normal 50% policy. */
+            const returnShare = Math.min(1, existing.careReturnAllowance / existing.fare);
+            const returnGross = existing.total * returnShare;
+            policyRefundAmount = parseFloat(((existing.total - returnGross) * 0.50 + returnGross).toFixed(2));
           } else {
             /* Partial: 50% refund */
             policyRefundAmount = parseFloat((existing.total * 0.50).toFixed(2));
@@ -338,10 +379,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ error: "Booking not found" }, { status: 404 });
       }
 
-      const booking = await prisma.booking.update({
-        where: { id },
+      /* Atomic: only a CONFIRMED booking completes, exactly once — a repeat
+         call must not credit the chauffeur's wallet again */
+      const done = await prisma.booking.updateMany({
+        where: { id, status: "CONFIRMED" },
         data: { status: "COMPLETED", completedAt: new Date() },
       });
+      if (done.count === 0) {
+        return NextResponse.json(
+          { error: existing.status === "COMPLETED" ? "Ride already completed" : "Only a confirmed ride can be completed" },
+          { status: 409 },
+        );
+      }
+      const booking = (await prisma.booking.findUnique({ where: { id } }))!;
 
       /* Auto-credit driver earnings after platform commission + fleet split */
       if (existing.driverId && existing.fare > 0) {
@@ -471,7 +521,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     /* Socket: generic status change */
     dispatchBookingStatus({ bookingId: id, status, userId: null, driverId: null });
     return NextResponse.json(booking);
-  } catch {
+  } catch (e) {
+    console.error("[bookings status PATCH]", e);
     return NextResponse.json({ error: "Failed to update status" }, { status: 500 });
   }
 }

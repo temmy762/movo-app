@@ -78,9 +78,11 @@ export async function POST(req: NextRequest) {
               amount: booking.total,
               method: "Card",
               date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+              /* Safe Ride is all-inclusive: one fare + GST, no service fee line */
               items: [
-                { label: "Ride Fare", amount: booking.fare },
-                { label: "Service Fee", amount: booking.serviceFee },
+                { label: booking.bookingType === "CARE" ? "Safe Ride fare" : "Ride Fare", amount: booking.fare },
+                ...(booking.serviceFee > 0 ? [{ label: "Service Fee", amount: booking.serviceFee }] : []),
+                ...(booking.gst ? [{ label: "GST", amount: booking.gst }] : []),
               ],
             },
           }).catch((e) => console.error("[webhook] receipt email failed:", e));

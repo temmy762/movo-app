@@ -28,6 +28,7 @@ type CareAssignment = {
   id: string;
   role: "PRIMARY" | "SUPPORT";
   status: string;
+  arrivedAt?: string | null;
   booking: {
     id: string;
     clientName: string;
@@ -37,6 +38,10 @@ type CareAssignment = {
     total: number;
     paymentStatus: string;
     status: string;
+    /* Safe Ride return leg: "UBER" = Dispatch books PRIMARY an Uber back */
+    returnMode?: string | null;
+    uberReturnRef?: string | null;
+    uberReturnBookedAt?: string | null;
   };
 };
 
@@ -125,12 +130,33 @@ export default function DriverHomePage() {
 
   /* Tick the waiting clock once a second while at pickup */
   useEffect(() => {
-    if (!waitInfo || ridePhase !== "arrived") return;
+    if (!waitInfo || (ridePhase !== "arrived" && carePhase !== "arrived")) return;
     const t = setInterval(() => setWaitNow(Date.now()), 1000);
     return () => clearInterval(t);
-  }, [waitInfo, ridePhase]);
+  }, [waitInfo, ridePhase, carePhase]);
   usePushSubscription();
   const { join, on } = useSocket();
+
+  /* Safe Ride PRIMARY waiting clock: free window then per-minute charges,
+     using the Safe Ride rules (admin-configurable) */
+  useEffect(() => {
+    if (!careAssignment || careAssignment.role !== "PRIMARY") return;
+    if (carePhase !== "arrived") {
+      if (carePhase === "started" || carePhase === "awaiting_return") setWaitInfo(null);
+      return;
+    }
+    if (waitInfo) return;
+    const arrivedAt = careAssignment.arrivedAt ? new Date(careAssignment.arrivedAt).getTime() : Date.now();
+    fetch("/api/admin/pricing")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setWaitInfo({
+        arrivedAt,
+        freeMin: d?.safeRideWaiting?.freeWaitingMinutes ?? 3,
+        rate:    d?.safeRideWaiting?.waitingRatePerMin ?? 1,
+      }))
+      .catch(() => setWaitInfo({ arrivedAt, freeMin: 3, rate: 1 }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carePhase, careAssignment?.id]);
   /* Keep ridePhaseRef in sync so async callbacks can read current phase without stale closure */
   useEffect(() => { ridePhaseRef.current = ridePhase; }, [ridePhase]);
 
@@ -428,6 +454,28 @@ export default function DriverHomePage() {
     return () => { unsubCreated(); unsubRiderLoc(); unsubCancelled(); unsubCarePrimary(); unsubCareSupport(); unsubCareClosed(); unsubCarePickupReady(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline, ridePhase, carePhase]);
+
+  /* Uber return: while PRIMARY waits, pick up Dispatch's Uber booking (ref)
+     and release the panel if Dispatch marks them returned */
+  useEffect(() => {
+    if (carePhase !== "awaiting_return" || careAssignment?.booking?.returnMode !== "UBER") return;
+    const poll = () => {
+      fetch("/api/care/driver")
+        .then(r => r.json())
+        .then(({ assignment }) => {
+          if (!assignment || assignment.status !== "AWAITING_RETURN") {
+            setCareAssignment(null);
+            setCarePhase("idle");
+            return;
+          }
+          setCareAssignment(assignment as CareAssignment);
+        })
+        .catch(() => {});
+    };
+    const t = setInterval(poll, 15_000);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carePhase, careAssignment?.id, careAssignment?.booking?.returnMode]);
 
   /* Poll for Care assignment on mount so a restored session restores Care state */
   useEffect(() => {
@@ -834,6 +882,26 @@ export default function DriverHomePage() {
     });
     setCareLoading(false);
     setCareAssignment(null);
+    setCarePhase("idle");
+  }
+
+  async function handleCareReturned() {
+    if (!careAssignment) return;
+    setCareLoading(true);
+    setCareError(null);
+    const res = await fetch(`/api/care/assignments/${careAssignment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "COMPLETED" }),
+    }).catch(() => null);
+    setCareLoading(false);
+    if (!res?.ok) {
+      const d = await res?.json().catch(() => null);
+      setCareError(d?.error ?? "Could not close the job. Please try again.");
+      return;
+    }
+    setCareAssignment(null);
+    setCoDriver(null);
     setCarePhase("idle");
   }
 
@@ -1480,7 +1548,7 @@ export default function DriverHomePage() {
               </div>
             )}
             {/* No co-driver yet hint (only after this driver has accepted) */}
-            {!coDriver && carePhase !== "requesting" && careAssignment.role === "PRIMARY" && (
+            {!coDriver && carePhase !== "requesting" && careAssignment.role === "PRIMARY" && careAssignment.booking.returnMode !== "UBER" && (
               <div className="flex items-center gap-2 mb-3 bg-amber-50 rounded-xl px-3 py-2.5">
                 <div className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin shrink-0" />
                 <p className="text-[11px] text-amber-700">Searching for a support chauffeur…</p>
@@ -1548,6 +1616,25 @@ export default function DriverHomePage() {
                 </button>
               </div>
             )}
+            {/* Safe Ride waiting clock (PRIMARY at pickup) */}
+            {carePhase === "arrived" && careAssignment.role === "PRIMARY" && waitInfo && (() => {
+              const elapsedSec  = Math.max(0, Math.floor((waitNow - waitInfo.arrivedAt) / 1000));
+              const freeRemain  = Math.max(0, waitInfo.freeMin * 60 - elapsedSec);
+              const billableMin = Math.max(0, Math.floor(elapsedSec / 60) - waitInfo.freeMin);
+              return freeRemain > 0 ? (
+                <div className="flex items-center justify-between px-3 py-2 rounded-xl mb-3 bg-gray-50 border border-gray-200">
+                  <p className="text-[12px] font-semibold text-gray-700">Free waiting time</p>
+                  <p className="text-[13px] font-bold" style={{ color: "#131936" }}>
+                    {Math.floor(freeRemain / 60)}:{String(freeRemain % 60).padStart(2, "0")}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between px-3 py-2 rounded-xl mb-3 bg-amber-50 border border-amber-200">
+                  <p className="text-[12px] font-semibold text-amber-700">Wait charges accruing (${waitInfo.rate.toFixed(2)}/min)</p>
+                  <p className="text-[13px] font-bold text-amber-700">${(billableMin * waitInfo.rate).toFixed(2)}</p>
+                </div>
+              );
+            })()}
             {carePhase === "arrived" && (() => {
               /* SUPPORT may only collect PRIMARY once they've delivered the
                  customer — that's AWAITING_RETURN, not COMPLETED (PRIMARY only
@@ -1595,7 +1682,33 @@ export default function DriverHomePage() {
             {/* PRIMARY: customer delivered, now waiting on the return leg. The
                 job stays open here — no Complete button, because only SUPPORT
                 dropping them back at their car closes it. */}
-            {carePhase === "awaiting_return" && (
+            {carePhase === "awaiting_return" && careAssignment.booking.returnMode === "UBER" && (
+              <div className="flex flex-col gap-3">
+                <div className="rounded-xl px-3 py-3" style={{ background: "#f5f0ff", border: "1px solid #131936" }}>
+                  <p className="text-[12px] font-bold" style={{ color: "#131936" }}>Customer delivered ✓</p>
+                  {careAssignment.booking.uberReturnBookedAt ? (
+                    <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                      Your Uber back to your vehicle is booked
+                      {careAssignment.booking.uberReturnRef ? <> — reference <strong>{careAssignment.booking.uberReturnRef}</strong></> : null}.
+                      Watch for the Uber text message with your driver&apos;s details.
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                      Movo Dispatch is booking an Uber to take you back to your vehicle at {careAssignment.booking.pickup}. You&apos;ll get a text when it&apos;s booked.
+                    </p>
+                  )}
+                  <p className="text-[10px] text-gray-400 mt-1.5">
+                    Your earnings for this Safe Ride have been credited.
+                  </p>
+                </div>
+                <button onClick={handleCareReturned} disabled={careLoading}
+                  className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                  style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                  {careLoading ? "Saving…" : "I'm back at my vehicle"}
+                </button>
+              </div>
+            )}
+            {carePhase === "awaiting_return" && careAssignment.booking.returnMode !== "UBER" && (
               <div className="flex flex-col gap-3">
                 <div className="rounded-xl px-3 py-3" style={{ background: "#f5f0ff", border: "1px solid #131936" }}>
                   <p className="text-[12px] font-bold" style={{ color: "#131936" }}>Customer delivered ✓</p>

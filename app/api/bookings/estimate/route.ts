@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { normalizeTier } from "@/lib/normalizeTier";
 import { signFareQuote } from "@/lib/fareQuote";
 import { AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED } from "@/lib/launchConfig";
+import { getSafeRideSettings, getSafeRideServiceRates, priceSafeRide } from "@/lib/safeRide";
 
 /* Prefer a dedicated server key: NEXT_PUBLIC_* keys are often HTTP-referrer
    restricted for the browser, which makes server-side Distance Matrix calls
@@ -26,6 +27,73 @@ const DEFAULT_AIRPORT_PICKUP_FEE     = 10.00;
 const DEFAULT_FREE_WAITING_MINUTES   = 5;
 const DEFAULT_WAITING_RATE_PER_MIN   = 0.75;
 
+/* Driving distance/time for one leg, or null if Google can't route it */
+async function routeLeg(origin: string, destination: string): Promise<{ km: number; min: number } | null> {
+  if (!GOOGLE_API_KEY) return null;
+  try {
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&units=metric&key=${GOOGLE_API_KEY}`;
+    const data = await (await fetch(url)).json();
+    const el = data?.rows?.[0]?.elements?.[0];
+    if (!el || el.status !== "OK") {
+      console.error(`[estimate] Distance Matrix failed (top-level: ${data?.status ?? "?"}, element: ${el?.status ?? "missing"})`);
+      return null;
+    }
+    return { km: el.distance.value / 1000, min: Math.ceil(el.duration.value / 60) };
+  } catch (e) {
+    console.error("[estimate] Distance Matrix request failed", e);
+    return null;
+  }
+}
+
+/* Safe Ride: service portion + Return Logistics Allowance + GST, no service
+   fee (lib/safeRide.ts). The return leg is priced on the real reverse route,
+   and "late night" is judged on when that return happens. */
+async function estimateSafeRide(pickup: string, dropoff: string, pickupTimeParam: string | null) {
+  const requested = pickupTimeParam ? new Date(pickupTimeParam) : null;
+  const pickupAt  = requested && !isNaN(requested.getTime()) && requested.getTime() > Date.now() ? requested : new Date();
+
+  const [trip, back, settings, serviceRates, pricingConfig] = await Promise.all([
+    routeLeg(pickup, dropoff),
+    routeLeg(dropoff, pickup),
+    getSafeRideSettings(),
+    getSafeRideServiceRates(),
+    prisma.pricingConfig.findFirst().catch(() => null),
+  ]);
+  /* Same flat fallback as standard rides when Google can't route the trip */
+  const tripKm  = trip?.km  ?? 10, tripMin  = trip?.min ?? 15;
+  const backKm  = back?.km  ?? tripKm, backMin = back?.min ?? tripMin;
+  const gstRate = pricingConfig?.gstRate ?? DEFAULT_GST_RATE;
+
+  const price = priceSafeRide({
+    tripKm, tripMin, returnKm: backKm, returnMin: backMin,
+    returnAt: new Date(pickupAt.getTime() + tripMin * 60_000),
+    serviceRates, settings, gstRate,
+  });
+
+  const amounts = { fare: price.fare, additionalStopFee: 0, airportFee: 0, serviceFee: 0, gst: price.gst, total: price.total };
+  const quote = signFareQuote({
+    pickup, dropoff, tier: "care", ...amounts,
+    safeRide: {
+      servicePortion: price.servicePortion,
+      returnAllowance: price.returnAllowance,
+      chauffeurPayout: price.chauffeurPayout,
+      snapshot: price.snapshot,
+    },
+  });
+
+  return NextResponse.json({
+    ...amounts, quote,
+    distanceKm: trip ? +trip.km.toFixed(2) : null,
+    durationMin: trip ? trip.min : null,
+    estimateBasis: trip ? "route" : "flat",
+    tier: "care", gstRate, serviceFeeRate: 0,
+    stopFeeUnit: 0, airportFeeUnit: 0,
+    freeWaitingMinutes: settings.freeWaitingMinutes,
+    waitingRatePerMin: settings.waitingRatePerMin,
+    stops: 0, isAirport: false,
+  });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -45,6 +113,11 @@ export async function GET(req: NextRequest) {
 
     if (!pickup || (!dropoff && !isHourly)) {
       return NextResponse.json({ error: "pickup and dropoff required" }, { status: 400 });
+    }
+
+    if (tier === "care") {
+      if (!dropoff) return NextResponse.json({ error: "pickup and dropoff required" }, { status: 400 });
+      return await estimateSafeRide(pickup, dropoff, searchParams.get("pickupTime"));
     }
 
     /* Load tier config + global pricing config from DB (non-fatal) */

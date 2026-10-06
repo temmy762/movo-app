@@ -22,6 +22,7 @@ import { dispatchPrimary } from "@/lib/care/dispatch";
 import { scheduleCareDispatch } from "@/lib/care/scheduledDispatch";
 import { pushToAllDriversByTier } from "@/lib/webpush";
 import { verifyBookingPayment } from "@/lib/bookingPayment";
+import { getSafeRideSettings } from "@/lib/safeRide";
 
 /* A Safe Ride whose pickup is further out than this is "scheduled" rather than
    ASAP — chauffeurs get an advance heads-up now and the real targeted dispatch
@@ -59,7 +60,8 @@ export async function POST(req: NextRequest) {
     if (verified.existingBookingId) {
       return NextResponse.json({ bookingId: verified.existingBookingId }, { status: 200 });
     }
-    const { fare, serviceFee, gst, total } = verified.quote;
+    const { fare, serviceFee, gst, total, safeRide } = verified.quote;
+    const settings = await getSafeRideSettings();
 
     const clientUser = await prisma.user.findUnique({
       where: { id: userId },
@@ -98,6 +100,12 @@ export async function POST(req: NextRequest) {
         bookingType:   "CARE",
         stripePaymentIntentId: verified.paymentIntentId,
         userId,
+        /* Internal breakdown + the chauffeur's payout, locked at the quoted price */
+        careServicePortion:  safeRide?.servicePortion ?? null,
+        careReturnAllowance: safeRide?.returnAllowance ?? null,
+        chauffeurPayout:     safeRide?.chauffeurPayout ?? null,
+        pricingSnapshot:     (safeRide?.snapshot ?? undefined) as never,
+        returnMode:          settings.defaultReturnMode === "SUPPORT" ? "SUPPORT" : "UBER",
         ...(isValidSchedule ? { scheduledAt: parsedScheduledAt } : {}),
       },
     });

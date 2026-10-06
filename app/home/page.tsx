@@ -11,13 +11,13 @@ import { IN_CITY_RIDES_ENABLED, AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED
 /* Per MOVO Team: selecting a service goes STRAIGHT to address entry — no
    intermediate "here's the service, tap Book now" screen in between. Safe
    Ride keeps its own page since it's a substantive explainer (how it works,
-   two-chauffeur flow), not a single-button interstitial. */
+   how the service works), not a single-button interstitial. */
 /* Launch scope (lib/launchConfig.ts): switched-off services are hidden */
 const ALL_SERVICES = [
   { id: 1, title: "In-City Rides",    desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",     href: "/home/pickup",              enabled: IN_CITY_RIDES_ENABLED },
   { id: 2, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/pickup?mode=airport", enabled: AIRPORT_TRANSFER_ENABLED },
   { id: 3, title: "Hourly Chauffeur", desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",      href: "/home/pickup?mode=hourly",  enabled: HOURLY_CHARTER_ENABLED },
-  { id: 4, title: "Safe Ride",        desc: "We drive you home in your own car. Two chauffeurs, one booking.", img: "/images/In-city ride.png",     href: "/home/care-ride",           enabled: true },
+  { id: 4, title: "Safe Ride",        desc: "We drive you home safely in your own car.",                  img: "/images/In-city ride.png",     href: "/home/care-ride",           enabled: true },
 ];
 const services = ALL_SERVICES.filter((s) => s.enabled);
 
