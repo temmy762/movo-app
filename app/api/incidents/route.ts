@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     type:          type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
     description:   description.trim().slice(0, 100) + (description.length > 100 ? "..." : ""),
     bookingId:     bookingId ?? undefined,
-    createdAt:     new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+    createdAt:     new Date().toLocaleString("en-CA", { timeZone: "America/Winnipeg" }),
   };
 
   notifyAdmins("ADMIN_NEW_INCIDENT_REPORT", incidentData, ["EMAIL", "IN_APP"]).catch(() => {});

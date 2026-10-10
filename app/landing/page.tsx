@@ -82,7 +82,7 @@ const FAQS = [
 
 const TESTIMONIALS = [
   { name: "Amara O.",   role: "Corporate Client",      stars: 5, text: "Concierge is in a league of its own. Impeccable vehicle, professional driver — I won't use anyone else for client meetings." },
-  { name: "Daniel T.",  role: "Regular Commuter",      stars: 5, text: "The Care Ride service saved my evening. I could relax knowing my car was being driven safely home." },
+  { name: "Daniel T.",  role: "Regular Commuter",      stars: 5, text: "The Safe Ride service saved my evening. I could relax knowing my car was being driven safely home." },
   { name: "Sophia R.",  role: "Airport Transfer",      stars: 5, text: "Never missed a flight since switching to Movo. Always early, always professional." },
 ];
 

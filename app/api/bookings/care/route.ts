@@ -30,6 +30,34 @@ import { getSafeRideSettings } from "@/lib/safeRide";
    threshold in app/api/bookings/route.ts. */
 const SCHEDULED_THRESHOLD_MS = 25 * 60 * 1000;
 
+/* Optional booking details from checkout, cleaned and length-limited */
+function bookingDetails(body: Record<string, unknown>) {
+  const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+  const stops = Array.isArray(body.stops)
+    ? (body.stops as unknown[]).filter((x): x is string => typeof x === "string" && !!x.trim()).map(x => x.trim()).slice(0, 3)
+    : [];
+  const passengers = Number(body.passengers);
+  return {
+    stops,
+    riderName:          str(body.riderName, 80),
+    riderPhone:         str(body.riderPhone, 30),
+    pickupInstructions: str(body.pickupInstructions, 300),
+    passengers:         Number.isInteger(passengers) && passengers > 0 && passengers <= 8 ? passengers : null,
+  };
+}
+
+/* The customer's own vehicle, from Safe Ride step 2 */
+function careVehicle(v: unknown) {
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  const s = (x: unknown) => (typeof x === "string" ? x.trim().slice(0, 40) : "");
+  const vehicle = {
+    make: s(o.make), model: s(o.model), year: s(o.year), colour: s(o.colour),
+    plate: s(o.plate).toUpperCase(), transmission: o.transmission === "Manual" ? "Manual" : "Automatic",
+  };
+  return vehicle.make && vehicle.model && vehicle.plate ? vehicle : null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession(req);
@@ -42,8 +70,12 @@ export async function POST(req: NextRequest) {
     const {
       pickup, dropoff,
       quote: quoteToken, stripePaymentIntentId,
-      customerVehicle, scheduledAt,
+      scheduledAt,
     } = body;
+    const details = bookingDetails(body);
+    const vehicle = careVehicle(body.vehicle);
+    const receiptEmail = typeof body.receiptEmail === "string" && /^\S+@\S+\.\S+$/.test(body.receiptEmail.trim())
+      ? body.receiptEmail.trim() : null;
 
     if (!pickup || !dropoff) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -53,6 +85,7 @@ export async function POST(req: NextRequest) {
        verified Stripe payment — never from the request body. */
     const verified = await verifyBookingPayment({
       userId, quoteToken, paymentIntentId: stripePaymentIntentId, pickup, dropoff, tier: "care",
+      stops: details.stops,
     });
     if (!verified.ok) {
       return NextResponse.json({ error: verified.error }, { status: verified.status });
@@ -67,7 +100,8 @@ export async function POST(req: NextRequest) {
       where: { id: userId },
       select: { firstName: true, lastName: true },
     });
-    const clientName = `${clientUser?.firstName ?? ""} ${clientUser?.lastName ?? ""}`.trim() || "Guest";
+    /* The rider may be someone other than the account holder */
+    const clientName = details.riderName ?? (`${clientUser?.firstName ?? ""} ${clientUser?.lastName ?? ""}`.trim() || "Guest");
 
     const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
     const isValidSchedule = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime());
@@ -90,7 +124,7 @@ export async function POST(req: NextRequest) {
         dropoffLat: coordinates?.dropoffLat ?? null,
         dropoffLng: coordinates?.dropoffLng ?? null,
         carTier:    "care",
-        carName:    customerVehicle ?? "Customer vehicle",
+        carName:    vehicle ? `${vehicle.colour} ${vehicle.make} ${vehicle.model}`.trim() : "Customer vehicle",
         fare:       Number(fare),
         serviceFee: Number(serviceFee),
         gst:        gst != null ? Number(gst) : null,
@@ -106,6 +140,13 @@ export async function POST(req: NextRequest) {
         chauffeurPayout:     safeRide?.chauffeurPayout ?? null,
         pricingSnapshot:     (safeRide?.snapshot ?? undefined) as never,
         returnMode:          settings.defaultReturnMode === "SUPPORT" ? "SUPPORT" : "UBER",
+        riderPhone:          details.riderPhone,
+        passengers:          details.passengers,
+        pickupInstructions:  details.pickupInstructions,
+        ...(details.stops.length ? { stops: details.stops } : {}),
+        ...(vehicle ? { careVehicle: vehicle } : {}),
+        /* Checkout requires all three authorization boxes before payment */
+        careConsentAt:       vehicle ? new Date() : null,
         ...(isValidSchedule ? { scheduledAt: parsedScheduledAt } : {}),
       },
     });
@@ -124,20 +165,31 @@ export async function POST(req: NextRequest) {
         where: { id: userId },
         select: { email: true, firstName: true, phone: true },
       });
-      if (user?.email) {
+      const email = receiptEmail ?? user?.email;
+      if (email) {
+        const when = isScheduled
+          ? parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Winnipeg", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+          : undefined;
+        /* Booking confirmation, sent immediately after successful payment.
+           A separate update follows when a chauffeur accepts. */
         sendNotification({
           eventType: "RIDER_BOOKING_CONFIRMED",
           recipient: {
             type: "user", id: userId,
-            email: user.email, firstName: user.firstName,
-            phone: user.phone ?? undefined,
+            email, firstName: user?.firstName ?? clientName,
+            phone: user?.phone ?? undefined,
           },
           data: {
-            bookingId: booking.id, pickup, dropoff, carTier: "care",
-            fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total),
-            message: isScheduled
-              ? `Your Safe Ride is booked for ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. We'll line up your chauffeurs ahead of your pickup time.`
-              : "Your Safe Ride is confirmed. We are now finding your chauffeurs.",
+            bookingId: booking.id, pickup, dropoff,
+            carTier: "Safe Ride",
+            serviceLabel: "Safe Ride",
+            fare: Number(fare), serviceFee: Number(serviceFee), gst: Number(gst ?? 0), total: Number(total),
+            ...(when ? { scheduledDate: when } : {}),
+            ...(vehicle ? { vehicle: `${vehicle.colour} ${vehicle.make} ${vehicle.model} (${vehicle.plate})` } : {}),
+            riderName: clientName,
+            message: when
+              ? `Your Safe Ride is booked for ${when}. We'll confirm your chauffeur ahead of your pickup time.`
+              : "Your Safe Ride is booked. We're finding your chauffeur now.",
           },
         }).catch(() => {});
       }
@@ -153,7 +205,7 @@ export async function POST(req: NextRequest) {
       if (isScheduled) {
         pushToAllDriversByTier(null, {
           title: "🌟 New Scheduled Safe Ride",
-          body:  `Pickup: ${pickup} at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Open the app to be ready.`,
+          body:  `Pickup: ${pickup} at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Winnipeg", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Open the app to be ready.`,
           tag:   `care-scheduled-${booking.id}`,
           data:  { type: "care_scheduled", bookingId: booking.id },
         }).catch(() => {});

@@ -26,7 +26,7 @@ const WHERE_TO_HREF = IN_CITY_RIDES_ENABLED ? "/home/pickup" : "/home/pickup?ser
 
 const ALL_PROMOS = [
   { title: "Luxury travel",      desc: "Private, discreet rides in a class of their own.",   img: "/images/slider card 1.png", imgClass: "object-cover",              enabled: true },
-  { title: "The ease of travel", desc: "Hourly chauffeur, airport transfer & Care Ride.",    img: "/images/Group 6.png",       imgClass: "object-cover",              enabled: AIRPORT_TRANSFER_ENABLED && HOURLY_CHARTER_ENABLED },
+  { title: "The ease of travel", desc: "Hourly chauffeur, airport transfer & Safe Ride.",    img: "/images/Group 6.png",       imgClass: "object-cover",              enabled: AIRPORT_TRANSFER_ENABLED && HOURLY_CHARTER_ENABLED },
   { title: "Safe Ride",          desc: "We drive you and your car home safely.",             img: "/images/Group 6.png",       imgClass: "object-cover",              enabled: !(AIRPORT_TRANSFER_ENABLED && HOURLY_CHARTER_ENABLED) },
   { title: "In-City Rides",      desc: "Cruise the city in comfort and class.",              img: "/images/home banner.png",   imgClass: "object-cover",              enabled: IN_CITY_RIDES_ENABLED },
   { title: "Airport Transfer",   desc: "From doorstep to departure gate—effortlessly.",      img: "/images/slider card 1.png", imgClass: "object-cover object-right", enabled: AIRPORT_TRANSFER_ENABLED },

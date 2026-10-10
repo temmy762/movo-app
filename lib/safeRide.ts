@@ -100,10 +100,15 @@ export function priceSafeRide(opts: {
   serviceRates: typeof SAFE_RIDE_SERVICE_DEFAULTS;
   settings: SafeRideSettings;
   gstRate: number;
+  /* Per-stop fees on top of the distance/time through the stops — part of
+     the chauffeur's work, so inside the service portion */
+  stopFees?: number;
 }): SafeRidePrice {
   const { tripKm, tripMin, returnKm, returnMin, returnAt, serviceRates: r, settings: s, gstRate } = opts;
 
-  const servicePortion = round2(Math.max(r.minFare, r.baseFare + tripKm * r.ratePerKm + tripMin * r.ratePerMin));
+  const servicePortion = round2(
+    Math.max(r.minFare, r.baseFare + tripKm * r.ratePerKm + tripMin * r.ratePerMin) + (opts.stopFees ?? 0),
+  );
 
   const returnEstimate = round2(Math.max(
     s.returnMinimum,

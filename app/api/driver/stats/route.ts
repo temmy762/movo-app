@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  /* Start of "today" in the platform's timezone (America/Toronto) for the
+  /* Start of "today" in the platform's timezone (America/Winnipeg) for the
      dashboard's daily figures. */
   const now = new Date();
   const startOfToday = new Date(now);

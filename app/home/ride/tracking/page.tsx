@@ -7,6 +7,7 @@ import Image from "next/image";
 import SupportSheet from "./SupportSheet";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
+import { bookingExtras, clearSafeRideDraft, getSafeRideDraft } from "@/lib/safeRideDraft";
 
 const RideMap = dynamic(() => import("./RideMap"), {
   ssr: false,
@@ -122,6 +123,28 @@ function RideTrackingContent() {
   const [addingStop,        setAddingStop]        = useState(false);
   const [stopFeeAmount,     setStopFeeAmount]     = useState<number | null>(null);
   const [stopError,         setStopError]         = useState<string | null>(null);
+  /* Price of the stop, shown before the rider confirms */
+  const [stopQuote,         setStopQuote]         = useState<{ charge: number; newTotal: number; routed: boolean } | null>(null);
+
+  const handleQuoteStop = async () => {
+    if (!bookingId || !stopAddress.trim()) return;
+    setAddingStop(true);
+    setStopError(null);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/add-stop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stopAddress: stopAddress.trim(), quoteOnly: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Couldn't price this stop");
+      setStopQuote({ charge: data.charge, newTotal: data.newTotal, routed: !!data.routed });
+    } catch (e) {
+      setStopError(e instanceof Error ? e.message : "Couldn't price this stop. Please try again.");
+    } finally {
+      setAddingStop(false);
+    }
+  };
 
   /* Add a stop mid-ride — charges the fee difference to the rider's card
      (on-session, so a 3DS challenge can pop right here if the bank asks). */
@@ -130,7 +153,7 @@ function RideTrackingContent() {
     setAddingStop(true);
     setStopError(null);
     try {
-      let res = await fetch(`/api/bookings/${bookingId}/add-stop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      let res = await fetch(`/api/bookings/${bookingId}/add-stop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ stopAddress: stopAddress.trim() }) });
       let data = await res.json();
 
       if (res.ok && data.requiresAction && data.clientSecret) {
@@ -151,6 +174,7 @@ function RideTrackingContent() {
       setStopFeeAmount(data.charged ?? null);
       setShowAddStop(false);
       setStopAddress("");
+      setStopQuote(null);
     } catch (e) {
       setStopError(e instanceof Error ? e.message : "Failed to add stop. Please try again.");
     } finally {
@@ -189,12 +213,14 @@ function RideTrackingContent() {
         ...(isCareReturn ? {} : { carTier: resolvedT, carName: car }),
         stripePaymentIntentId: intentId,
         ...(scheduledAtPm ? { scheduledAt: scheduledAtPm } : {}),
+        /* Stops / rider / vehicle saved before the 3DS redirect */
+        ...bookingExtras(isCareReturn, getSafeRideDraft().stops ?? []),
       }),
     })
       .then(r => r.json())
       .then(data => {
         const id = isCareReturn ? data?.bookingId : data?.id;
-        if (id) setBookingId(id);
+        if (id) { setBookingId(id); clearSafeRideDraft(); }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -458,10 +484,14 @@ function RideTrackingContent() {
           /* Scheduled-ride banner — while searching AND after a chauffeur is
              confirmed but hasn't set off yet. A reserved 5 PM ride must NOT
              read "your chauffeur is on the way" hours ahead of time. */
-          const scheduledFuture = data.scheduledAt && new Date(data.scheduledAt).getTime() > Date.now();
-          if (scheduledFuture && !data.enRouteAt && !data.startedAt &&
+          /* A reservation (booked 25+ min ahead) stays in its "scheduled /
+             confirmed for <date>" state until the chauffeur actually taps
+             "Heading to pickup" (enRouteAt) — even past the pickup time. */
+          const isReservation = !!data.scheduledAt &&
+            new Date(data.scheduledAt).getTime() - new Date(data.createdAt).getTime() > 25 * 60 * 1000;
+          if (isReservation && !data.enRouteAt && !data.arrivedAt && !data.startedAt &&
               (data.status === "PENDING" || data.status === "CONFIRMED")) {
-            setScheduledForLabel(new Date(data.scheduledAt).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
+            setScheduledForLabel(new Date(data.scheduledAt).toLocaleString("en-CA", { timeZone: "America/Winnipeg", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }));
             setAwaitingSetOff(!!data.driver);
           } else {
             setScheduledForLabel(null);
@@ -530,6 +560,13 @@ function RideTrackingContent() {
 
           /* Keep the driver card fresh — a new driver can accept after a
              reassignment, and the one-shot details fetch won't re-run */
+          /* Safe Ride: the chauffeur drives the customer's own car, so only
+             their name and phone matter (for call / message) */
+          if (data.driver && data.bookingType === "CARE") {
+            const name = `${data.driver.firstName ?? ""} ${data.driver.lastName ?? ""}`.trim();
+            if (name) setDriverName(name);
+            if (data.driver.phone) setDriverPhone(data.driver.phone);
+          }
           if (data.driver && data.bookingType !== "CARE") {
             const name = `${data.driver.firstName ?? ""} ${data.driver.lastName ?? ""}`.trim();
             if (name) setDriverName(name);
@@ -745,7 +782,7 @@ function RideTrackingContent() {
                   customer must only ever be aware of their Primary chauffeur. */}
               {rideStatus === "PENDING"    ? (scheduledForLabel ? "We'll line up your chauffeur ahead of pickup." : "We're contacting nearby chauffeurs — hang tight.") :
                awaitingSetOff              ? `Your chauffeur is confirmed for ${scheduledForLabel}. You'll be notified when they set off.` :
-               rideStatus === "CONFIRMED"  ? "Your chauffeur is on the way to you" :
+               rideStatus === "CONFIRMED"  ? "Chauffeur on the way" :
                rideStatus === "STARTED"    ? "Ride in progress — arriving at your destination" :
                rideStatus === "COMPLETED"  ? "Ride completed" :
                "Ride in progress"}
@@ -949,8 +986,19 @@ function RideTrackingContent() {
             </div>
           </div>}
 
-          {/* Message / Call — hidden for Care (drivers are in the Care panel) */}
-          {!isCareRide && <div className="flex gap-3 mb-4">
+          {/* Reservation confirmed — booking details */}
+          {awaitingSetOff && scheduledForLabel && (
+            <div className="rounded-2xl border border-gray-200 px-4 py-3 mb-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Your reservation</p>
+              <div className="flex justify-between text-[13px] mb-1"><span className="text-gray-500">Pickup time</span><span className="font-semibold text-gray-900">{scheduledForLabel}</span></div>
+              <div className="flex justify-between text-[13px] mb-1"><span className="text-gray-500">Chauffeur</span><span className="font-semibold text-gray-900">{driverName}</span></div>
+              <div className="flex justify-between text-[13px]"><span className="text-gray-500">{isCareRide ? "Your vehicle" : "Service"}</span><span className="font-semibold text-gray-900 text-right">{car}</span></div>
+              <p className="text-[11px] text-gray-400 mt-2">We&apos;ll notify you when your chauffeur sets off.</p>
+            </div>
+          )}
+
+          {/* Message / Call — once a chauffeur is assigned (Safe Ride included) */}
+          {(!isCareRide || !!driverPhone) && <div className="flex gap-3 mb-4">
             <button type="button" onClick={() => setChatOpen(true)}
               className="no-hover-fx flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full border border-gray-200 text-gray-700 relative">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
@@ -1130,7 +1178,7 @@ function RideTrackingContent() {
           <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg">
             <h3 className="text-[15px] font-bold text-gray-900 mb-1">Add a Stop</h3>
             <p className="text-[12px] text-gray-500 mb-1">
-              The additional stop fee (plus tax) will be charged to your card on file.
+              Enter the stop to see the updated fare. Nothing is charged until you confirm.
             </p>
             {stopFeeAmount != null && (
               <p className="text-[12px] font-semibold text-green-600 mb-2">✓ ${stopFeeAmount.toFixed(2)} charged for your last stop.</p>
@@ -1141,24 +1189,31 @@ function RideTrackingContent() {
             <input
               type="text"
               value={stopAddress}
-              onChange={(e) => setStopAddress(e.target.value)}
+              onChange={(e) => { setStopAddress(e.target.value); setStopQuote(null); }}
               placeholder="Enter stop address"
               className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936] mt-2"
             />
+            {stopQuote && (
+              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[13px]">
+                <div className="flex justify-between"><span className="text-gray-500">Added to your fare (incl. GST)</span><span className="font-bold text-gray-900">+${stopQuote.charge.toFixed(2)}</span></div>
+                <div className="flex justify-between mt-0.5"><span className="text-gray-500">New total</span><span className="font-semibold text-gray-900">${stopQuote.newTotal.toFixed(2)}</span></div>
+                {!stopQuote.routed && <p className="text-[11px] text-gray-400 mt-1">We couldn&apos;t map the detour, so only the stop fee applies.</p>}
+              </div>
+            )}
             <div className="flex gap-2 mt-3">
               <button
-                onClick={() => { setShowAddStop(false); setStopAddress(""); setStopError(null); }}
+                onClick={() => { setShowAddStop(false); setStopAddress(""); setStopError(null); setStopQuote(null); }}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600"
               >
                 Cancel
               </button>
               <button
                 disabled={!stopAddress.trim() || addingStop}
-                onClick={handleAddStop}
+                onClick={stopQuote ? handleAddStop : handleQuoteStop}
                 className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-50"
                 style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}
               >
-                {addingStop ? "Adding…" : "Add Stop"}
+                {addingStop ? "Please wait…" : stopQuote ? `Confirm & pay $${stopQuote.charge.toFixed(2)}` : "See price"}
               </button>
             </div>
           </div>
@@ -1277,7 +1332,7 @@ function RideTrackingContent() {
             </div>
             <p className="text-[16px] font-bold text-gray-900 mb-2">No chauffeurs available</p>
             <p className="text-[13px] text-gray-500 mb-6 leading-snug">
-              We were unable to find a Care Ride chauffeur in your area at this time. Please try again shortly or contact support.
+              We were unable to find a Safe Ride chauffeur in your area at this time. Please try again shortly or contact support.
             </p>
             <button
               type="button"

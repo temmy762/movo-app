@@ -15,7 +15,11 @@ export function riderBookingConfirmedTemplate(
     fare: number;
     serviceFee: number;
     total: number;
+    gst?: number;
     scheduledDate?: string;
+    serviceLabel?: string;
+    vehicle?: string;
+    riderName?: string;
   };
 
   const preview = `Your ${settings.appName} booking is confirmed!`;
@@ -42,8 +46,18 @@ export function riderBookingConfirmedTemplate(
           <strong>Booking ID:</strong> {booking.bookingId}
         </Text>
         <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "8px" }}>
-          <strong>Service:</strong> {booking.carTier}
+          <strong>Service:</strong> {booking.serviceLabel ?? booking.carTier}
         </Text>
+        {booking.vehicle && (
+          <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "8px" }}>
+            <strong>Vehicle:</strong> {booking.vehicle}
+          </Text>
+        )}
+        {booking.riderName && (
+          <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "8px" }}>
+            <strong>Rider:</strong> {booking.riderName}
+          </Text>
+        )}
         {booking.scheduledDate && (
           <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "8px" }}>
             <strong>Scheduled:</strong> {booking.scheduledDate}
@@ -74,9 +88,16 @@ export function riderBookingConfirmedTemplate(
         <Text style={{ fontSize: "14px", color: "#333333" }}>
           Ride fare: ${booking.fare.toFixed(2)}
         </Text>
-        <Text style={{ fontSize: "14px", color: "#333333" }}>
-          Service fee: ${booking.serviceFee.toFixed(2)}
-        </Text>
+        {booking.serviceFee > 0 && (
+          <Text style={{ fontSize: "14px", color: "#333333" }}>
+            Service fee: ${booking.serviceFee.toFixed(2)}
+          </Text>
+        )}
+        {!!booking.gst && (
+          <Text style={{ fontSize: "14px", color: "#333333" }}>
+            GST: ${booking.gst.toFixed(2)}
+          </Text>
+        )}
         <Text
           style={{ fontSize: "16px", fontWeight: "700", color: "#2D0A53", marginTop: "8px" }}
         >
@@ -117,7 +138,8 @@ Dropoff Location: ${booking.dropoff}
 
 Fare Breakdown:
 Ride fare: $${booking.fare.toFixed(2)}
-Service fee: $${booking.serviceFee.toFixed(2)}
+${booking.serviceFee > 0 ? `Service fee: $${booking.serviceFee.toFixed(2)}
+` : ""}${booking.gst ? `GST: $${booking.gst.toFixed(2)}` : ""}
 Total: $${booking.total.toFixed(2)}
 
 Track your ride: ${settings.baseUrl}/home/rides/${booking.bookingId}

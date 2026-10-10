@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 import { VEHICLE_RENTAL_ENABLED } from "@/lib/launchConfig";
+import RideDetails from "./components/RideDetails";
 
 const DriverMap = dynamic(() => import("./DriverMap"), { ssr: false, loading: () => <div className="absolute inset-0" style={{ background: "#1a1e3c" }} /> });
 
@@ -22,6 +23,11 @@ type Booking = {
   scheduledAt?: string | null;
   paymentStatus: string;
   status: string;
+  riderPhone?: string | null;
+  user?: { phone: string | null } | null;
+  passengers?: number | null;
+  pickupInstructions?: string | null;
+  stops?: unknown;
 };
 
 type CareAssignment = {
@@ -42,6 +48,14 @@ type CareAssignment = {
     returnMode?: string | null;
     uberReturnRef?: string | null;
     uberReturnBookedAt?: string | null;
+    scheduledAt?: string | null;
+    enRouteAt?: string | null;
+    riderPhone?: string | null;
+    user?: { phone: string | null } | null;
+    passengers?: number | null;
+    pickupInstructions?: string | null;
+    stops?: unknown;
+    careVehicle?: unknown;
   };
 };
 
@@ -885,6 +899,28 @@ export default function DriverHomePage() {
     setCarePhase("idle");
   }
 
+  /* A reserved Safe Ride waits for the chauffeur to set off before "Arrived" */
+  function needsSetOff(a: CareAssignment) {
+    return !!a.booking.scheduledAt && !a.booking.enRouteAt &&
+      new Date(a.booking.scheduledAt).getTime() > Date.now() - 6 * 60 * 60 * 1000;
+  }
+
+  async function handleCareEnRoute() {
+    if (!careAssignment) return;
+    setCareLoading(true);
+    setCareError(null);
+    const res = await fetch(`/api/care/assignments/${careAssignment.id}/en-route`, { method: "PATCH" }).catch(() => null);
+    setCareLoading(false);
+    if (!res?.ok) {
+      const d = await res?.json().catch(() => null);
+      setCareError(d?.error ?? "Could not update. Please try again.");
+      return;
+    }
+    const d = await res.json().catch(() => ({}));
+    setCareAssignment(prev => prev ? { ...prev, booking: { ...prev.booking, enRouteAt: d.enRouteAt ?? new Date().toISOString() } } : prev);
+    startLocationTracking(careAssignment.booking.id);
+  }
+
   async function handleCareReturned() {
     if (!careAssignment) return;
     setCareLoading(true);
@@ -1595,13 +1631,29 @@ export default function DriverHomePage() {
                 </p>
               </div>
             </div>
+            {careAssignment.role === "PRIMARY" && <RideDetails booking={careAssignment.booking} />}
             {/* CTA */}
             {careError && (
               <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
                 <p className="text-[12px] font-semibold text-red-600">{careError}</p>
               </div>
             )}
-            {carePhase === "accepted" && (
+            {carePhase === "accepted" && careAssignment.role === "PRIMARY" && needsSetOff(careAssignment) && (
+              <div className="flex flex-col gap-2">
+                <div className="rounded-xl px-3 py-2.5 bg-indigo-50 border border-indigo-200">
+                  <p className="text-[12px] font-semibold text-indigo-700">
+                    Reserved for {new Date(careAssignment.booking.scheduledAt!).toLocaleString("en-CA", { timeZone: "America/Winnipeg", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </p>
+                  <p className="text-[11px] text-indigo-600 mt-0.5">Tap below when you set off — the customer is told you&apos;re on the way.</p>
+                </div>
+                <button onClick={handleCareEnRoute} disabled={careLoading}
+                  className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+                  style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
+                  {careLoading ? "…" : "Heading to pickup"}
+                </button>
+              </div>
+            )}
+            {carePhase === "accepted" && !(careAssignment.role === "PRIMARY" && needsSetOff(careAssignment)) && (
               <div className="flex gap-3">
                 <button
                   onClick={() => router.push(`/driver/home/finish/chat?bookingId=${careAssignment.booking.id}`)}
@@ -1674,7 +1726,7 @@ export default function DriverHomePage() {
                   <button onClick={handleCareComplete} disabled={careLoading}
                     className="no-hover-fx flex-1 py-3 rounded-xl text-white font-bold text-[15px]"
                     style={{ background: careLoading ? "#9ca3af" : "linear-gradient(90deg,#1a1a2e,#131936,#C6BFB2)" }}>
-                    {careLoading ? "Saving…" : careAssignment.role === "SUPPORT" ? "Complete — Returned Primary to Vehicle" : "Customer Delivered"}
+                    {careLoading ? "Saving…" : careAssignment.role === "SUPPORT" ? "Complete — Returned Primary to Vehicle" : "Customer Dropped Off"}
                   </button>
                 </div>
               </div>
@@ -1685,7 +1737,7 @@ export default function DriverHomePage() {
             {carePhase === "awaiting_return" && careAssignment.booking.returnMode === "UBER" && (
               <div className="flex flex-col gap-3">
                 <div className="rounded-xl px-3 py-3" style={{ background: "#f5f0ff", border: "1px solid #131936" }}>
-                  <p className="text-[12px] font-bold" style={{ color: "#131936" }}>Customer delivered ✓</p>
+                  <p className="text-[12px] font-bold" style={{ color: "#131936" }}>Customer dropped off ✓</p>
                   {careAssignment.booking.uberReturnBookedAt ? (
                     <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
                       Your Uber back to your vehicle is booked
@@ -1694,7 +1746,7 @@ export default function DriverHomePage() {
                     </p>
                   ) : (
                     <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-                      Movo Dispatch is booking an Uber to take you back to your vehicle at {careAssignment.booking.pickup}. You&apos;ll get a text when it&apos;s booked.
+                      Your return is being arranged. We&apos;ll notify you when your pickup details are ready.
                     </p>
                   )}
                   <p className="text-[10px] text-gray-400 mt-1.5">
@@ -1711,7 +1763,7 @@ export default function DriverHomePage() {
             {carePhase === "awaiting_return" && careAssignment.booking.returnMode !== "UBER" && (
               <div className="flex flex-col gap-3">
                 <div className="rounded-xl px-3 py-3" style={{ background: "#f5f0ff", border: "1px solid #131936" }}>
-                  <p className="text-[12px] font-bold" style={{ color: "#131936" }}>Customer delivered ✓</p>
+                  <p className="text-[12px] font-bold" style={{ color: "#131936" }}>Customer dropped off ✓</p>
                   <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
                     {coDriver
                       ? `${coDriver.driver.firstName} ${coDriver.driver.lastName} is on the way to pick you up and take you back to your vehicle.`
@@ -1796,6 +1848,7 @@ export default function DriverHomePage() {
                 <p className="text-[12px] text-gray-600 leading-tight">{activeBooking.dropoff}</p>
               </div>
             </div>
+            <RideDetails booking={activeBooking} />
 
             {ridePhase === "accepted" && (
               <div className="flex gap-3">

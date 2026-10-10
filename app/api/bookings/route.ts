@@ -79,6 +79,22 @@ export async function GET(req: NextRequest) {
    no-driver refund timeout anchors to the pickup time instead of now. */
 const SCHEDULED_THRESHOLD_MS = 25 * 60 * 1000;
 
+/* Optional booking details from checkout, cleaned and length-limited */
+function bookingDetails(body: Record<string, unknown>) {
+  const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+  const stops = Array.isArray(body.stops)
+    ? (body.stops as unknown[]).filter((x): x is string => typeof x === "string" && !!x.trim()).map(x => x.trim()).slice(0, 3)
+    : [];
+  const passengers = Number(body.passengers);
+  return {
+    stops,
+    riderName:          str(body.riderName, 80),
+    riderPhone:         str(body.riderPhone, 30),
+    pickupInstructions: str(body.pickupInstructions, 300),
+    passengers:         Number.isInteger(passengers) && passengers > 0 && passengers <= 8 ? passengers : null,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     /* Launch scope: standard rides can only be booked while In-City is on
@@ -95,6 +111,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { pickup, dropoff, carTier, carName, quote: quoteToken, stripePaymentIntentId, scheduledAt } = body;
+    const details = bookingDetails(body);
 
     if (!pickup || !dropoff || !carTier || !carName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -104,6 +121,7 @@ export async function POST(req: NextRequest) {
        Stripe payment — never from the request body. */
     const verified = await verifyBookingPayment({
       userId, quoteToken, paymentIntentId: stripePaymentIntentId, pickup, dropoff, tier: carTier,
+      stops: details.stops,
     });
     if (!verified.ok) {
       return NextResponse.json({ error: verified.error }, { status: verified.status });
@@ -118,7 +136,8 @@ export async function POST(req: NextRequest) {
       where: { id: userId },
       select: { firstName: true, lastName: true },
     });
-    const clientName = `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Guest";
+    /* Booking for someone else: the chauffeur sees (and calls) the rider */
+    const clientName = details.riderName ?? (`${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || "Guest");
 
     // Geocode addresses to get coordinates (non-fatal — booking proceeds even without coords)
     const coordinates = await geocodeAddresses(pickup, dropoff).catch(() => null);
@@ -155,6 +174,10 @@ export async function POST(req: NextRequest) {
         status: resolvedStatus,
         stripePaymentIntentId: verified.paymentIntentId,
         userId,
+        riderPhone:         details.riderPhone,
+        passengers:         details.passengers,
+        pickupInstructions: details.pickupInstructions,
+        ...(details.stops.length ? { stops: details.stops } : {}),
         ...(isValidSchedule ? { scheduledAt: parsedScheduledAt } : {}),
       },
     });
@@ -197,7 +220,7 @@ export async function POST(req: NextRequest) {
     /* Push ride-request alert to matching online drivers, always */
     pushToOnlineDriversByTier(carTier ?? null, {
       title: isScheduled ? "📅 New Scheduled Ride" : "🚗 New Ride Request",
-      body:  `Pickup: ${pickup}${isScheduled ? ` at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : ""}`,
+      body:  `Pickup: ${pickup}${isScheduled ? ` at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Winnipeg", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : ""}`,
       tag:   `booking-${booking.id}`,
       data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
     }).catch(() => {});
@@ -207,7 +230,7 @@ export async function POST(req: NextRequest) {
     if (isScheduled) {
       pushToAllDriversByTier(carTier ?? null, {
         title: "📅 New Scheduled Ride",
-        body:  `Pickup: ${pickup} at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Toronto", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Open the app to accept.`,
+        body:  `Pickup: ${pickup} at ${parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Winnipeg", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. Open the app to accept.`,
         tag:   `booking-${booking.id}`,
         data:  { type: "new_booking", bookingId: booking.id, requireInteraction: "true" },
       }).catch(() => {});

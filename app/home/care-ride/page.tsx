@@ -83,7 +83,7 @@ export default function CareRidePage() {
           className="w-full py-4 rounded-2xl text-white font-bold text-[16px] tracking-wide shadow-lg"
           style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
         >
-          Book Care Ride
+          Book Safe Ride
         </button>
         <p className="text-center text-[11px] text-gray-400 mt-2">Your car, our chauffeur</p>
       </div>

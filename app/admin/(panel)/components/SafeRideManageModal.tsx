@@ -23,6 +23,12 @@ export type SafeRideAdminBooking = {
   uberReturnRef: string | null;
   uberReturnCost: number | null;
   uberReturnBookedAt: string | null;
+  riderPhone?: string | null;
+  passengers?: number | null;
+  pickupInstructions?: string | null;
+  stops?: unknown;
+  careVehicle?: unknown;
+  scheduledAt?: string | null;
   careAssignments: { id: string; role: "PRIMARY" | "SUPPORT"; status: string; driver: { firstName: string; lastName: string; phone: string | null } | null }[];
 };
 
@@ -91,6 +97,23 @@ export default function SafeRideManageModal({ booking, onClose, onChanged }: {
           </div>
           <button onClick={onClose} className="no-hover-fx text-gray-400 text-[18px] leading-none">×</button>
         </div>
+
+        {/* Trip details from the booking flow */}
+        {(() => {
+          const v = (booking.careVehicle ?? null) as { make?: string; model?: string; year?: string; colour?: string; plate?: string; transmission?: string } | null;
+          const stops = Array.isArray(booking.stops) ? (booking.stops as string[]) : [];
+          return (
+            <div className="rounded-xl border border-gray-100 px-4 py-3 text-[12px] mb-4 flex flex-col gap-1">
+              <p className="font-bold text-gray-500 mb-1">Trip details</p>
+              <p><span className="text-gray-500">Route:</span> {booking.pickup} → {booking.dropoff}</p>
+              {stops.length > 0 && <p><span className="text-gray-500">Stops:</span> {stops.join(" → ")}</p>}
+              {booking.scheduledAt && <p><span className="text-gray-500">Reserved for:</span> {new Date(booking.scheduledAt).toLocaleString("en-CA", { timeZone: "America/Winnipeg" })}</p>}
+              <p><span className="text-gray-500">Rider:</span> {booking.clientName}{booking.riderPhone ? <> · <a className="underline" href={`tel:${booking.riderPhone}`}>{booking.riderPhone}</a></> : null}{booking.passengers ? ` · ${booking.passengers} passenger${booking.passengers > 1 ? "s" : ""}` : ""}</p>
+              {v && <p><span className="text-gray-500">Vehicle:</span> {[v.colour, v.year, v.make, v.model].filter(Boolean).join(" ")} · {v.plate} · {v.transmission}</p>}
+              {booking.pickupInstructions && <p><span className="text-gray-500">Pickup note:</span> {booking.pickupInstructions}</p>}
+            </div>
+          );
+        })()}
 
         {/* Price breakdown (customer only ever sees the single fare) */}
         <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-[12px] mb-4">

@@ -420,6 +420,17 @@ model Booking {
   uberReturnRef         String?
   uberReturnCost        Float?
   uberReturnBookedAt    DateTime?
+  /* Who is actually riding — set when the account holder books for someone
+     else (clientName then holds the rider's name). */
+  riderPhone            String?
+  passengers            Int?
+  pickupInstructions    String?
+  /* Extra stop addresses, in order, between pickup and dropoff */
+  stops                 Json?
+  /* Safe Ride: the customer's own vehicle { make, model, year, colour, plate,
+     transmission } and when they accepted the authorization/consents */
+  careVehicle           Json?
+  careConsentAt         DateTime?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 

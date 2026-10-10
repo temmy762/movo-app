@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import { IN_CITY_RIDES_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
+import { getSafeRideDraft, saveSafeRideDraft } from "@/lib/safeRideDraft";
+import SafeRideSteps from "../components/SafeRideSteps";
 
 const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
 
@@ -39,6 +41,8 @@ function PickupContent() {
   const [time,       setTime]       = useState(() => searchParams.get("time") || nowTimeStr());
   const [scheduleError, setScheduleError] = useState("");
   const [passengers, setPassengers] = useState(() => Math.min(8, Math.max(1, parseInt(searchParams.get("passengers") ?? "1", 10) || 1)));
+  /* Optional note for the chauffeur (side entrance, unit number…) */
+  const [pickupInstructions, setPickupInstructions] = useState(() => getSafeRideDraft().pickupInstructions ?? "");
   const [selectedPoint, setSelectedPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedDropoff, setSelectedDropoff] = useState<{ lat: number; lng: number } | null>(null);
   const [mapMode, setMapMode] = useState<"pickup" | "dropoff">("pickup");
@@ -154,6 +158,8 @@ function PickupContent() {
       }
     }
     const schedule: { date?: string; time?: string } = kind === "reserve" ? { date, time } : {};
+    /* Carried to checkout and stored on the booking for the chauffeur */
+    saveSafeRideDraft({ pickupInstructions: pickupInstructions.trim(), passengers });
 
     if (service === "care") {
       /* Care Ride: skip car selection — go straight to the Care confirm/pay page */
@@ -170,7 +176,8 @@ function PickupContent() {
         params.set("pickupLat", String(selectedPoint.lat));
         params.set("pickupLng", String(selectedPoint.lng));
       }
-      router.push(`/home/ride/confirm?${params.toString()}`);
+      /* Safe Ride step 2 (vehicle) and 3 (contact & authorization) come next */
+      router.push(`/home/care-ride/details?${params.toString()}`);
       return;
     }
 
@@ -226,7 +233,10 @@ function PickupContent() {
 
       {/* Pickup panel */}
       <div className="shrink-0 bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.10)] px-5 pt-5 pb-8 z-10">
-        <p className="text-[13px] font-semibold text-gray-700 mb-4">Set pickup on map or type an address</p>
+        {service === "care" && <SafeRideSteps step={1} />}
+        <p className="text-[13px] font-semibold text-gray-700 mb-4">
+          {service === "care" ? "Where are we taking you? Set pickup on the map or type an address" : "Set pickup on map or type an address"}
+        </p>
 
         <div className="relative flex flex-col gap-3 mb-5">
           <div className="absolute left-[9px] top-[22px] bottom-[22px] w-px bg-gray-300" />
@@ -290,6 +300,14 @@ function PickupContent() {
           </div>
         </div>
 
+        {/* Pickup instructions (optional) */}
+        <div className="mb-4">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Pickup instructions (optional)</label>
+          <textarea value={pickupInstructions} onChange={e => setPickupInstructions(e.target.value.slice(0, 300))}
+            rows={2} placeholder="E.g. side entrance, unit number, etc."
+            className="w-full rounded-lg px-3 py-2 bg-gray-100 border border-gray-200 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none resize-none" />
+        </div>
+
         {/* Schedule — date / time / passengers (same as landing widget) */}
         <div className="grid grid-cols-3 gap-2 mb-5">
           <div>
@@ -320,6 +338,9 @@ function PickupContent() {
           </div>
         </div>
 
+        {service === "care" && (
+          <p className="text-[11px] text-gray-400 -mt-3 mb-4">Passengers: count everyone, including yourself. Leave a seat for the chauffeur.</p>
+        )}
         {scheduleError && (
           <p className="text-[12px] text-red-500 mb-3">{scheduleError}</p>
         )}

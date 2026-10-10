@@ -39,6 +39,12 @@ export async function GET(req: NextRequest) {
       status: true,
       startedAt: true,
       scheduledAt: true,
+      /* Rider contact + pickup details for the chauffeur */
+      riderPhone: true,
+      passengers: true,
+      pickupInstructions: true,
+      stops: true,
+      user: { select: { phone: true } },
     },
   });
 

@@ -4,6 +4,7 @@ import { normalizeTier } from "@/lib/normalizeTier";
 import { signFareQuote } from "@/lib/fareQuote";
 import { AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED } from "@/lib/launchConfig";
 import { getSafeRideSettings, getSafeRideServiceRates, priceSafeRide } from "@/lib/safeRide";
+import { routeLeg, routeVia } from "@/lib/routing";
 
 /* Prefer a dedicated server key: NEXT_PUBLIC_* keys are often HTTP-referrer
    restricted for the browser, which makes server-side Distance Matrix calls
@@ -27,33 +28,16 @@ const DEFAULT_AIRPORT_PICKUP_FEE     = 10.00;
 const DEFAULT_FREE_WAITING_MINUTES   = 5;
 const DEFAULT_WAITING_RATE_PER_MIN   = 0.75;
 
-/* Driving distance/time for one leg, or null if Google can't route it */
-async function routeLeg(origin: string, destination: string): Promise<{ km: number; min: number } | null> {
-  if (!GOOGLE_API_KEY) return null;
-  try {
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&units=metric&key=${GOOGLE_API_KEY}`;
-    const data = await (await fetch(url)).json();
-    const el = data?.rows?.[0]?.elements?.[0];
-    if (!el || el.status !== "OK") {
-      console.error(`[estimate] Distance Matrix failed (top-level: ${data?.status ?? "?"}, element: ${el?.status ?? "missing"})`);
-      return null;
-    }
-    return { km: el.distance.value / 1000, min: Math.ceil(el.duration.value / 60) };
-  } catch (e) {
-    console.error("[estimate] Distance Matrix request failed", e);
-    return null;
-  }
-}
-
 /* Safe Ride: service portion + Return Logistics Allowance + GST, no service
    fee (lib/safeRide.ts). The return leg is priced on the real reverse route,
    and "late night" is judged on when that return happens. */
-async function estimateSafeRide(pickup: string, dropoff: string, pickupTimeParam: string | null) {
+async function estimateSafeRide(pickup: string, dropoff: string, pickupTimeParam: string | null, stopAddresses: string[]) {
   const requested = pickupTimeParam ? new Date(pickupTimeParam) : null;
   const pickupAt  = requested && !isNaN(requested.getTime()) && requested.getTime() > Date.now() ? requested : new Date();
 
   const [trip, back, settings, serviceRates, pricingConfig] = await Promise.all([
-    routeLeg(pickup, dropoff),
+    /* The chauffeur's trip goes through any stops; their return doesn't */
+    stopAddresses.length ? routeVia([pickup, ...stopAddresses, dropoff]) : routeLeg(pickup, dropoff),
     routeLeg(dropoff, pickup),
     getSafeRideSettings(),
     getSafeRideServiceRates(),
@@ -63,16 +47,19 @@ async function estimateSafeRide(pickup: string, dropoff: string, pickupTimeParam
   const tripKm  = trip?.km  ?? 10, tripMin  = trip?.min ?? 15;
   const backKm  = back?.km  ?? tripKm, backMin = back?.min ?? tripMin;
   const gstRate = pricingConfig?.gstRate ?? DEFAULT_GST_RATE;
+  const stopFeeUnit = pricingConfig?.additionalStopFee ?? DEFAULT_ADDITIONAL_STOP_FEE;
+  const stopFees    = parseFloat((stopAddresses.length * stopFeeUnit).toFixed(2));
 
   const price = priceSafeRide({
     tripKm, tripMin, returnKm: backKm, returnMin: backMin,
     returnAt: new Date(pickupAt.getTime() + tripMin * 60_000),
-    serviceRates, settings, gstRate,
+    serviceRates, settings, gstRate, stopFees,
   });
 
+  /* Stops are folded into the single Safe Ride fare (customer sees one price) */
   const amounts = { fare: price.fare, additionalStopFee: 0, airportFee: 0, serviceFee: 0, gst: price.gst, total: price.total };
   const quote = signFareQuote({
-    pickup, dropoff, tier: "care", ...amounts,
+    pickup, dropoff, tier: "care", ...amounts, stops: stopAddresses,
     safeRide: {
       servicePortion: price.servicePortion,
       returnAllowance: price.returnAllowance,
@@ -87,10 +74,10 @@ async function estimateSafeRide(pickup: string, dropoff: string, pickupTimeParam
     durationMin: trip ? trip.min : null,
     estimateBasis: trip ? "route" : "flat",
     tier: "care", gstRate, serviceFeeRate: 0,
-    stopFeeUnit: 0, airportFeeUnit: 0,
+    stopFeeUnit, airportFeeUnit: 0,
     freeWaitingMinutes: settings.freeWaitingMinutes,
     waitingRatePerMin: settings.waitingRatePerMin,
-    stops: 0, isAirport: false,
+    stops: stopAddresses.length, stopAddresses, isAirport: false,
   });
 }
 
@@ -102,7 +89,10 @@ export async function GET(req: NextRequest) {
     /* Normalize legacy/UI tier labels ("First Class", "Economy", "all", …) to
        the canonical config keys so the admin-configured rates actually match. */
     const tier      = normalizeTier(searchParams.get("tier"));
-    const stops     = Math.max(0, parseInt(searchParams.get("stops") ?? "0", 10) || 0);
+    /* Stop addresses (in order, max 3). The trip is priced on the real route
+       through them, plus the per-stop fee. */
+    const stopAddresses = searchParams.getAll("stop").map(a => a.trim()).filter(Boolean).slice(0, 3);
+    const stops     = stopAddresses.length;
     /* Switched-off services are never quoted, so they can't be paid for or booked */
     const isAirport = AIRPORT_TRANSFER_ENABLED && searchParams.get("isAirport") === "true";
     const isHourly  = searchParams.get("mode") === "hourly";
@@ -117,7 +107,7 @@ export async function GET(req: NextRequest) {
 
     if (tier === "care") {
       if (!dropoff) return NextResponse.json({ error: "pickup and dropoff required" }, { status: 400 });
-      return await estimateSafeRide(pickup, dropoff, searchParams.get("pickupTime"));
+      return await estimateSafeRide(pickup, dropoff, searchParams.get("pickupTime"), stopAddresses);
     }
 
     /* Load tier config + global pricing config from DB (non-fatal) */
@@ -153,7 +143,7 @@ export async function GET(req: NextRequest) {
       const total           = parseFloat((taxableAmount + gst).toFixed(2));
       const amounts = { fare, additionalStopFee, airportFee, serviceFee, gst, total };
       /* Signed so booking creation can trust these amounts, not the browser's */
-      const quote = signFareQuote({ pickup, dropoff: dropoff ?? "", tier, ...amounts });
+      const quote = signFareQuote({ pickup, dropoff: dropoff ?? "", tier, ...amounts, stops: stopAddresses });
       return { ...amounts, quote };
     };
 
@@ -165,7 +155,7 @@ export async function GET(req: NextRequest) {
     const meta = {
       tier, gstRate, serviceFeeRate, stopFeeUnit, airportFeeUnit,
       freeWaitingMinutes, waitingRatePerMin,
-      stops, isAirport,
+      stops, stopAddresses, isAirport,
     };
 
     /* Hourly charter: fare = configured hourly rate × booked hours (min-hours enforced) */
@@ -186,6 +176,17 @@ export async function GET(req: NextRequest) {
       console.error("[estimate] No Google Maps API key configured — falling back to flat 10km/15min estimate");
       const result = calcFares(10, 15);
       return NextResponse.json({ ...result, distanceKm: null, durationMin: null, estimateBasis: "flat", ...meta });
+    }
+
+    /* With stops, price the real route through them */
+    if (stopAddresses.length) {
+      const via = await routeVia([pickup, ...stopAddresses, dropoff!]);
+      const result = via ? calcFares(via.km, via.min) : calcFares(10, 15);
+      return NextResponse.json({
+        ...result,
+        distanceKm: via ? +via.km.toFixed(2) : null, durationMin: via ? via.min : null,
+        estimateBasis: via ? "route" : "flat", ...meta,
+      });
     }
 
     /* Google Distance Matrix */

@@ -224,6 +224,43 @@ export async function PATCH(
         driverId: driver!.id, driverName, userId,
       });
 
+      /* Tell the customer a chauffeur has accepted (separate from the booking
+         confirmation sent at payment). A reservation is NOT "on the way" yet —
+         that only happens when the chauffeur taps "Heading to pickup". */
+      const isReservation = !!booking.scheduledAt && booking.scheduledAt.getTime() > Date.now() + 25 * 60 * 1000;
+      if (!isReservation) {
+        await prisma.booking.update({ where: { id: booking.id }, data: { enRouteAt: new Date() } });
+      }
+      if (userId) {
+        const rider = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, firstName: true, phone: true },
+        });
+        if (rider?.email) {
+          const when = booking.scheduledAt?.toLocaleString("en-CA", { timeZone: "America/Winnipeg", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+          sendNotification({
+            eventType: "RIDER_DRIVER_ASSIGNED",
+            channels: isReservation ? ["EMAIL", "IN_APP"] : ["EMAIL", "IN_APP", "SMS"],
+            recipient: { type: "user", id: userId, email: rider.email, firstName: rider.firstName, phone: rider.phone ?? undefined },
+            data: {
+              bookingId: booking.id,
+              driverName,
+              vehicle: booking.carName,
+              pickup: booking.pickup, dropoff: booking.dropoff,
+              ...(isReservation
+                ? {
+                    title: "Safe Ride reservation confirmed",
+                    message: `${driverName} is confirmed as your Safe Ride chauffeur for ${when}. We'll let you know when they set off.`,
+                  }
+                : {
+                    title: "Your Safe Ride chauffeur is on the way",
+                    message: `${driverName} has accepted your Safe Ride and is on the way to your pickup.`,
+                  }),
+            },
+          }).catch((e) => console.error("[care accept notify rider]", e));
+        }
+      }
+
       if (isUberReturn) {
         /* No Support Chauffeur to wait for — the booking is confirmed now.
            Dispatch books PRIMARY's Uber back once the customer is delivered. */

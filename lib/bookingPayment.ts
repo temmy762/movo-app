@@ -28,6 +28,7 @@ export async function verifyBookingPayment(opts: {
   pickup: string;
   dropoff: string;
   tier: string;
+  stops?: string[];
 }): Promise<VerifiedPayment> {
   const quote = verifyFareQuote(opts.quoteToken);
   if (!quote) {
@@ -36,7 +37,8 @@ export async function verifyBookingPayment(opts: {
   if (
     quote.pickup !== opts.pickup ||
     quote.dropoff !== opts.dropoff ||
-    quote.tier !== normalizeTier(opts.tier)
+    quote.tier !== normalizeTier(opts.tier) ||
+    JSON.stringify(quote.stops ?? []) !== JSON.stringify(opts.stops ?? [])
   ) {
     return { ok: false, status: 400, error: "Fare quote does not match this trip" };
   }

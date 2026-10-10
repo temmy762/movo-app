@@ -6,6 +6,9 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { IN_CITY_RIDES_ENABLED, AIRPORT_TRANSFER_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
+import { bookingExtras, clearSafeRideDraft, getSafeRideDraft, saveSafeRideDraft, vehicleLabel } from "@/lib/safeRideDraft";
+import SafeRideSteps from "../../components/SafeRideSteps";
+import StopsEditor from "../../components/StopsEditor";
 
 const STRIPE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
 const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : Promise.resolve(null);
@@ -28,6 +31,8 @@ type FareEstimate = {
   stopFeeUnit: number; airportFeeUnit: number;
   freeWaitingMinutes: number; waitingRatePerMin: number;
   stops: number; isAirport: boolean;
+  /* Stop addresses this price includes (echoed by the server, signed in the quote) */
+  stopAddresses?: string[];
   hourly?: { rate: number; billedHours: number; minHours: number };
   /* Server-signed price — booking creation only trusts amounts inside it */
   quote: string;
@@ -66,8 +71,10 @@ async function createBookingAfterPayment(opts: {
         pickup, dropoff, quote,
         stripePaymentIntentId: intentId,
         ...(scheduledAt ? { scheduledAt } : {}),
+        ...bookingExtras(true, estimate.stopAddresses ?? []),
       }),
     }).then(r => r.json()).catch(() => null);
+    if (careRes?.bookingId) clearSafeRideDraft();
 
     const cp: Record<string, string> = { pickup, dropoff, car: "Safe Ride", tier: "care", paid: "1", service: "care" };
     if (careRes?.bookingId) cp.bookingId = careRes.bookingId;
@@ -83,8 +90,10 @@ async function createBookingAfterPayment(opts: {
       carTier: resolvedTier, carName,
       stripePaymentIntentId: intentId,
       ...(scheduledAt ? { scheduledAt } : {}),
+      ...bookingExtras(false, estimate.stopAddresses ?? []),
     }),
   }).then(r => r.json()).catch(() => null);
+  if (bookingRes?.id) clearSafeRideDraft();
 
   const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
   if (bookingRes?.id) tp.bookingId = bookingRes.id;
@@ -186,6 +195,8 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, clientName, inte
     if (scheduledAt) rp.scheduledAt = scheduledAt;
     if (isCare)      { rp.service = "care"; rp.car = "Safe Ride"; }
     const returnUrl = `${window.location.origin}/home/ride/tracking?${new URLSearchParams(rp).toString()}`;
+    /* Survives the 3DS redirect (same tab) so the booking matches the quote */
+    saveSafeRideDraft({ stops: estimate.stopAddresses ?? [] });
 
     const { error: stripeError } = await stripe.confirmPayment({
       elements,
@@ -227,7 +238,7 @@ function CheckoutForm({ pickup, dropoff, carName, tier, carImg, clientName, inte
                 : "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)",
             }}
           >
-            {submitting ? "Processing…" : "Confirm Booking"}
+            {submitting ? "Processing…" : `Pay $${estimate.total.toFixed(2)} & book`}
           </button>
         </div>
       </div>
@@ -271,8 +282,14 @@ function ConfirmPayContent() {
   const [estimateError, setEstimateError] = useState<string | null>(null);
   const [estimating, setEstimating] = useState(true);
   const [retryKey, setRetryKey] = useState(0);
-  const [stops, setStops] = useState(0);
-  const [showStopRow, setShowStopRow] = useState(false);
+  /* Stop addresses (max 3) — each change re-prices on the real route */
+  const [stopList, setStopList] = useState<string[]>([]);
+  /* In-City: booking for someone else */
+  const [riderMode, setRiderMode]   = useState<"me" | "other">("me");
+  const [otherName, setOtherName]   = useState("");
+  const [otherPhone, setOtherPhone] = useState("");
+  /* Safe Ride details from steps 2–3 (vehicle, rider) for the summary card */
+  const [careDraft] = useState(() => getSafeRideDraft());
   const [airportPickup, setAirportPickup] = useState(false);
   /* Sticky: is the airport fee even relevant to THIS trip? Controls whether the
      toggle is rendered at all — most rides never see it. */
@@ -294,6 +311,23 @@ function ConfirmPayContent() {
     if (pickupIsAirport) setAirportPickup(true);
   }, [pickup, dropoff, mode]);
 
+  /* Safe Ride needs the vehicle + authorization from steps 2–3 first */
+  useEffect(() => {
+    if (!isCare) return;
+    const d = getSafeRideDraft();
+    if (!d.vehicle || !d.consented) router.replace(`/home/care-ride/details?${searchParams.toString()}`);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCare]);
+
+  /* In-City rider details travel with the booking (and survive a 3DS redirect) */
+  useEffect(() => {
+    if (isCare) return;
+    saveSafeRideDraft({
+      inCityRider: riderMode === "other" && otherName.trim() ? { name: otherName.trim(), phone: otherPhone.trim() } : null,
+    });
+  }, [isCare, riderMode, otherName, otherPhone]);
+  const riderIncomplete = !isCare && riderMode === "other" && (!otherName.trim() || otherPhone.replace(/\D/g, "").length < 10);
+
   /* Load saved cards so returning riders can pay in one tap */
   useEffect(() => {
     if (userLoading || !user) return;
@@ -311,7 +345,7 @@ function ConfirmPayContent() {
     /* Reset payment intent so a fresh one is created for the new fare */
     setClientSecret(null);
     setIntentId(null);
-    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}&stops=${stops}&isAirport=${!isCare && airportPickup}${!isCare && mode === "hourly" ? "&mode=hourly" : ""}${isCare && scheduledAt ? `&pickupTime=${encodeURIComponent(scheduledAt)}` : ""}`;
+    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}${stopList.map(a => `&stop=${encodeURIComponent(a)}`).join("")}&isAirport=${!isCare && airportPickup}${!isCare && mode === "hourly" ? "&mode=hourly" : ""}${isCare && scheduledAt ? `&pickupTime=${encodeURIComponent(scheduledAt)}` : ""}`;
     fetch(url)
       .then((r) => r.json())
       .then((d) => {
@@ -321,7 +355,7 @@ function ConfirmPayContent() {
       .catch(() => setEstimateError("Failed to calculate fare. Please try again."))
       .finally(() => setEstimating(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, dropoff, resolvedTier, stops, airportPickup, retryKey, scheduledAt]);
+  }, [pickup, dropoff, resolvedTier, stopList.join("|"), airportPickup, retryKey, scheduledAt]);
 
   /* Step 2 — Once estimate + user ready, create ONLY the payment intent */
   useEffect(() => {
@@ -375,26 +409,37 @@ function ConfirmPayContent() {
           </button>
 
           {/* Title */}
-          <h1 className="text-center text-[22px] md:text-[28px] font-bold text-gray-900">Confirm &amp; Pay</h1>
-          {isCare && (
-            <p className="text-center text-[12px] text-gray-400 mt-1">Safe Ride · Your car, our chauffeur</p>
-          )}
-
-          {/* Care info banner */}
-          {isCare && (
-            <div className="mt-4 rounded-xl p-3 flex items-start gap-2"
-              style={{ background: "linear-gradient(135deg,#0A0A0F,#131936)", border: "1px solid rgba(198,191,178,0.2)" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2" className="shrink-0 mt-0.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <div>
-                <p className="text-[12px] font-bold text-white mb-0.5">Safe Ride</p>
-                <p className="text-[11px] text-white/60 leading-snug">A professional chauffeur will meet you and drive you home in your own vehicle.</p>
+          {isCare ? (
+            <>
+              <SafeRideSteps step={4} />
+              <h1 className="text-[24px] font-bold text-gray-900">Confirm &amp; pay</h1>
+              {/* Safe Ride summary */}
+              <div className="mt-4 rounded-2xl p-4 flex flex-col gap-2.5 text-white" style={{ background: "#0A0A0F" }}>
+                <p className="text-[15px] font-bold flex items-center gap-2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2"><path d="M5 17H3a1 1 0 0 1-1-1v-4l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v4a1 1 0 0 1-1 1h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>
+                  Safe Ride — your vehicle
+                </p>
+                {estimate?.distanceKm != null && estimate.durationMin != null && (
+                  <p className="text-[13px] text-white/80">{estimate.distanceKm} km • {estimate.durationMin} min</p>
+                )}
+                {careDraft.vehicle && (
+                  <p className="text-[13px] text-white/80">{vehicleLabel(careDraft.vehicle)} • {careDraft.vehicle.transmission}</p>
+                )}
+                {!!careDraft.passengers && (
+                  <p className="text-[13px] text-white/80">{careDraft.passengers} passenger{careDraft.passengers > 1 ? "s" : ""}</p>
+                )}
+                {careDraft.contact?.forSomeoneElse && (
+                  <p className="text-[13px] text-white/80">Rider: {careDraft.contact.riderName}</p>
+                )}
               </div>
-            </div>
+            </>
+          ) : (
+            <h1 className="text-center text-[22px] md:text-[28px] font-bold text-gray-900">Confirm &amp; Pay</h1>
           )}
 
           {/* Ride Summary */}
           <div className="mt-6">
-            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">{isCare ? "Your Vehicle" : carName}</p>
+            <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">{isCare ? "Your trip" : carName}</p>
 
             <div className="relative flex flex-col gap-3">
               {/* Vertical connector */}
@@ -434,32 +479,36 @@ function ConfirmPayContent() {
               </p>
             ) : null}
 
-            {/* Optional stops — hidden until the rider asks for one */}
-            {!isCare && !showStopRow && (
-              <button type="button" onClick={() => { setShowStopRow(true); setStops(1); }}
-                className="no-hover-fx flex items-center gap-1.5 mt-3 ml-7 text-[12px] font-semibold"
-                style={{ color: "#131936" }}>
-                <span className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[11px] leading-none">+</span>
-                Add a stop (${(estimate?.stopFeeUnit ?? 5).toFixed(2)} per stop)
-              </button>
-            )}
-            {!isCare && showStopRow && (
-              <div className="flex items-center justify-between mt-3 ml-7 rounded-xl border border-gray-200 px-3 py-2.5">
-                <div className="flex-1 min-w-0 pr-3">
-                  <p className="text-[13px] font-semibold text-gray-800">Additional stops</p>
-                  <p className="text-[11px] text-gray-400">${(estimate?.stopFeeUnit ?? 5).toFixed(2)} per stop — share the address with your chauffeur</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button type="button"
-                    onClick={() => { const n = Math.max(0, stops - 1); setStops(n); if (n === 0) setShowStopRow(false); }}
-                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">−</button>
-                  <span className="text-[14px] font-semibold text-gray-900 w-4 text-center">{stops}</span>
-                  <button type="button" onClick={() => setStops(s => Math.min(5, s + 1))}
-                    className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 text-[16px] font-bold">+</button>
-                </div>
-              </div>
+            {/* Stops — priced on the real route; updated fare shown below before paying */}
+            {mode !== "hourly" && (
+              <StopsEditor stops={stopList} onChange={setStopList} disabled={estimating} />
             )}
           </div>
+
+          {/* In-City: who's riding? (Safe Ride asks in step 3) */}
+          {!isCare && (
+            <div className="mt-5">
+              <p className="text-[14px] font-bold text-gray-900 mb-2">Who&apos;s riding?</p>
+              <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-gray-100">
+                {(["me", "other"] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setRiderMode(m)}
+                    className="no-hover-fx py-2 rounded-lg text-[13px] font-semibold"
+                    style={riderMode === m ? { background: "#0A0A0F", color: "white" } : { color: "#374151" }}>
+                    {m === "me" ? "I'm riding" : "Someone else"}
+                  </button>
+                ))}
+              </div>
+              {riderMode === "other" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  <input value={otherName} onChange={e => setOtherName(e.target.value)} placeholder="Rider's full name"
+                    className="rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#131936]" />
+                  <input value={otherPhone} onChange={e => setOtherPhone(e.target.value)} placeholder="Rider's mobile number" inputMode="tel"
+                    className="rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#131936]" />
+                  <p className="text-[11px] text-gray-400 sm:col-span-2">Your chauffeur will contact the rider on this number. You&apos;ll get the receipt.</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Divider */}
           <div className="h-px bg-gray-100 my-5" />
@@ -467,6 +516,12 @@ function ConfirmPayContent() {
           {/* Payment Method */}
           <div>
             <p className="text-[14px] md:text-[15px] font-bold text-gray-900 mb-3">Payment Method</p>
+
+            {riderIncomplete && (
+              <div className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3">
+                Enter the rider&apos;s name and mobile number to continue.
+              </div>
+            )}
 
             {/* User not logged in */}
             {!userLoading && !user && (
@@ -515,7 +570,7 @@ function ConfirmPayContent() {
             )}
 
             {/* Saved cards — one-tap checkout for returning riders */}
-            {savedCards.length > 0 && !useNewCard && estimate && !estimating && user && (
+            {savedCards.length > 0 && !useNewCard && estimate && !estimating && user && !riderIncomplete && (
               <>
                 <SavedCardPay
                   cards={savedCards}
@@ -536,7 +591,7 @@ function ConfirmPayContent() {
             )}
 
             {/* Stripe form — new card */}
-            {(savedCards.length === 0 || useNewCard) && clientSecret && estimate && intentId && (
+            {(savedCards.length === 0 || useNewCard) && clientSecret && estimate && intentId && !riderIncomplete && (
               <>
                 <Elements stripe={stripePromise} options={{ clientSecret }}>
                   <CheckoutForm
@@ -615,7 +670,7 @@ function ConfirmPayContent() {
                 )}
                 {(estimate?.additionalStopFee ?? 0) > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-[13px] md:text-[14px] text-gray-600">Additional Stop{stops > 1 ? `s (×${stops})` : ""}</span>
+                    <span className="text-[13px] md:text-[14px] text-gray-600">Additional Stop{stopList.length > 1 ? `s (×${stopList.length})` : ""}</span>
                     <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">+${estimate!.additionalStopFee.toFixed(2)}</span>
                   </div>
                 )}
@@ -646,6 +701,24 @@ function ConfirmPayContent() {
               </>
             )}
           </div>
+
+          {/* Waiting time + what happens after payment */}
+          {estimate && (
+            <div className="mt-4 flex flex-col gap-2.5 text-[12px] text-gray-500">
+              <p className="flex items-center gap-2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {estimate.freeWaitingMinutes} minutes free waiting, then ${estimate.waitingRatePerMin.toFixed(2)}/min.
+              </p>
+              {isCare && (
+                <p className="flex items-start gap-2">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  {isScheduled
+                    ? "Your chauffeur is confirmed ahead of your pickup time. Details appear once assigned."
+                    : "Finding your chauffeur after payment. Details and ETA appear once assigned."}
+                </p>
+              )}
+            </div>
+          )}
 
         </div>
       </div>

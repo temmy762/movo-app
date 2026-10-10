@@ -179,7 +179,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const driverName = `${booking.driver.firstName} ${booking.driver.lastName}`;
         const vehicle = booking.driver.vehicle ? `${booking.driver.vehicle.make} ${booking.driver.vehicle.model} (${booking.driver.vehicle.plate})` : "N/A";
         if (isScheduledAccept) {
-          const whenLabel = new Date(booking.scheduledAt!).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+          const whenLabel = new Date(booking.scheduledAt!).toLocaleString("en-CA", { timeZone: "America/Winnipeg", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
           sendNotification({
             eventType: "RIDER_DRIVER_ASSIGNED",
             channels: ["IN_APP"],
@@ -210,7 +210,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (booking?.driver?.id) {
         const driverName = `${booking.driver.firstName} ${booking.driver.lastName}`;
         if (isScheduledAccept) {
-          const whenLabel = new Date(booking.scheduledAt!).toLocaleString("en-CA", { timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+          const whenLabel = new Date(booking.scheduledAt!).toLocaleString("en-CA", { timeZone: "America/Winnipeg", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
           sendNotification({
             eventType: "CHAUFFEUR_BOOKING_ASSIGNED",
             channels: ["EMAIL", "IN_APP"],
@@ -468,7 +468,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               driverName: driver ? `${driver.firstName} ${driver.lastName}` : "Your driver",
               vehicleInfo: driver?.vehicle ? `${driver.vehicle.make} ${driver.vehicle.model}` : "",
               total: existing.total,
-              completedAt: new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+              completedAt: new Date().toLocaleString("en-CA", { timeZone: "America/Winnipeg" }),
             },
           }).catch(() => {});
 
@@ -491,7 +491,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
                 paymentId: existing.stripePaymentIntentId ?? id,
                 amount: existing.total,
                 method: "Card",
-                date: new Date().toLocaleDateString("en-CA", { timeZone: "America/Toronto", year: "numeric", month: "long", day: "numeric" }),
+                date: new Date().toLocaleDateString("en-CA", { timeZone: "America/Winnipeg", year: "numeric", month: "long", day: "numeric" }),
                 items: receiptItems,
               },
             }).catch(() => {});

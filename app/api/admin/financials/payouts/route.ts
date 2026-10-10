@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest) {
             payoutId:      tx.id,
             amount:        tx.amount,
             paymentMethod: "Bank transfer",
-            processedAt:   new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" }),
+            processedAt:   new Date().toLocaleString("en-CA", { timeZone: "America/Winnipeg" }),
             periodStart:   "",
             periodEnd:     "",
             ridesCompleted: 0,

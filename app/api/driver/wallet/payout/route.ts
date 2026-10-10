@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         note:     `Bank transfer via Stripe Connect — ref ${transfer.id}`,
       },
     });
-    const processedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" });
+    const processedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Winnipeg" });
     const payoutData = {
       driverName:    `${driver.firstName} ${driver.lastName}`,
       driverEmail:   driver.email ?? "",
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const requestedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" });
+  const requestedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Winnipeg" });
   const payoutData = {
     driverName:    `${driver?.firstName ?? ""} ${driver?.lastName ?? ""}`.trim(),
     driverEmail:   driver?.email ?? "",

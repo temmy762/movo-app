@@ -19,6 +19,8 @@ export type FareQuote = {
   additionalStopFee: number;
   airportFee: number;
   total: number;
+  /* Stop addresses (in order) the price includes */
+  stops?: string[];
   /* Safe Ride only: internal breakdown + the chauffeur's locked payout,
      signed with the price so the booking stores exactly what was quoted */
   safeRide?: {

@@ -124,7 +124,8 @@ function AvailableCarsContent() {
     if (date)       params.set("date", date);
     if (time)       params.set("time", time);
     if (passengers) params.set("passengers", passengers);
-    router.push(`/home/ride/confirm?${params.toString()}`);
+    /* Safe Ride steps 2–3: the customer's vehicle + authorization */
+    router.push(`/home/care-ride/details?${params.toString()}`);
   };
 
   /* With In-City switched off there are no tiers to pick, so go straight to
@@ -135,7 +136,7 @@ function AvailableCarsContent() {
     if (date)       params.set("date", date);
     if (time)       params.set("time", time);
     if (passengers) params.set("passengers", passengers);
-    router.replace(`/home/ride/confirm?${params.toString()}`);
+    router.replace(`/home/care-ride/details?${params.toString()}`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
