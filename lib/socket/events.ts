@@ -47,6 +47,9 @@ export const SOCKET_EVENTS = {
   CARE_DISPATCH_FAILED:     "care.dispatch.failed",
   CARE_SUPPORT_PICKUP_READY: "care.support.pickupReady",
   CARE_PRIMARY_PICKUP_EN_ROUTE: "care.primary.pickupEnRoute",
+
+  /* Rider changed the route mid-trip (destination / stops / stop order) */
+  BOOKING_ROUTE_UPDATED: "booking.route.updated",
 } as const;
 
 export type SocketEventName = (typeof SOCKET_EVENTS)[keyof typeof SOCKET_EVENTS];

@@ -30,6 +30,26 @@ export async function verifyBookingPayment(opts: {
   tier: string;
   stops?: string[];
 }): Promise<VerifiedPayment> {
+  const intentId = opts.paymentIntentId;
+  if (typeof intentId !== "string" || !intentId.startsWith("pi_")) {
+    return { ok: false, status: 402, error: "Payment is required" };
+  }
+
+  /* Checked first: a refresh or resubmit after payment must return the
+     existing booking, even if the stops / quote in the browser have since
+     been cleared — otherwise the rider was stuck on "looking for chauffeurs". */
+  const existing = await prisma.booking.findFirst({
+    where: { stripePaymentIntentId: intentId },
+    select: { id: true, userId: true },
+  });
+  if (existing) {
+    if (existing.userId !== opts.userId) {
+      return { ok: false, status: 409, error: "This payment is already linked to another booking" };
+    }
+    const q = verifyFareQuote(opts.quoteToken);
+    return { ok: true, quote: q as FareQuote, paymentIntentId: intentId, existingBookingId: existing.id };
+  }
+
   const quote = verifyFareQuote(opts.quoteToken);
   if (!quote) {
     return { ok: false, status: 400, error: "Your fare quote has expired. Please review the price and try again." };
@@ -41,22 +61,6 @@ export async function verifyBookingPayment(opts: {
     JSON.stringify(quote.stops ?? []) !== JSON.stringify(opts.stops ?? [])
   ) {
     return { ok: false, status: 400, error: "Fare quote does not match this trip" };
-  }
-
-  const intentId = opts.paymentIntentId;
-  if (typeof intentId !== "string" || !intentId.startsWith("pi_")) {
-    return { ok: false, status: 402, error: "Payment is required" };
-  }
-
-  const existing = await prisma.booking.findFirst({
-    where: { stripePaymentIntentId: intentId },
-    select: { id: true, userId: true },
-  });
-  if (existing) {
-    if (existing.userId !== opts.userId) {
-      return { ok: false, status: 409, error: "This payment is already linked to another booking" };
-    }
-    return { ok: true, quote, paymentIntentId: intentId, existingBookingId: existing.id };
   }
 
   let intent: Stripe.PaymentIntent;

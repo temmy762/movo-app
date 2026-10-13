@@ -159,7 +159,7 @@ function PickupContent() {
     }
     const schedule: { date?: string; time?: string } = kind === "reserve" ? { date, time } : {};
     /* Carried to checkout and stored on the booking for the chauffeur */
-    saveSafeRideDraft({ pickupInstructions: pickupInstructions.trim(), passengers });
+    saveSafeRideDraft({ pickupInstructions: service === "care" ? pickupInstructions.trim() : "", passengers });
 
     if (service === "care") {
       /* Care Ride: skip car selection — go straight to the Care confirm/pay page */
@@ -300,13 +300,13 @@ function PickupContent() {
           </div>
         </div>
 
-        {/* Pickup instructions (optional) */}
-        <div className="mb-4">
+        {/* Pickup instructions (optional) — Safe Ride only */}
+        {service === "care" && <div className="mb-4">
           <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-1">Pickup instructions (optional)</label>
           <textarea value={pickupInstructions} onChange={e => setPickupInstructions(e.target.value.slice(0, 300))}
             rows={2} placeholder="E.g. side entrance, unit number, etc."
             className="w-full rounded-lg px-3 py-2 bg-gray-100 border border-gray-200 text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none resize-none" />
-        </div>
+        </div>}
 
         {/* Schedule — date / time / passengers (same as landing widget) */}
         <div className="grid grid-cols-3 gap-2 mb-5">

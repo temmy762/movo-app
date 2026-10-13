@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { ensureReceiptNumber } from "@/lib/references";
 
 /* Driver details riders see once a chauffeur has been assigned */
 const DRIVER_SELECT = {
@@ -11,23 +12,19 @@ const DRIVER_SELECT = {
   vehicle: {
     select: { photoUrl: true, tier: true, make: true, model: true, year: true, plate: true },
   },
-  bookings: {
-    where: { rating: { not: null } },
-    select: { rating: true },
-  },
 } as const;
 
 type DriverRow = {
   id: string; firstName: string; lastName: string; phone: string | null;
   vehicle?: { photoUrl: string | null; tier: string; make: string; model: string; year: number | null; plate: string } | null;
-  bookings: { rating: number | null }[];
 };
 
-function publicDriver(d: DriverRow | null | undefined) {
+/* Average rating computed in the database (this used to load every rated
+   booking the chauffeur ever had, which made ride pages slower over time) */
+async function publicDriver(d: DriverRow | null | undefined) {
   if (!d) return null;
-  const ratings = d.bookings.map(b => b.rating).filter((r): r is number => r != null);
-  const avgRating = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
-  return { firstName: d.firstName, lastName: d.lastName, phone: d.phone, avgRating, vehicle: d.vehicle ?? null };
+  const agg = await prisma.booking.aggregate({ where: { driverId: d.id, rating: { not: null } }, _avg: { rating: true } });
+  return { firstName: d.firstName, lastName: d.lastName, phone: d.phone, avgRating: agg._avg.rating ?? null, vehicle: d.vehicle ?? null };
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -68,8 +65,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({
       ...rest,
       ...(isAdmin ? { chauffeurPayout, pricingSnapshot, careServicePortion, careReturnAllowance, uberReturnCost } : {}),
-      driver: publicDriver((driver ?? primary?.driver) as DriverRow | null),
-    });
+      driver: await publicDriver((driver ?? primary?.driver) as DriverRow | null),
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("[booking GET]", e);
     return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
@@ -94,7 +91,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json();
     const allowedFields = isAdmin
       ? ["stripePaymentIntentId", "paymentStatus", "clientName", "additionalStopFee", "total", "dropoff"]
-      : ["dropoff"];
+      : []; /* riders change the route via /destination, /add-stop and /stops */
     const data: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (field in body) data[field] = body[field];
@@ -105,6 +102,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const updated = await prisma.booking.update({ where: { id }, data });
+    /* Admin "Mark paid" records a payment — issue its receipt number */
+    if (data.paymentStatus === "PAID") await ensureReceiptNumber(id);
     return NextResponse.json(updated);
   } catch (e) {
     console.error("[booking PATCH]", e);

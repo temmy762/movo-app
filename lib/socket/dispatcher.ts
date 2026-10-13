@@ -120,6 +120,21 @@ export function dispatchBookingStatus(payload: {
   emitMany(rooms, SOCKET_EVENTS.BOOKING_STATUS, payload);
 }
 
+/* Rider changed the route mid-trip — the chauffeur's screen updates live */
+export function dispatchRouteUpdated(payload: {
+  bookingId: string; driverId?: string | null; userId?: string | null;
+  dropoff: string; stops: string[]; change: "destination" | "stop_added" | "stops_reordered";
+  message: string;
+}) {
+  const rooms = [
+    "admin",
+    `booking:${payload.bookingId}`,
+    ...(payload.userId   ? [`user:${payload.userId}`]     : []),
+    ...(payload.driverId ? [`driver:${payload.driverId}`] : []),
+  ];
+  emitMany(rooms, SOCKET_EVENTS.BOOKING_ROUTE_UPDATED, payload);
+}
+
 /* ── Trip ─────────────────────────────────────────────────────────────────── */
 
 export function dispatchTripStarted(payload: {

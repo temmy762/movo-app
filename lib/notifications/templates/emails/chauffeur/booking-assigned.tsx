@@ -2,6 +2,7 @@ import { Button, Heading, Text, Hr, Section } from "@react-email/components";
 import { EmailLayout } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
+import { serviceLabel } from "@/lib/tierLabels";
 
 export function chauffeurBookingAssignedTemplate(
   context: EmailTemplateContext
@@ -43,7 +44,7 @@ export function chauffeurBookingAssignedTemplate(
           <strong>Booking ID:</strong> {booking.bookingId}
         </Text>
         <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "4px" }}>
-          <strong>Service:</strong> {booking.carTier}
+          <strong>Service:</strong> {serviceLabel(booking.carTier)}
         </Text>
         {booking.scheduledTime && (
           <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "4px" }}>
@@ -128,7 +129,7 @@ New Booking Assigned
 Hi ${recipient.firstName}, you have a new booking!
 
 Booking ID: ${booking.bookingId}
-Service: ${booking.carTier}
+Service: ${serviceLabel(booking.carTier)}
 ${booking.scheduledTime ? `Pickup Time: ${booking.scheduledTime}` : ""}
 ${booking.estimatedDistance ? `Est. Distance: ${booking.estimatedDistance}` : ""}
 

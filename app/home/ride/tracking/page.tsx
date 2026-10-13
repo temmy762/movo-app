@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Image from "next/image";
 import SupportSheet from "./SupportSheet";
+import AddressInput from "../../components/AddressInput";
+import RouteStops from "../../components/RouteStops";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 import { bookingExtras, clearSafeRideDraft, getSafeRideDraft } from "@/lib/safeRideDraft";
@@ -49,7 +51,9 @@ function RideTrackingContent() {
   const [vehicleImg,       setVehicleImg]       = useState<string>("");
   const [vehiclePlate,     setVehiclePlate]     = useState<string | null>(null);
   const [vehicleMakeModel, setVehicleMakeModel] = useState<string>("");
-  const [rideStatus,       setRideStatus]       = useState<string>("PENDING");
+  /* "LOADING" until the first status fetch — a refresh used to flash the
+     "Looking for chauffeurs" screen before the real status arrived */
+  const [rideStatus,       setRideStatus]       = useState<string>("LOADING");
   const [driverArrived,    setDriverArrived]    = useState(false);
   const [driverPosition,   setDriverPosition]   = useState<{ lat: number; lng: number } | null>(null);
   type CareAssignmentRow = { id: string; role: "PRIMARY" | "SUPPORT"; status: string; driverName: string };
@@ -81,6 +85,8 @@ function RideTrackingContent() {
   const [scheduledForLabel, setScheduledForLabel] = useState<string | null>(null);
   /* Chauffeur confirmed for a future reservation but hasn't set off yet */
   const [awaitingSetOff, setAwaitingSetOff] = useState(false);
+  /* Permanent booking reference (MOVO-B-…) */
+  const [bookingNumber, setBookingNumber] = useState<string | null>(null);
   const riderLocPushRef = useRef<number>(0);
   /* Wait-time clock: chauffeur arrived, free window then accruing charges */
   const [arrivedAtMs, setArrivedAtMs] = useState<number | null>(null);
@@ -125,6 +131,98 @@ function RideTrackingContent() {
   const [stopError,         setStopError]         = useState<string | null>(null);
   /* Price of the stop, shown before the rider confirms */
   const [stopQuote,         setStopQuote]         = useState<{ charge: number; newTotal: number; routed: boolean } | null>(null);
+  const [routeStops,        setRouteStops]        = useState<string[]>([]);
+  const [routeError,        setRouteError]        = useState<string | null>(null);
+  const [destError,         setDestError]         = useState<string | null>(null);
+  const [destQuote,         setDestQuote]         = useState<{ charge: number; newTotal: number } | null>(null);
+  const [destChargedAmount, setDestChargedAmount] = useState<number | null>(null);
+
+  /* Charge any 3DS challenge the bank asks for, then let the server apply it */
+  const confirmExtraPayment = async (endpoint: string, data: { clientSecret: string; intentId: string }) => {
+    const { loadStripe } = await import("@stripe/stripe-js");
+    const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
+    if (!stripe) throw new Error("Payment system unavailable");
+    const { error: confirmErr } = await stripe.confirmCardPayment(data.clientSecret);
+    if (confirmErr) throw new Error(confirmErr.message ?? "Card authentication failed");
+    return fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmedIntentId: data.intentId }),
+    });
+  };
+
+  const closeChangeDest = () => {
+    setShowChangeDest(false);
+    setNewDestination("");
+    setDestQuote(null);
+    setDestError(null);
+  };
+
+  const handleQuoteDestination = async () => {
+    if (!bookingId || !newDestination.trim()) return;
+    setChangingDest(true);
+    setDestError(null);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/destination`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dropoff: newDestination.trim(), quoteOnly: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Couldn't price this destination");
+      setDestQuote({ charge: data.charge, newTotal: data.newTotal });
+    } catch (e) {
+      setDestError(e instanceof Error ? e.message : "Couldn't price this destination. Please try again.");
+    } finally {
+      setChangingDest(false);
+    }
+  };
+
+  const handleChangeDestination = async () => {
+    if (!bookingId || !newDestination.trim()) return;
+    const endpoint = `/api/bookings/${bookingId}/destination`;
+    setChangingDest(true);
+    setDestError(null);
+    try {
+      let res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dropoff: newDestination.trim() }),
+      });
+      let data = await res.json();
+      if (res.ok && data.requiresAction && data.clientSecret) {
+        res = await confirmExtraPayment(endpoint, data);
+        data = await res.json();
+      }
+      if (!res.ok) throw new Error(data?.error ?? "Failed to change destination");
+      if (data.booking?.dropoff) setCurrentDropoff(data.booking.dropoff);
+      setDestChargedAmount(data.charged ?? 0);
+      closeChangeDest();
+    } catch (e) {
+      setDestError(e instanceof Error ? e.message : "Failed to change destination. Please try again.");
+    } finally {
+      setChangingDest(false);
+    }
+  };
+
+  /* Drag-reorder the stops — same stops, new travel order, no price change */
+  const handleReorderStops = async (next: string[]) => {
+    if (!bookingId) return;
+    const prev = routeStops;
+    setRouteStops(next);
+    setRouteError(null);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/stops`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stops: next }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Couldn't reorder the stops");
+    } catch (e) {
+      setRouteStops(prev);
+      setRouteError(e instanceof Error ? e.message : "Couldn't reorder the stops");
+    }
+  };
 
   const handleQuoteStop = async () => {
     if (!bookingId || !stopAddress.trim()) return;
@@ -157,21 +255,13 @@ function RideTrackingContent() {
       let data = await res.json();
 
       if (res.ok && data.requiresAction && data.clientSecret) {
-        const { loadStripe } = await import("@stripe/stripe-js");
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
-        if (!stripe) throw new Error("Payment system unavailable");
-        const { error: confirmErr } = await stripe.confirmCardPayment(data.clientSecret);
-        if (confirmErr) throw new Error(confirmErr.message ?? "Card authentication failed");
-        res = await fetch(`/api/bookings/${bookingId}/add-stop`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ confirmedIntentId: data.intentId }),
-        });
+        res = await confirmExtraPayment(`/api/bookings/${bookingId}/add-stop`, data);
         data = await res.json();
       }
 
       if (!res.ok) throw new Error(data?.error ?? "Failed to add stop");
       setStopFeeAmount(data.charged ?? null);
+      if (Array.isArray(data.booking?.stops)) setRouteStops(data.booking.stops as string[]);
       setShowAddStop(false);
       setStopAddress("");
       setStopQuote(null);
@@ -195,7 +285,7 @@ function RideTrackingContent() {
   const resolvedTier = tier.toLowerCase().replace(/ /g, "") === "firstclass" ? "black" : tier.toLowerCase();
   const carImg = vehicleImg || carImgParam || TIER_IMAGES[resolvedTier] || "/images/movo classic.png";
   const tierLabel = TIER_LABELS[resolvedTier] || tier || "";
-  const dropoffCity = dropoff.split(",").slice(1, 3).join(",").trim();
+  const dropoffCity = currentDropoff.split(",").slice(1, 3).join(",").trim();
   const driverInitial = driverName.charAt(0).toUpperCase() || "D";
 
   /* ── 3DS redirect: no bookingId yet — create booking as PAID from URL params ── */
@@ -220,7 +310,15 @@ function RideTrackingContent() {
       .then(r => r.json())
       .then(data => {
         const id = isCareReturn ? data?.bookingId : data?.id;
-        if (id) { setBookingId(id); clearSafeRideDraft(); }
+        if (id) {
+          setBookingId(id);
+          clearSafeRideDraft();
+          /* Put the booking in the URL so a refresh loads it instead of
+             re-submitting the payment */
+          const q = new URLSearchParams({ bookingId: id, pickup, dropoff, car, tier });
+          if (isCareReturn) q.set("service", "care");
+          router.replace(`/home/ride/tracking?${q.toString()}`);
+        }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -424,7 +522,16 @@ function RideTrackingContent() {
       router.replace(`/home/ride/completed?bookingId=${bookingId}`);
     });
 
+    /* Route changed (from this or another of the rider's screens) */
+    const unsubRoute = on(SOCKET_EVENTS.BOOKING_ROUTE_UPDATED, (data) => {
+      const d = data as { bookingId: string; dropoff?: string; stops?: string[] };
+      if (d.bookingId !== bookingId) return;
+      if (d.dropoff) setCurrentDropoff(d.dropoff);
+      if (Array.isArray(d.stops)) setRouteStops(d.stops);
+    });
+
     return () => {
+      unsubRoute();
       unsubLoc(); unsubStarted(); unsubCompleted(); unsubCancelled(); unsubAccepted(); unsubStatus(); unsubArrived(); unsubReleased();
       unsubCarePrimary(); unsubCareSupport(); unsubCareStatus(); unsubCareConfirmed(); unsubCareClosed(); unsubDispatchFailed();
     };
@@ -480,6 +587,9 @@ function RideTrackingContent() {
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (!data) return;
+          if (data.bookingNumber) setBookingNumber(data.bookingNumber);
+          if (typeof data.dropoff === "string" && data.dropoff) setCurrentDropoff(data.dropoff);
+          if (Array.isArray(data.stops)) setRouteStops(data.stops as string[]);
 
           /* Scheduled-ride banner — while searching AND after a chauffeur is
              confirmed but hasn't set off yet. A reserved 5 PM ride must NOT
@@ -763,7 +873,7 @@ function RideTrackingContent() {
         <div className="absolute top-4 left-5 z-[999]">
           <span className="text-white text-[16px] font-semibold drop-shadow-md">Ride</span>
         </div>
-        <RideMap pickup={pickup} dropoff={dropoff} driverPosition={driverPosition} tripStarted={rideStatus === "STARTED"} onDirectionsFetched={handleDirectionsFetched} />
+        <RideMap pickup={pickup} dropoff={currentDropoff} driverPosition={driverPosition} tripStarted={rideStatus === "STARTED"} onDirectionsFetched={handleDirectionsFetched} />
       </div>
 
       {/* White panel */}
@@ -773,14 +883,19 @@ function RideTrackingContent() {
           {/* ETA + Status stages */}
           <div className="mb-3">
             <p className="text-[26px] md:text-[30px] font-extrabold text-gray-900 leading-tight">
-              {rideStatus === "PENDING" ? (scheduledForLabel ? "Ride Scheduled" : "Finding Your Chauffeur")
+              {rideStatus === "LOADING" ? "Loading your ride…"
+                : rideStatus === "PENDING" ? (scheduledForLabel ? "Ride Scheduled" : "Finding Your Chauffeur")
                 : awaitingSetOff ? "Reservation Confirmed"
                 : etaText}
             </p>
+            {bookingNumber && (
+              <p className="text-[11px] font-mono font-semibold text-gray-500 mt-1 tracking-wide">Booking {bookingNumber}</p>
+            )}
             <p className="text-[12px] md:text-[13px] text-gray-400 mt-1">
               {/* Safe Ride dispatches an internal Support chauffeur too, but the
                   customer must only ever be aware of their Primary chauffeur. */}
-              {rideStatus === "PENDING"    ? (scheduledForLabel ? "We'll line up your chauffeur ahead of pickup." : "We're contacting nearby chauffeurs — hang tight.") :
+              {rideStatus === "LOADING"    ? "Fetching your booking details…" :
+               rideStatus === "PENDING"    ? (scheduledForLabel ? "We'll line up your chauffeur ahead of pickup." : "We're contacting nearby chauffeurs — hang tight.") :
                awaitingSetOff              ? `Your chauffeur is confirmed for ${scheduledForLabel}. You'll be notified when they set off.` :
                rideStatus === "CONFIRMED"  ? "Chauffeur on the way" :
                rideStatus === "STARTED"    ? "Ride in progress — arriving at your destination" :
@@ -1023,15 +1138,15 @@ function RideTrackingContent() {
 
           {/* Route view */}
           {view === "route" && (
-            <div className="flex flex-col gap-3 mb-5">
-              <div className="flex items-start gap-3">
-                <div className="w-[14px] h-[14px] rounded-full shrink-0 mt-0.5" style={{ background: "#4f46e5" }} />
-                <p className="text-[13px] md:text-[14px] text-gray-700 leading-snug break-words">{pickup}</p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-[14px] h-[14px] rounded-full bg-red-500 shrink-0 mt-0.5" />
-                <p className="text-[13px] md:text-[14px] text-gray-700 leading-snug break-words">{dropoff}</p>
-              </div>
+            <div className="mb-5">
+              <RouteStops pickup={pickup} stops={routeStops} dropoff={currentDropoff}
+                onReorder={rideStatus === "COMPLETED" ? undefined : handleReorderStops} />
+              {routeError && <p className="text-[12px] text-red-500 mt-2">{routeError}</p>}
+              {destChargedAmount != null && (
+                <p className="text-[12px] text-green-600 mt-2">
+                  Destination updated{destChargedAmount > 0 ? ` — $${destChargedAmount.toFixed(2)} added to your fare` : ""}. Your chauffeur has been notified.
+                </p>
+              )}
             </div>
           )}
 
@@ -1044,7 +1159,7 @@ function RideTrackingContent() {
                     <div className="w-2 h-2 bg-white rounded-full" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] md:text-[14px] font-semibold text-gray-900 truncate">{dropoff.split(",")[0]}</p>
+                    <p className="text-[13px] md:text-[14px] font-semibold text-gray-900 truncate">{currentDropoff.split(",")[0]}</p>
                     {dropoffCity && <p className="text-[11px] text-gray-400 truncate">{dropoffCity}</p>}
                   </div>
                 </div>
@@ -1186,13 +1301,16 @@ function RideTrackingContent() {
             {stopError && (
               <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-2">{stopError}</p>
             )}
-            <input
-              type="text"
-              value={stopAddress}
-              onChange={(e) => { setStopAddress(e.target.value); setStopQuote(null); }}
-              placeholder="Enter stop address"
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936] mt-2"
-            />
+            <div className="mt-2 rounded-xl border border-gray-200 px-3 py-2.5 focus-within:border-[#131936]">
+              <AddressInput
+                value={stopAddress}
+                onChange={(v) => { setStopAddress(v); setStopQuote(null); }}
+                onSelect={(v) => { setStopAddress(v); setStopQuote(null); }}
+                placeholder="Enter stop address"
+                autoFocus
+                className="w-full text-[13px] text-gray-800 focus:outline-none bg-transparent"
+              />
+            </div>
             {stopQuote && (
               <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[13px]">
                 <div className="flex justify-between"><span className="text-gray-500">Added to your fare (incl. GST)</span><span className="font-bold text-gray-900">+${stopQuote.charge.toFixed(2)}</span></div>
@@ -1225,43 +1343,43 @@ function RideTrackingContent() {
         <div className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/50">
           <div className="bg-white rounded-t-2xl p-5 w-full max-w-lg">
             <h3 className="text-[15px] font-bold text-gray-900 mb-1">Change Destination</h3>
-            <p className="text-[12px] text-gray-400 mb-3">Update where you'd like to be dropped off.</p>
-            <input
-              type="text"
-              value={newDestination}
-              onChange={(e) => setNewDestination(e.target.value)}
-              placeholder="New destination address"
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-[13px] text-gray-800 focus:outline-none focus:border-[#131936]"
-            />
+            <p className="text-[12px] text-gray-500 mb-3">
+              Enter the new drop-off to see the updated fare. Nothing is charged until you confirm, and your chauffeur is told right away.
+            </p>
+            {destError && (
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-2">{destError}</p>
+            )}
+            <div className="rounded-xl border border-gray-200 px-3 py-2.5 focus-within:border-[#131936]">
+              <AddressInput
+                value={newDestination}
+                onChange={(v) => { setNewDestination(v); setDestQuote(null); }}
+                onSelect={(v) => { setNewDestination(v); setDestQuote(null); }}
+                placeholder="New destination address"
+                autoFocus
+                className="w-full text-[13px] text-gray-800 focus:outline-none bg-transparent"
+              />
+            </div>
+            {destQuote && (
+              <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[13px]">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Added to your fare (incl. GST)</span>
+                  <span className="font-bold text-gray-900">{destQuote.charge > 0 ? `+$${destQuote.charge.toFixed(2)}` : "No extra charge"}</span>
+                </div>
+                <div className="flex justify-between mt-0.5"><span className="text-gray-500">New total</span><span className="font-semibold text-gray-900">${destQuote.newTotal.toFixed(2)}</span></div>
+              </div>
+            )}
             <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => { setShowChangeDest(false); setNewDestination(""); }}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600"
-              >
+              <button onClick={closeChangeDest}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-[13px] font-medium text-gray-600">
                 Cancel
               </button>
               <button
-                disabled={!newDestination.trim() || changingDest}
-                onClick={async () => {
-                  if (!bookingId || !newDestination.trim()) return;
-                  setChangingDest(true);
-                  try {
-                    await fetch(`/api/bookings/${bookingId}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ dropoff: newDestination.trim() }),
-                    });
-                    setCurrentDropoff(newDestination.trim());
-                  } catch { /* ignore */ } finally {
-                    setChangingDest(false);
-                    setShowChangeDest(false);
-                    setNewDestination("");
-                  }
-                }}
+                disabled={!newDestination.trim() || newDestination.trim() === currentDropoff || changingDest}
+                onClick={destQuote ? handleChangeDestination : handleQuoteDestination}
                 className="flex-1 py-2.5 rounded-xl text-white text-[13px] font-semibold disabled:opacity-50"
                 style={{ background: "linear-gradient(90deg, #131936, #C6BFB2)" }}
               >
-                {changingDest ? "Updating…" : "Confirm"}
+                {changingDest ? "Please wait…" : !destQuote ? "See price" : destQuote.charge > 0 ? `Confirm & pay $${destQuote.charge.toFixed(2)}` : "Confirm"}
               </button>
             </div>
           </div>

@@ -22,6 +22,7 @@ import { dispatchPrimary } from "@/lib/care/dispatch";
 import { scheduleCareDispatch } from "@/lib/care/scheduledDispatch";
 import { pushToAllDriversByTier } from "@/lib/webpush";
 import { verifyBookingPayment } from "@/lib/bookingPayment";
+import { nextBookingNumber, nextReceiptNumber } from "@/lib/references";
 import { getSafeRideSettings } from "@/lib/safeRide";
 
 /* A Safe Ride whose pickup is further out than this is "scheduled" rather than
@@ -134,6 +135,9 @@ export async function POST(req: NextRequest) {
         bookingType:   "CARE",
         stripePaymentIntentId: verified.paymentIntentId,
         userId,
+        /* Permanent references: confirmed booking + recorded payment */
+        bookingNumber:  await nextBookingNumber(),
+        receiptNumber:  await nextReceiptNumber(),
         /* Internal breakdown + the chauffeur's payout, locked at the quoted price */
         careServicePortion:  safeRide?.servicePortion ?? null,
         careReturnAllowance: safeRide?.returnAllowance ?? null,
@@ -181,6 +185,7 @@ export async function POST(req: NextRequest) {
           },
           data: {
             bookingId: booking.id, pickup, dropoff,
+            bookingNumber: booking.bookingNumber,
             carTier: "Safe Ride",
             serviceLabel: "Safe Ride",
             fare: Number(fare), serviceFee: Number(serviceFee), gst: Number(gst ?? 0), total: Number(total),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
-import { sendNotification } from "@/lib/notifications";
+import { ensureReceiptNumber } from "@/lib/references";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -29,64 +29,21 @@ export async function POST(req: NextRequest) {
       /* ── Payment succeeded ── */
       case "payment_intent.succeeded": {
         const intent = event.data.object as Stripe.PaymentIntent;
+        /* Booking creation already verifies the payment, sends the booking
+           confirmation and issues the receipt number; the itemised receipt is
+           sent at completion. This only backstops the PAID flag + receipt
+           number. It must NOT change the booking status (that marked Safe Rides
+           "confirmed" before any chauffeur accepted) or email again (riders got
+           duplicate confirmations and an early receipt). */
         await prisma.booking.updateMany({
-          where: { stripePaymentIntentId: intent.id },
-          data: { paymentStatus: "PAID", status: "CONFIRMED" },
+          where: { stripePaymentIntentId: intent.id, paymentStatus: { not: "PAID" } },
+          data: { paymentStatus: "PAID" },
         });
-
-        /* Fire payment receipt email */
         const booking = await prisma.booking.findFirst({
           where: { stripePaymentIntentId: intent.id },
-          include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+          select: { id: true },
         });
-
-        if (booking?.user?.email) {
-          // Booking confirmed email
-          sendNotification({
-            eventType: "RIDER_BOOKING_CONFIRMED",
-            recipient: {
-              type: "user",
-              id: booking.user.id,
-              email: booking.user.email,
-              firstName: booking.user.firstName,
-              lastName: booking.user.lastName ?? undefined,
-            },
-            data: {
-              bookingId: booking.id,
-              pickup: booking.pickup,
-              dropoff: booking.dropoff,
-              carTier: booking.carTier,
-              fare: booking.fare,
-              serviceFee: booking.serviceFee,
-              total: booking.total,
-            },
-          }).catch((e) => console.error("[webhook] booking confirmed email failed:", e));
-
-          // Payment receipt email
-          sendNotification({
-            eventType: "RIDER_PAYMENT_RECEIPT",
-            recipient: {
-              type: "user",
-              id: booking.user.id,
-              email: booking.user.email,
-              firstName: booking.user.firstName,
-              lastName: booking.user.lastName ?? undefined,
-            },
-            data: {
-              bookingId: booking.id,
-              paymentId: intent.id,
-              amount: booking.total,
-              method: "Card",
-              date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-              /* Safe Ride is all-inclusive: one fare + GST, no service fee line */
-              items: [
-                { label: booking.bookingType === "CARE" ? "Safe Ride fare" : "Ride Fare", amount: booking.fare },
-                ...(booking.serviceFee > 0 ? [{ label: "Service Fee", amount: booking.serviceFee }] : []),
-                ...(booking.gst ? [{ label: "GST", amount: booking.gst }] : []),
-              ],
-            },
-          }).catch((e) => console.error("[webhook] receipt email failed:", e));
-        }
+        if (booking) await ensureReceiptNumber(booking.id);
         break;
       }
 

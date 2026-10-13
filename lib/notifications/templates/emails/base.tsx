@@ -30,14 +30,14 @@ export function EmailLayout({ context, preview, children }: EmailLayoutProps) {
         <Container style={container}>
           {/* Logo */}
           <Section style={logoSection}>
+            {/* PNG wordmark (600×167) — includes the name, so no text line */}
             <Img
               src={settings.logoUrl}
-              width="60"
-              height="60"
-              alt={settings.appName}
+              width="180"
+              height="50"
+              alt="MOVO"
               style={logo}
             />
-            <Text style={logoText}>{settings.appName}</Text>
           </Section>
 
           {/* Content */}
@@ -100,15 +100,6 @@ const logo = {
   textDecoration: "none",
 };
 
-const logoText = {
-  textAlign: "center" as const,
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  fontSize: "18px",
-  fontWeight: "700" as const,
-  color: "#131936",
-  letterSpacing: "3px",
-  margin: "6px 0 0",
-};
 
 const contentSection = {
   backgroundColor: "#ffffff",

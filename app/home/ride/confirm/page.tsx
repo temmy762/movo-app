@@ -481,7 +481,7 @@ function ConfirmPayContent() {
 
             {/* Stops — priced on the real route; updated fare shown below before paying */}
             {mode !== "hourly" && (
-              <StopsEditor stops={stopList} onChange={setStopList} disabled={estimating} />
+              <StopsEditor pickup={pickup} dropoff={dropoff} stops={stopList} onChange={setStopList} disabled={estimating} />
             )}
           </div>
 
@@ -683,7 +683,7 @@ function ConfirmPayContent() {
                 {/* Safe Ride is all-inclusive — no separate service fee */}
                 {!isCare && (
                   <div className="flex justify-between items-center">
-                    <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee ({Math.round((estimate?.serviceFeeRate ?? 0.12) * 100)}%)</span>
+                    <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
                     <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}</span>
                   </div>
                 )}

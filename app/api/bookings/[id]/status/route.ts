@@ -7,6 +7,7 @@ import { sendNotification } from "@/lib/notifications";
 import { pushToDriver } from "@/lib/webpush";
 import { normalizeCommissionRate } from "@/lib/earnings";
 import { logAudit } from "@/lib/auditLog";
+import { serviceLabel } from "@/lib/tierLabels";
 import {
   dispatchBookingAccepted,
   dispatchBookingCancelled,
@@ -489,6 +490,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               data: {
                 bookingId: id,
                 paymentId: existing.stripePaymentIntentId ?? id,
+                receiptNumber: existing.receiptNumber,
+                bookingNumber: existing.bookingNumber,
+                serviceLabel: serviceLabel(existing.carTier, existing.bookingType),
                 amount: existing.total,
                 method: "Card",
                 date: new Date().toLocaleDateString("en-CA", { timeZone: "America/Winnipeg", year: "numeric", month: "long", day: "numeric" }),

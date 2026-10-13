@@ -4,10 +4,10 @@ import { getSession } from "@/lib/session";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { bookingId: string } }
+  { params }: { params: Promise<{ bookingId: string }> }
 ) {
   try {
-    const { bookingId } = params;
+    const { bookingId } = await params;
     const session = await getSession(req);
 
     // Fetch booking with driver and vehicle info

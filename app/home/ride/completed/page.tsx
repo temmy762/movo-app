@@ -5,6 +5,8 @@ import { useState, useEffect, Suspense } from "react";
 
 type BookingData = {
   id: string;
+  bookingNumber?: string | null;
+  receiptNumber?: string | null;
   total: number;
   fare: number;
   serviceFee?: number | null;
@@ -85,12 +87,36 @@ function RideCompletedContent() {
   const [review, setReview] = useState("");
   const [showReportIssue, setShowReportIssue] = useState(false);
 
+  /* Retry a few times — a single slow/failed request used to leave the
+     amount charged blank for good */
+  const [loadFailed, setLoadFailed] = useState(false);
   useEffect(() => {
     if (!bookingId) return;
-    fetch(`/api/bookings/${bookingId}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => {
-        if (!d) return;
+    let cancelled = false;
+    const load = (attempt: number) => {
+      fetch(`/api/bookings/${bookingId}`, { cache: "no-store" })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => {
+          if (cancelled) return;
+          if (!d) {
+            if (attempt < 4) setTimeout(() => load(attempt + 1), 1500 * attempt);
+            else setLoadFailed(true);
+            return;
+          }
+          onBooking(d);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempt < 4) setTimeout(() => load(attempt + 1), 1500 * attempt);
+          else setLoadFailed(true);
+        });
+    };
+    load(1);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId]);
+
+  function onBooking(d: BookingData) {
         setBooking(d);
         if (d.bookingType === "CARE") {
           /* Fetch full booking with care assignments */
@@ -109,9 +135,7 @@ function RideCompletedContent() {
             })
             .catch(() => {});
         }
-      })
-      .catch(() => {});
-  }, [bookingId]);
+  }
 
   const isCare = booking?.bookingType === "CARE";
 
@@ -179,7 +203,13 @@ function RideCompletedContent() {
             </svg>
           </div>
 
-          <h1 className="text-[20px] font-extrabold text-gray-900 mb-5 text-center">Ride Completed</h1>
+          <h1 className="text-[20px] font-extrabold text-gray-900 mb-1 text-center">Ride Completed</h1>
+          {booking?.bookingNumber && (
+            <p className="text-[11px] font-mono text-gray-500 mb-5 text-center">
+              Booking {booking.bookingNumber}{booking.receiptNumber ? ` · Receipt ${booking.receiptNumber}` : ""}
+            </p>
+          )}
+          {!booking?.bookingNumber && <div className="mb-4" />}
 
           {/* Amount stat */}
           <div className="w-full mb-5">
@@ -188,7 +218,7 @@ function RideCompletedContent() {
                 <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
               </svg>
               <span className="text-[22px] font-bold text-gray-900 ml-1">
-                {amount > 0 ? `$${amount.toFixed(2)}` : "—"}
+                {amount > 0 ? `$${amount.toFixed(2)}` : loadFailed ? "—" : "Loading…"}
               </span>
               <span className="text-[12px] text-gray-400 ml-2 self-end mb-1">Total charged</span>
             </div>

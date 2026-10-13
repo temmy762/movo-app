@@ -8,6 +8,8 @@ import { useState } from "react";
 
 export type SafeRideAdminBooking = {
   id: string;
+  bookingNumber?: string | null;
+  receiptNumber?: string | null;
   clientName: string;
   pickup: string;
   dropoff: string;
@@ -93,7 +95,9 @@ export default function SafeRideManageModal({ booking, onClose, onChanged }: {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-[15px] font-bold text-gray-900">Safe Ride · {booking.clientName}</h3>
-            <p className="text-[11px] font-mono text-gray-400">{booking.id}</p>
+            <p className="text-[11px] font-mono text-gray-400">
+              {booking.bookingNumber ?? booking.id}{booking.receiptNumber ? ` · ${booking.receiptNumber}` : ""}
+            </p>
           </div>
           <button onClick={onClose} className="no-hover-fx text-gray-400 text-[18px] leading-none">×</button>
         </div>

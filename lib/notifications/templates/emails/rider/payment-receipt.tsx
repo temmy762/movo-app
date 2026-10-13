@@ -14,6 +14,9 @@ export function riderPaymentReceiptTemplate(
     method: string;
     date: string;
     items: { label: string; amount: number }[];
+    receiptNumber?: string | null;
+    bookingNumber?: string | null;
+    serviceLabel?: string;
   };
 
   const preview = `Your payment receipt from ${settings.appName}`;
@@ -37,8 +40,18 @@ export function riderPaymentReceiptTemplate(
         }}
       >
         <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "4px" }}>
-          <strong>Receipt ID:</strong> {payment.paymentId}
+          <strong>Receipt number:</strong> {payment.receiptNumber ?? payment.paymentId}
         </Text>
+        {payment.bookingNumber && (
+          <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "4px" }}>
+            <strong>Booking number:</strong> {payment.bookingNumber}
+          </Text>
+        )}
+        {payment.serviceLabel && (
+          <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "4px" }}>
+            <strong>Service:</strong> {payment.serviceLabel}
+          </Text>
+        )}
         <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "4px" }}>
           <strong>Date:</strong> {payment.date}
         </Text>
@@ -104,7 +117,9 @@ Payment Receipt
 
 Hi ${recipient.firstName}, here's your receipt for the recent payment.
 
-Receipt ID: ${payment.paymentId}
+Receipt number: ${payment.receiptNumber ?? payment.paymentId}${payment.bookingNumber ? `
+Booking number: ${payment.bookingNumber}` : ""}${payment.serviceLabel ? `
+Service: ${payment.serviceLabel}` : ""}
 Date: ${payment.date}
 Payment Method: ${payment.method}
 

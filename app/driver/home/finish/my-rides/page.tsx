@@ -14,6 +14,10 @@ type Ride = {
   status: string;
   paymentStatus: string;
   createdAt: string;
+  bookingNumber?: string | null;
+  bookingType?: string;
+  scheduledAt?: string | null;
+  enRouteAt?: string | null;
 };
 
 function formatDateTime(iso: string) {
@@ -50,7 +54,7 @@ function RideCard({
   ride: Ride;
   isUpcoming: boolean;
   onAction: (id: string, action: "accept" | "reject") => void;
-  onGoToRide: (id: string) => void;
+  onGoToRide: (ride: Ride) => void;
   acting: string | null;
 }) {
   const busy = acting === ride.id;
@@ -71,7 +75,8 @@ function RideCard({
           </div>
           <div>
             <p className="text-[14px] font-semibold text-gray-900">{ride.clientName}</p>
-            {ride.carName && <p className="text-[11px] text-gray-400">{ride.carName}</p>}
+            {ride.carName && <p className="text-[11px] text-gray-400">{ride.bookingType === "CARE" ? `Safe Ride · ${ride.carName}` : ride.carName}</p>}
+            {ride.bookingNumber && <p className="text-[10px] font-mono text-gray-500">{ride.bookingNumber}</p>}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -101,7 +106,7 @@ function RideCard({
       </div>
 
       {/* Action buttons — upcoming rides only */}
-      {isUpcoming && ride.status === "PENDING" && (
+      {isUpcoming && ride.status === "PENDING" && ride.bookingType !== "CARE" && (
         <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
           <button
             type="button"
@@ -124,24 +129,26 @@ function RideCard({
       )}
 
       {/* Confirmed — go to active ride flow + cancel option */}
-      {isUpcoming && ride.status === "CONFIRMED" && (
+      {isUpcoming && (ride.status === "CONFIRMED" || ride.bookingType === "CARE") && (
         <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => onGoToRide(ride.id)}
+            onClick={() => onGoToRide(ride)}
             className="no-hover-fx w-full py-2.5 rounded-xl text-[13px] font-bold text-white"
             style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}
           >
             Go to Ride →
           </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onAction(ride.id, "reject")}
-            className="no-hover-fx w-full py-2 rounded-xl text-[12px] font-semibold border border-red-200 text-red-500 bg-red-50 disabled:opacity-50"
-          >
-            {busy ? "Cancelling…" : "Cancel Ride"}
-          </button>
+          {ride.bookingType !== "CARE" && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onAction(ride.id, "reject")}
+              className="no-hover-fx w-full py-2 rounded-xl text-[12px] font-semibold border border-red-200 text-red-500 bg-red-50 disabled:opacity-50"
+            >
+              {busy ? "Cancelling…" : "Cancel Ride"}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -157,7 +164,7 @@ export default function MyRidesPage() {
 
   const loadRides = useCallback(() => {
     setLoading(true);
-    fetch(`/api/driver/rides?tab=${tab}`)
+    fetch(`/api/driver/rides?tab=${tab}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setRides(Array.isArray(data) ? data : []))
       .catch(() => setRides([]))
@@ -165,6 +172,12 @@ export default function MyRidesPage() {
   }, [tab]);
 
   useEffect(() => { loadRides(); }, [loadRides]);
+  /* Refresh when the chauffeur comes back to this screen */
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") loadRides(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [loadRides]);
 
   const handleAction = useCallback(async (id: string, action: "accept" | "reject") => {
     setActing(id);
@@ -266,7 +279,13 @@ export default function MyRidesPage() {
             ride={ride}
             isUpcoming={tab === "upcoming"}
             onAction={handleAction}
-            onGoToRide={(id) => { void id; router.push("/driver/home"); }}
+            onGoToRide={(ride) => {
+              /* A reservation the chauffeur hasn't set off for lives in
+                 Reserved Rides; everything else is on the dashboard */
+              const reservedForLater = ride.bookingType !== "CARE" && !!ride.scheduledAt && !ride.enRouteAt &&
+                new Date(ride.scheduledAt).getTime() > Date.now();
+              router.push(reservedForLater ? "/driver/home/planned" : "/driver/home");
+            }}
             acting={acting}
           />
         ))}

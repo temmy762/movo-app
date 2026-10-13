@@ -31,10 +31,21 @@ export async function GET(req: NextRequest) {
     const page   = Math.max(1, Number(searchParams.get("page") ?? 1));
     const limit  = Math.min(50, Number(searchParams.get("limit") ?? 20));
     const status = searchParams.get("status");
+    const q      = searchParams.get("q")?.trim().slice(0, 80) ?? "";
 
+    /* Search by booking / receipt number, client name or email */
     const where = {
       bookingType: "CARE" as const,
       ...(status ? { status: status as never } : {}),
+      ...(q ? {
+        OR: [
+          { bookingNumber: { contains: q, mode: "insensitive" as const } },
+          { receiptNumber: { contains: q, mode: "insensitive" as const } },
+          { clientName:    { contains: q, mode: "insensitive" as const } },
+          { id: q },
+          { user: { email: { contains: q, mode: "insensitive" as const } } },
+        ],
+      } : {}),
     };
 
     const [total, bookings] = await Promise.all([

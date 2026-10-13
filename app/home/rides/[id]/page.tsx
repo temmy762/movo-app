@@ -19,6 +19,8 @@ const statusColors: Record<string, { bg: string; text: string; label: string }> 
 
 interface BookingDetail {
   id: string;
+  bookingNumber?: string | null;
+  receiptNumber?: string | null;
   carName: string;
   carTier: string;
   pickup: string;
@@ -165,7 +167,10 @@ function BookingDetailContent() {
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-0.5 font-mono">#{booking.id.slice(-8).toUpperCase()}</p>
+                <p className="text-[11px] text-gray-500 mt-0.5 font-mono">
+                  {booking.bookingNumber ?? `#${booking.id.slice(-8).toUpperCase()}`}
+                  {booking.receiptNumber ? ` · Receipt ${booking.receiptNumber}` : ""}
+                </p>
               </div>
 
               {/* Route */}
@@ -335,6 +340,20 @@ function BookingDetailContent() {
             </div>
 
             {/* Actions */}
+            {booking.status === "COMPLETED" && (
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button"
+                  onClick={() => router.push(`/home/report-incident?bookingId=${booking.id}`)}
+                  className="py-3 rounded-full text-[13px] font-semibold border border-gray-300 text-gray-700 bg-white">
+                  Report an issue
+                </button>
+                <button type="button"
+                  onClick={() => router.push(`/home/report-lost-item?bookingId=${booking.id}${booking.bookingNumber ? `&ref=${encodeURIComponent(booking.bookingNumber)}` : ""}`)}
+                  className="py-3 rounded-full text-[13px] font-semibold border border-gray-300 text-gray-700 bg-white">
+                  Report a lost item
+                </button>
+              </div>
+            )}
             {booking.status === "COMPLETED" && (
               <button
                 type="button"

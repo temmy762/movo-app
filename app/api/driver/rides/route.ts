@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { computeDriverEarning } from "@/lib/earnings";
+import { computeDriverEarning, safeRideEarningFor } from "@/lib/earnings";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -12,17 +12,24 @@ export async function GET(req: NextRequest) {
 
   const tab = new URL(req.url).searchParams.get("tab") ?? "past";
 
-  const statusFilter =
-    tab === "upcoming"
-      ? { in: ["PENDING", "CONFIRMED"] as const }
-      : { equals: "COMPLETED" as const };
+  const statusFilter: { in: ("PENDING" | "CONFIRMED" | "COMPLETED")[] } =
+    tab === "upcoming" ? { in: ["PENDING", "CONFIRMED"] } : { in: ["COMPLETED"] };
 
   const [rides, driver] = await Promise.all([
     prisma.booking.findMany({
       where: {
-        driverId: session.driverId,
         status: statusFilter,
+        /* Standard rides (booking.driverId) AND Safe Rides, whose chauffeur is
+           on a care assignment — those never showed up here before */
+        OR: [
+          { driverId: session.driverId },
+          { careAssignments: { some: {
+            driverId: session.driverId,
+            status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN", "COMPLETED"] },
+          } } },
+        ],
       },
+      take: 100,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -37,6 +44,17 @@ export async function GET(req: NextRequest) {
         paymentStatus: true,
         scheduledAt: true,
         createdAt: true,
+        bookingNumber: true,
+        bookingType: true,
+        enRouteAt: true,
+        chauffeurPayout: true,
+        waitingFee: true,
+        pricingSnapshot: true,
+        careAssignments: {
+          where: { driverId: session.driverId, status: { notIn: ["PENDING", "CANCELLED", "SEARCHING"] } },
+          select: { role: true },
+          take: 1,
+        },
       },
     }),
     prisma.driver.findUnique({
@@ -48,11 +66,15 @@ export async function GET(req: NextRequest) {
   /* Attach the chauffeur's payout per ride so the list shows earnings, not the
      customer fare. */
   const enriched = await Promise.all(
-    rides.map(async (r) => ({
+    rides.map(async ({ careAssignments, chauffeurPayout, waitingFee, pricingSnapshot, ...r }) => ({
       ...r,
-      earning: await computeDriverEarning(r.fare, r.carTier, driver),
+      careRole: careAssignments[0]?.role ?? null,
+      earning: r.bookingType === "CARE"
+        ? await safeRideEarningFor({ fare: r.fare, chauffeurPayout, waitingFee, pricingSnapshot }, careAssignments[0]?.role ?? "PRIMARY")
+        : await computeDriverEarning(r.fare, r.carTier, driver),
     })),
   );
 
-  return NextResponse.json(enriched);
+  /* Always fresh — a just-completed ride must show up immediately */
+  return NextResponse.json(enriched, { headers: { "Cache-Control": "no-store" } });
 }

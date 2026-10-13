@@ -46,6 +46,7 @@ interface Booking {
   createdAt: string;
   bookingType?: string;
   scheduledAt?: string | null;
+  bookingNumber?: string | null;
 }
 
 const fmtReserved = (iso: string) =>
@@ -59,7 +60,7 @@ export default function RidesPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/user/bookings?tab=${tab}`)
+    fetch(`/api/user/bookings?tab=${tab}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { bookings: [] }))
       .then((data) => setBookings(data.bookings ?? []))
       .catch(() => setBookings([]))
@@ -116,7 +117,11 @@ export default function RidesPage() {
                 <div
                   key={ride.id}
                   role="button"
-                  onClick={() => router.push(`/home/rides/${ride.id}`)}
+                  onClick={() => router.push(
+                    ride.status === "PENDING" || ride.status === "CONFIRMED"
+                      ? `/home/ride/tracking?bookingId=${ride.id}&pickup=${encodeURIComponent(ride.pickup)}&dropoff=${encodeURIComponent(ride.dropoff)}&car=${encodeURIComponent(ride.carName)}&tier=${encodeURIComponent(ride.carTier)}${ride.bookingType === "CARE" ? "&service=care" : ""}`
+                      : `/home/rides/${ride.id}`,
+                  )}
                   className="rounded-2xl px-4 pt-3 pb-3 flex flex-col gap-3 border border-transparent cursor-pointer active:scale-[0.99] transition-transform"
                   style={{
                     background:
@@ -140,6 +145,7 @@ export default function RidesPage() {
                         </div>
                       )}
                       <div className="flex items-center gap-2 mt-1">
+                        {ride.bookingNumber && <span className="text-[11px] font-mono font-semibold text-gray-600">{ride.bookingNumber}</span>}
                         <span className="text-[11px] font-semibold text-gray-500 uppercase">{ride.status}</span>
                         <span className="text-[12px] font-bold text-gray-800">${ride.total.toFixed(2)}</span>
                         {ride.bookingType === "CARE" && (
@@ -166,11 +172,29 @@ export default function RidesPage() {
                     </div>
                   </div>
 
-                  {/* View ticket label */}
+                  {/* View ticket / track label */}
                   <div className="flex items-center gap-1.5">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="15" x2="12" y2="15"/></svg>
-                    <span className="text-[11px] text-gray-400">Tap to view ticket</span>
+                    <span className="text-[11px] text-gray-400">
+                      {ride.status === "PENDING" || ride.status === "CONFIRMED" ? "Tap to track your ride" : "Tap to view ticket"}
+                    </span>
                   </div>
+
+                  {/* Past rides: support shortcuts */}
+                  {ride.status === "COMPLETED" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button"
+                        onClick={(e) => { e.stopPropagation(); router.push(`/home/report-incident?bookingId=${ride.id}`); }}
+                        className="no-hover-fx py-2 rounded-full text-[12px] font-semibold bg-white text-gray-700 border border-gray-300">
+                        Report an issue
+                      </button>
+                      <button type="button"
+                        onClick={(e) => { e.stopPropagation(); router.push(`/home/report-lost-item?bookingId=${ride.id}${ride.bookingNumber ? `&ref=${encodeURIComponent(ride.bookingNumber)}` : ""}`); }}
+                        className="no-hover-fx py-2 rounded-full text-[12px] font-semibold bg-white text-gray-700 border border-gray-300">
+                        Report a lost item
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

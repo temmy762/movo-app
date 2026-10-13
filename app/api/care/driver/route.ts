@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         booking: {
           select: {
             id: true,
+            bookingNumber: true,
             clientName: true,
             pickup: true,
             dropoff: true,

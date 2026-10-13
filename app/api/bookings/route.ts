@@ -9,7 +9,9 @@ import { dispatchBookingCreated } from "@/lib/socket/dispatcher";
 import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
 import { computeDriverEarning } from "@/lib/earnings";
 import { verifyBookingPayment } from "@/lib/bookingPayment";
+import { nextBookingNumber, nextReceiptNumber } from "@/lib/references";
 import { IN_CITY_RIDES_ENABLED } from "@/lib/launchConfig";
+import { serviceLabel } from "@/lib/tierLabels";
 
 export async function GET(req: NextRequest) {
   try {
@@ -174,6 +176,9 @@ export async function POST(req: NextRequest) {
         status: resolvedStatus,
         stripePaymentIntentId: verified.paymentIntentId,
         userId,
+        /* Permanent references: confirmed booking + recorded payment */
+        bookingNumber:  await nextBookingNumber(),
+        receiptNumber:  await nextReceiptNumber(),
         riderPhone:         details.riderPhone,
         passengers:         details.passengers,
         pickupInstructions: details.pickupInstructions,
@@ -194,16 +199,22 @@ export async function POST(req: NextRequest) {
       if (user?.email) {
         sendNotification({
           eventType: "RIDER_BOOKING_CONFIRMED",
-          channels: ["IN_APP"],
+          /* Email too — it carries the booking number. "Chauffeur on the way"
+             is a separate update sent when a chauffeur accepts. */
+          channels: ["EMAIL", "IN_APP"],
           recipient: { type: "user", id: userId, email: user.email, firstName: user.firstName, phone: user.phone ?? undefined },
           data: {
             bookingId: booking.id,
+            bookingNumber: booking.bookingNumber,
             title: "Booking received",
             message: isScheduled
               ? "Payment received — we'll line up your chauffeur ahead of your scheduled time."
               : "Payment received — we're finding your chauffeur now.",
             pickup, dropoff, carTier,
-            fare: Number(fare), serviceFee: Number(serviceFee), total: Number(total),
+            serviceLabel: serviceLabel(carTier),
+            ...(isScheduled ? { scheduledDate: parsedScheduledAt!.toLocaleString("en-CA", { timeZone: "America/Winnipeg", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) } : {}),
+            ...(details.stops.length ? { stops: details.stops } : {}),
+            fare: Number(fare), serviceFee: Number(serviceFee), gst: Number(gst ?? 0), total: Number(total),
           },
         }).catch(() => {});
       }

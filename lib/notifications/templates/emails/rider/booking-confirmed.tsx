@@ -20,6 +20,9 @@ export function riderBookingConfirmedTemplate(
     serviceLabel?: string;
     vehicle?: string;
     riderName?: string;
+    bookingNumber?: string | null;
+    message?: string;
+    stops?: string[];
   };
 
   const preview = `Your ${settings.appName} booking is confirmed!`;
@@ -31,7 +34,7 @@ export function riderBookingConfirmedTemplate(
       </Heading>
 
       <Text style={{ fontSize: "16px", color: "#333333" }}>
-        Hi {recipient.firstName}, your ride has been confirmed.
+        Hi {recipient.firstName}, {booking.message ?? "your ride has been confirmed."}
       </Text>
 
       <Section
@@ -43,7 +46,7 @@ export function riderBookingConfirmedTemplate(
         }}
       >
         <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "8px" }}>
-          <strong>Booking ID:</strong> {booking.bookingId}
+          <strong>Booking number:</strong> {booking.bookingNumber ?? booking.bookingId}
         </Text>
         <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "8px" }}>
           <strong>Service:</strong> {booking.serviceLabel ?? booking.carTier}
@@ -70,6 +73,10 @@ export function riderBookingConfirmedTemplate(
           Pickup Location
         </Text>
         <Text style={{ fontSize: "14px", color: "#333333" }}>{booking.pickup}</Text>
+
+        {booking.stops?.map((stop, i) => (
+          <Text key={i} style={{ fontSize: "14px", color: "#333333" }}>Stop {i + 1}: {stop}</Text>
+        ))}
 
         <Text
           style={{ fontSize: "16px", fontWeight: "600", marginTop: "16px", marginBottom: "8px" }}
@@ -127,10 +134,10 @@ export function riderBookingConfirmedTemplate(
   const text = `
 Booking Confirmed!
 
-Hi ${recipient.firstName}, your ride has been confirmed.
+Hi ${recipient.firstName}, ${booking.message ?? "your ride has been confirmed."}
 
-Booking ID: ${booking.bookingId}
-Service: ${booking.carTier}
+Booking number: ${booking.bookingNumber ?? booking.bookingId}
+Service: ${booking.serviceLabel ?? booking.carTier}
 ${booking.scheduledDate ? `Scheduled: ${booking.scheduledDate}` : ""}
 
 Pickup Location: ${booking.pickup}

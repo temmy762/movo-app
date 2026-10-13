@@ -23,6 +23,10 @@ type Booking = {
   scheduledAt?: string | null;
   paymentStatus: string;
   status: string;
+  startedAt?: string | null;
+  arrivedAt?: string | null;
+  enRouteAt?: string | null;
+  bookingNumber?: string | null;
   riderPhone?: string | null;
   user?: { phone: string | null } | null;
   passengers?: number | null;
@@ -56,6 +60,7 @@ type CareAssignment = {
     pickupInstructions?: string | null;
     stops?: unknown;
     careVehicle?: unknown;
+    bookingNumber?: string | null;
   };
 };
 
@@ -125,6 +130,8 @@ export default function DriverHomePage() {
   const [careError,        setCareError]        = useState<string | null>(null);
   const [showCareComplete, setShowCareComplete] = useState(false);
   const [cancelNotice,     setCancelNotice]     = useState<string | null>(null);
+  /* Rider changed the destination / stops mid-trip */
+  const [routeNotice,      setRouteNotice]      = useState<string | null>(null);
   /* Surfaced when the browser can't get a GPS fix while online — previously
      silent, so a chauffeur with location blocked/unavailable never learned
      why they weren't receiving nearby (especially Safe Ride) requests. */
@@ -186,7 +193,16 @@ export default function DriverHomePage() {
           setActiveBooking(booking);
           setIsOnline(true);
           localStorage.setItem("driverOnline", "true");
-          setRidePhase(booking.startedAt ? "started" : "accepted");
+          /* Restore the exact step — a chauffeur who'd already tapped
+             "I've Arrived" was being sent back to the "accepted" step */
+          setRidePhase(booking.startedAt ? "started" : booking.arrivedAt ? "arrived" : "accepted");
+          if (booking.arrivedAt && !booking.startedAt) {
+            const arrivedAt = new Date(booking.arrivedAt).getTime();
+            fetch("/api/admin/pricing")
+              .then(r => (r.ok ? r.json() : null))
+              .then(d => setWaitInfo({ arrivedAt, freeMin: d?.global?.freeWaitingMinutes ?? 5, rate: d?.global?.waitingRatePerMin ?? 0.75 }))
+              .catch(() => setWaitInfo({ arrivedAt, freeMin: 5, rate: 0.75 }));
+          }
           startOnlineLocationBroadcast();
           if (booking.startedAt) startLocationTracking(booking.id);
         } else {
@@ -331,6 +347,23 @@ export default function DriverHomePage() {
     }
     if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume().catch(() => {});
   }, []);
+
+  /* ── Socket: rider changed the route (destination / stops) mid-trip ── */
+  useEffect(() => {
+    if (!isOnline) return;
+    const unsub = on(SOCKET_EVENTS.BOOKING_ROUTE_UPDATED, (data) => {
+      const d = data as { bookingId: string; dropoff: string; stops: string[]; message?: string };
+      /* Only sent to this chauffeur's own rooms (driver / their booking) */
+      setActiveBooking(prev => prev?.id === d.bookingId ? { ...prev, dropoff: d.dropoff, stops: d.stops } : prev);
+      setCareAssignment(prev => prev?.booking.id === d.bookingId
+        ? { ...prev, booking: { ...prev.booking, dropoff: d.dropoff, stops: d.stops } }
+        : prev);
+      setRouteNotice(d.message ?? "The rider updated the route.");
+      try { navigator.vibrate?.([200, 100, 200]); } catch { /* ignore */ }
+    });
+    return () => { unsub(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline]);
 
   /* ── Socket: real-time booking notifications ── */
   useEffect(() => {
@@ -500,6 +533,14 @@ export default function DriverHomePage() {
           setCareAssignment(assignment as CareAssignment);
           setCoDriver(co ?? null);
           setCareEarning(earning ?? 0);
+          /* A chauffeur on a Safe Ride is on shift: reconnect live updates and
+             location sharing after a refresh (they used to come back "offline") */
+          if (assignment.status !== "PENDING") {
+            setIsOnline(true);
+            localStorage.setItem("driverOnline", "true");
+            startOnlineLocationBroadcast();
+            if (assignment.status === "STARTED") startLocationTracking(assignment.booking.id);
+          }
           const s = assignment.status;
           if (s === "PENDING")  setCarePhase("requesting");
           if (s === "ACCEPTED") setCarePhase("accepted");
@@ -1947,6 +1988,26 @@ export default function DriverHomePage() {
       </>)}
 
       {/* Ride cancelled notice — rendered in both dashboard and trip modes */}
+      {routeNotice && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
+          style={{ background: "rgba(0,0,0,0.45)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-xl">
+            <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-3">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+              </svg>
+            </div>
+            <p className="text-[16px] font-bold text-gray-900 mb-1">Route updated</p>
+            <p className="text-[13px] text-gray-500 text-center mb-5 break-words">{routeNotice}</p>
+            <button type="button" onClick={() => setRouteNotice(null)}
+              className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"
+              style={{ background: "linear-gradient(90deg,#1a1a2e 0%,#131936 50%,#C6BFB2 100%)" }}>
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {cancelNotice && (
         <div className="absolute inset-0 z-50 flex items-center justify-center px-6"
           style={{ background: "rgba(0,0,0,0.45)" }}>

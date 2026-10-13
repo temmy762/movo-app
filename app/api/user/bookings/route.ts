@@ -25,8 +25,11 @@ export async function GET(req: NextRequest) {
       ...(statuses ? { status: { in: statuses as never[] } } : {}),
     },
     orderBy: { createdAt: "desc" },
+    /* Recent rides only — the full history made this list slow */
+    take: 50,
     select: {
       id: true,
+      bookingNumber: true,
       carName: true,
       carTier: true,
       pickup: true,
@@ -41,5 +44,5 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ bookings });
+  return NextResponse.json({ bookings }, { headers: { "Cache-Control": "no-store" } });
 }

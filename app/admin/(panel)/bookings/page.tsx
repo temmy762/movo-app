@@ -190,6 +190,8 @@ type BookingStatus = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
 type PaymentStatus = "UNPAID" | "PAID" | "FAILED" | "REFUNDED";
 type Booking = {
   id: string;
+  bookingNumber: string | null;
+  receiptNumber: string | null;
   clientName: string;
   pickup: string;
   dropoff: string;
@@ -319,6 +321,8 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
     (payFilter === "All" || b.paymentStatus === payFilter) &&
     (b.clientName.toLowerCase().includes(search.toLowerCase()) ||
      b.id.toLowerCase().includes(search.toLowerCase()) ||
+     (b.bookingNumber ?? "").toLowerCase().includes(search.toLowerCase()) ||
+     (b.receiptNumber ?? "").toLowerCase().includes(search.toLowerCase()) ||
      b.carName.toLowerCase().includes(search.toLowerCase()))
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -335,7 +339,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" placeholder="Search client, car or ID"
+            <input type="text" placeholder="Search client, booking or receipt no."
               value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
               className="text-[12px] w-full sm:w-44 focus:outline-none placeholder-gray-300"
               suppressHydrationWarning />
@@ -393,7 +397,10 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
               const date = new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
               return (
                 <tr key={b.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                  <td className="px-4 py-3.5 font-semibold text-gray-700 whitespace-nowrap font-mono text-[10px]">{b.id.slice(0, 10)}…</td>
+                  <td className="px-4 py-3.5 font-semibold text-gray-700 whitespace-nowrap font-mono text-[10px]">
+                    {b.bookingNumber ?? `${b.id.slice(0, 10)}…`}
+                    {b.receiptNumber && <span className="block text-gray-400 font-normal">{b.receiptNumber}</span>}
+                  </td>
                   <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{date}</td>
                   <td className="px-4 py-3.5 font-medium text-gray-800 whitespace-nowrap">{b.clientName}</td>
                   <td className="px-4 py-3.5 whitespace-nowrap">
@@ -475,7 +482,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
             <div key={b.id} className="border-b border-gray-100 px-4 py-4">
               {/* Row 1: ID + Status */}
               <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] text-gray-400 font-semibold">{b.id.slice(0, 12)}…</span>
+                <span className="font-mono text-[10px] text-gray-400 font-semibold">{b.bookingNumber ?? `${b.id.slice(0, 12)}…`}</span>
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold"
                   style={{ background: sc.bg, color: sc.color }}>
                   {sc.label}
@@ -634,6 +641,8 @@ type CareAssignmentRow = {
 };
 type CareBooking = {
   id: string;
+  bookingNumber?: string | null;
+  receiptNumber?: string | null;
   clientName: string;
   pickup: string;
   dropoff: string;
@@ -670,11 +679,19 @@ function CareBookingsTable() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [manageId, setManageId] = useState<string | null>(null);
   const [returnCostDeduction, setReturnCostDeduction] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [query, setQuery] = useState("");
   const LIMIT = 10;
+
+  /* Search by booking / receipt number, client or email (debounced) */
+  useEffect(() => {
+    const t = setTimeout(() => { setQuery(searchInput.trim()); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const load = useCallback((p = page, sf = statusFilter) => {
     setLoading(true);
-    const qs = sf === "ALL" ? `` : `&status=${sf}`;
+    const qs = (sf === "ALL" ? `` : `&status=${sf}`) + (query ? `&q=${encodeURIComponent(query)}` : "");
     fetch(`/api/admin/care?page=${p}&limit=${LIMIT}${qs}`)
       .then(r => r.json())
       .then(d => {
@@ -683,7 +700,7 @@ function CareBookingsTable() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page, statusFilter]);
+  }, [page, statusFilter, query]);
 
   useEffect(() => { load(page, statusFilter); }, [page, statusFilter, load]);
 
@@ -748,6 +765,9 @@ function CareBookingsTable() {
           <span className="px-2 py-0.5 rounded-full text-[11px] font-bold text-white" style={{ background: "#1e2d45" }}>{total}</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <input type="text" placeholder="Search booking / receipt no., client"
+            value={searchInput} onChange={e => setSearchInput(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-gray-200 text-[12px] w-full sm:w-56 focus:outline-none focus:border-[#131936]" />
           {CARE_STATUS_OPTIONS.map(s => (
             <button key={s} type="button"
               onClick={() => { setStatusFilter(s); setPage(1); }}
@@ -785,7 +805,10 @@ function CareBookingsTable() {
               const date = new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
               return (
                 <tr key={b.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors align-top">
-                  <td className="px-4 py-3 font-mono text-[10px] text-gray-500 whitespace-nowrap">{b.id.slice(0, 10)}…</td>
+                  <td className="px-4 py-3 font-mono text-[10px] text-gray-500 whitespace-nowrap">
+                    {b.bookingNumber ?? `${b.id.slice(0, 10)}…`}
+                    {b.receiptNumber && <span className="block text-gray-400">{b.receiptNumber}</span>}
+                  </td>
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{date}</td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800 whitespace-nowrap">{b.clientName}</p>
@@ -862,7 +885,7 @@ function CareBookingsTable() {
           return (
             <div key={b.id} className="border-b border-gray-100 px-4 py-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] text-gray-400">{b.id.slice(0, 12)}…</span>
+                <span className="font-mono text-[10px] text-gray-400">{b.bookingNumber ?? `${b.id.slice(0, 12)}…`}</span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold"
                   style={{ background: sc.bg, color: sc.color }}>{sc.label}</span>
               </div>

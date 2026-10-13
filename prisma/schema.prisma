@@ -365,6 +365,11 @@ model Session {
 
 model Booking {
   id                    String        @id @default(cuid())
+  /* Customer-facing references, never change once issued:
+     MOVO-B-000001 when the booking is confirmed (paid), MOVO-R-000001 when the
+     payment is recorded. Numbered from Postgres sequences. */
+  bookingNumber         String?       @unique
+  receiptNumber         String?       @unique
   clientName            String
   pickup                String
   dropoff               String
@@ -451,6 +456,9 @@ model Booking {
   @@index([status, createdAt])
   @@index([driverId])
   @@index([userId])
+  /* "My rides" lists: a rider's / chauffeur's rides by status, newest first */
+  @@index([userId, status, createdAt])
+  @@index([driverId, status, createdAt])
 }
 
 // ─── Care Ride Assignments ────────────────────────────────────────────────────

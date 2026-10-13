@@ -6,6 +6,7 @@ type Vehicle = { make?: string; model?: string; year?: string; colour?: string; 
 
 export type RideDetailsBooking = {
   clientName: string;
+  bookingNumber?: string | null;
   riderPhone?: string | null;
   user?: { phone: string | null } | null;
   passengers?: number | null;
@@ -19,10 +20,13 @@ export default function RideDetails({ booking }: { booking: RideDetailsBooking }
   const stops = Array.isArray(booking.stops) ? (booking.stops as string[]) : [];
   const v = (booking.careVehicle ?? null) as Vehicle | null;
 
-  if (!phone && !booking.passengers && !booking.pickupInstructions && !stops.length && !v) return null;
+  if (!booking.bookingNumber && !phone && !booking.passengers && !booking.pickupInstructions && !stops.length && !v) return null;
 
   return (
     <div className="flex flex-col gap-2 mb-3 rounded-xl bg-gray-50 px-3 py-2.5 text-[12px]">
+      {booking.bookingNumber && (
+        <p className="text-gray-500">Booking · <span className="font-mono text-gray-800 font-semibold">{booking.bookingNumber}</span></p>
+      )}
       {phone && (
         <div className="flex items-center justify-between">
           <span className="text-gray-500">Rider · <span className="text-gray-800 font-semibold">{booking.clientName}</span></span>
@@ -47,7 +51,7 @@ export default function RideDetails({ booking }: { booking: RideDetailsBooking }
         <div className="text-gray-500">
           Stops:
           <ol className="list-decimal ml-5 text-gray-800">
-            {stops.map((s, i) => <li key={i}>{s}</li>)}
+            {stops.map((s, i) => <li key={`${i}-${s}`}>{s}</li>)}
           </ol>
         </div>
       )}

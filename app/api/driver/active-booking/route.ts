@@ -39,6 +39,10 @@ export async function GET(req: NextRequest) {
       status: true,
       startedAt: true,
       scheduledAt: true,
+      /* So a page refresh restores the exact step (arrived → waiting clock) */
+      arrivedAt: true,
+      enRouteAt: true,
+      bookingNumber: true,
       /* Rider contact + pickup details for the chauffeur */
       riderPhone: true,
       passengers: true,

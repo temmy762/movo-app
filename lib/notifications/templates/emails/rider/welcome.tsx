@@ -25,7 +25,7 @@ export function riderWelcomeTemplate(context: EmailTemplateContext): EmailTempla
 
       <ul style={{ fontSize: "16px", lineHeight: "1.5", color: "#333333", paddingLeft: "20px" }}>
         <li>Book rides instantly or schedule for later</li>
-        <li>Choose from multiple service tiers (Classic, Business, VIP)</li>
+        <li>Choose Safe Ride or an In-City ride (Standard, Executive, Concierge)</li>
         <li>Track your driver in real-time</li>
         <li>Enjoy transparent, upfront pricing</li>
         <li>Earn rewards with every ride</li>
@@ -65,7 +65,7 @@ We're thrilled to have you on board. With ${settings.appName}, you can book prem
 
 Here's what you can do:
 - Book rides instantly or schedule for later
-- Choose from multiple service tiers (Classic, Business, VIP)
+- Choose Safe Ride or an In-City ride (Standard, Executive, Concierge)
 - Track your driver in real-time
 - Enjoy transparent, upfront pricing
 - Earn rewards with every ride
