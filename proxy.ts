@@ -77,12 +77,20 @@ export async function proxy(req: NextRequest) {
   const cookieHeader = req.headers.get("cookie");
   const session = await getSessionFromCookieHeader(cookieHeader);
 
-  // ── No session: redirect to auth select ─────────────────────────────────────
+  // ── No session ──────────────────────────────────────────────────────────────
   if (!session) {
-    const selectUrl = new URL("/auth/select", req.url);
     /* Keep the query too, so e.g. a Safe Ride booking link (?service=care)
        still opens the Safe Ride flow after logging in */
-    selectUrl.searchParams.set("from", pathname + req.nextUrl.search);
+    const destination = pathname + req.nextUrl.search;
+    /* A rider page (booking) needs no "Rider or Chauffeur?" question — go
+       straight to the rider login, which links to sign-up */
+    if (matchesPrefix(pathname, USER_ROUTES)) {
+      const loginUrl = new URL("/user/login", req.url);
+      loginUrl.searchParams.set("redirect", destination);
+      return NextResponse.redirect(loginUrl);
+    }
+    const selectUrl = new URL("/auth/select", req.url);
+    selectUrl.searchParams.set("from", destination);
     return NextResponse.redirect(selectUrl);
   }
 
