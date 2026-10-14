@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "../components/BottomNav";
 
@@ -15,6 +15,22 @@ type Topic = {
 
 const helpTopics: Topic[] = [
   {
+    id: "choosing",
+    title: "Choosing a service",
+    description: "City Rides or Safe Ride — which one is right for your trip",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+    sections: [
+      { heading: "City Rides — we bring the car", body: "A Movo chauffeur picks you up in a Movo vehicle and takes you where you need to go. Choose Standard for comfortable everyday rides, Executive for more space and presence, or Concierge for top-tier luxury. Each shows an estimated total before you book." },
+      { heading: "Safe Ride — we drive your car", body: "A professional Movo chauffeur meets you and drives you home in your own vehicle, so you and your car both get home safely. Ideal after an evening out, an event, or whenever you’d rather not drive but don’t want to leave your car behind." },
+      { heading: "Quick guide", body: "Don’t have your car with you, or just need to get somewhere? Choose City Rides. Your car is with you and you want it home too? Choose Safe Ride." },
+      { heading: "What happens next", body: "Both start with your pickup and destination. City Rides then lets you pick Standard, Executive or Concierge. Safe Ride asks for your vehicle details instead. Either way you review your fare before you pay, and can follow your chauffeur live on the tracking screen." },
+    ],
+  },
+  {
     id: "booking",
     title: "Booking a Ride",
     description: "How to book, choose a service, and schedule ahead",
@@ -24,7 +40,7 @@ const helpTopics: Topic[] = [
       </svg>
     ),
     sections: [
-      { heading: "Book in a few taps", body: "From the home screen, tap “Where to?”, then set your pickup and destination. Your pickup defaults to your current location, and address suggestions appear as you type. Choose your service level, review the fare estimate, and pay to confirm." },
+      { heading: "Book in a few taps", body: "From the home screen, tap “Where are you heading?”, then set your pickup and destination. Your pickup defaults to your current location, and address suggestions appear as you type. Choose your service level, review the fare estimate, and pay to confirm." },
       { heading: "Choose your service", body: "Standard — comfortable everyday rides. Executive — more space and presence. Concierge — top-tier luxury. Safe Ride — a chauffeur drives you home in your own vehicle. Each tier shows an estimated total before you book." },
       { heading: "Schedule for later", body: "Pick a future date and time when booking. Scheduled rides are lined up with a chauffeur ahead of your pickup, and you’ll be notified when your chauffeur sets off. You can view and manage upcoming rides from the Rides tab." },
       { heading: "Add a stop during your trip", body: "On the tracking screen, open Actions → Add Stop and enter the address. The additional stop fee (plus tax) is calculated automatically and charged to your card on file — you’ll see the updated total." },
@@ -112,7 +128,7 @@ const helpTopics: Topic[] = [
 ];
 
 const faqs = [
-  { question: "How do I book a ride?", answer: "Tap “Where to?” on the home screen, set your pickup and destination, choose your service tier, review the fare estimate, and pay to confirm." },
+  { question: "How do I book a ride?", answer: "Tap “Where are you heading?” on the home screen, set your pickup and destination, choose your service tier, review the fare estimate, and pay to confirm." },
   { question: "What payment methods are accepted?", answer: "Movo accepts credit and debit cards, processed securely by Stripe. You can save a card for faster checkout and remove it anytime in Payment settings." },
   { question: "When am I charged, and can I get a receipt?", answer: "You pay when you book. When the trip completes, an itemised receipt is emailed to you and shown on your ride summary." },
   { question: "How do I cancel a ride, and will I be refunded?", answer: "Cancelling within 5 minutes or before a chauffeur is assigned is free with a full refund. After that a partial charge may apply. If a chauffeur cancels or none is found, you’re fully refunded automatically." },
@@ -124,6 +140,14 @@ export default function HelpPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [openTopic, setOpenTopic] = useState<Topic | null>(null);
+
+  /* Deep link, e.g. /home/help?topic=choosing from "Need help choosing?" */
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("topic");
+    const topic = id ? helpTopics.find(t => t.id === id) : null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (topic) setOpenTopic(topic);
+  }, []);
 
   const q = query.trim().toLowerCase();
   const filteredTopics = useMemo(

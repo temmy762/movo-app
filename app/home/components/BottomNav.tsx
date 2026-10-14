@@ -5,10 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { label: "Dashboard", img: "/images/Home.png", href: "/home", match: (p: string) => p === "/home" },
+  { label: "Home", img: "/images/Home.png", href: "/home", match: (p: string) => p === "/home" },
   { label: "Rides", img: "/images/EMPTYCar.png", href: "/home/rides", match: (p: string) => p.startsWith("/home/rides") || p.startsWith("/home/pickup") || p === "/home/ride" || p.startsWith("/home/ride/") },
   { label: "Help", img: "/images/Help.png", href: "/home/help", match: (p: string) => p.startsWith("/home/help") },
-  { label: "My profile ID", img: "/images/Male User.png", href: "/home/profile", match: (p: string) => p.startsWith("/home/profile") || p.startsWith("/home/settings") },
+  { label: "Profile", img: "/images/Male User.png", href: "/home/profile", match: (p: string) => p.startsWith("/home/profile") || p.startsWith("/home/settings") },
 ];
 
 export default function BottomNav() {

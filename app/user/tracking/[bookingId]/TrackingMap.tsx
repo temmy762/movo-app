@@ -39,6 +39,9 @@ interface AnimationState {
   duration: number;
 }
 
+/* Must match every other page's Maps loader (same id + libraries) */
+const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
+
 export default function TrackingMap({
   driverLat,
   driverLng,
@@ -49,7 +52,9 @@ export default function TrackingMap({
   driverHeading = 0,
 }: TrackingMapProps) {
   const { isLoaded, loadError } = useJsApiLoader({
+    id: "movo-google-maps",
     googleMapsApiKey: API_KEY,
+    libraries: LIBRARIES,
   });
 
   const mapRef = useRef<google.maps.Map | null>(null);

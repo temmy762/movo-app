@@ -9,7 +9,9 @@ import { useJsApiLoader, Autocomplete as GPlacesAuto } from "@react-google-maps/
 import { IN_CITY_RIDES_ENABLED, AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED, VEHICLE_RENTAL_ENABLED } from "@/lib/launchConfig";
 
 const GMAPS_KEY  = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-const GMAPS_LIBS: ("places")[] = ["places"];
+/* Must match every other page's Maps loader (same id + libraries), or moving
+   between pages throws "Loader must not be called again with different options" */
+const GMAPS_LIBS: ("places" | "geometry")[] = ["places", "geometry"];
 
 const todayStr = () => new Date().toISOString().split("T")[0];
 const nowTimeStr = () => {
@@ -144,7 +146,7 @@ export default function LandingPage() {
   const [passengers, setPassengers] = useState(1);
 
   const { isLoaded: mapsLoaded } = useJsApiLoader({
-    id: "movo-landing-widget",
+    id: "movo-google-maps",
     googleMapsApiKey: GMAPS_KEY,
     libraries: GMAPS_LIBS,
   });
