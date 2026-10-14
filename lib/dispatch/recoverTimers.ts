@@ -6,7 +6,7 @@
  * startup (instrumentation.ts) to re-arm them from the database.
  */
 import { prisma } from "@/lib/prisma";
-import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
+import { scheduleStandardDispatchTimeout, POOL_SEARCH_TIMEOUT_MS } from "@/lib/dispatch/standardTimeout";
 import { scheduleCareDispatch, CARE_DISPATCH_LEAD_MS } from "@/lib/care/scheduledDispatch";
 import { dispatchPrimary, dispatchSupport } from "@/lib/care/dispatch";
 
@@ -31,11 +31,23 @@ export async function recoverDispatchTimers(): Promise<void> {
     },
     select: { id: true, scheduledAt: true, createdAt: true, updatedAt: true, driverId: true },
   });
+  let expired = 0;
   for (const b of waiting) {
     /* Scheduled: window runs from the pickup time. ASAP: from the last change
-       (creation, or the moment a chauffeur released it). Overdue → fires now. */
+       (creation, or the moment a chauffeur released it). */
     const anchor = isScheduledRide(b) ? b.scheduledAt! : b.updatedAt;
-    scheduleStandardDispatchTimeout(b.id, b.driverId ? "direct" : "pool", anchor);
+    const overdue = now - anchor.getTime() > POOL_SEARCH_TIMEOUT_MS;
+    if (overdue && b.driverId) {
+      /* Long past its window: never re-offer a stale ride to chauffeurs —
+         detach the silent chauffeur quietly so the timeout goes straight to
+         cancel + refund instead of releasing it back into the pool */
+      await prisma.booking.updateMany({
+        where: { id: b.id, driverId: b.driverId, acceptedAt: null, startedAt: null },
+        data: { driverId: null },
+      });
+    }
+    if (overdue) expired++;
+    scheduleStandardDispatchTimeout(b.id, "pool", overdue ? new Date(0) : anchor);
   }
 
   /* ── Safe Ride ── */
@@ -96,5 +108,5 @@ export async function recoverDispatchTimers(): Promise<void> {
     }
   }
 
-  console.log(`[recover timers] re-armed ${waiting.length} In-City timeout(s), ${care.length} Safe Ride booking(s) checked, ${reDispatched} re-dispatched`);
+  console.log(`[recover timers] re-armed ${waiting.length} In-City timeout(s) (${expired} already overdue → cancel + refund), ${care.length} Safe Ride booking(s) checked, ${reDispatched} re-dispatched`);
 }
