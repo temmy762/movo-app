@@ -16,15 +16,12 @@
  * (acceptedAt set) is never touched.
  */
 
-import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
+import { refundBooking } from "@/lib/payments/refundBooking";
 import { notifyAdmins, sendNotification } from "@/lib/notifications";
 import { dispatchBookingCancelled, dispatchBookingCreated, dispatchDriverReleased } from "@/lib/socket/dispatcher";
 import { pushToOnlineDriversByTier, pushToUser } from "@/lib/webpush";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-04-22.dahlia",
-});
 
 /* Keep in sync with the countdown windows on app/home/ride/tracking/page.tsx —
    the rider-facing timer is derived from these same durations. */
@@ -108,28 +105,26 @@ async function resolveStaleBooking(bookingId: string): Promise<void> {
     return;
   }
 
-  let refunded = false;
-  let refundId: string | undefined;
-
-  if (booking.stripePaymentIntentId) {
-    try {
-      const refund = await stripe.refunds.create({ payment_intent: booking.stripePaymentIntentId });
-      refunded = true;
-      refundId = refund.id;
-    } catch (e) {
-      console.error("[standard dispatch timeout] refund failed:", e);
-    }
-  }
-
-  await prisma.booking.update({
-    where: { id: bookingId },
-    data: {
-      status: "CANCELLED",
-      cancelledAt: new Date(),
-      cancelledBy: "system_timeout",
-      ...(refunded ? { paymentStatus: "REFUNDED", refundId } : {}),
-    },
+  /* Claim the cancellation atomically FIRST — a chauffeur accepting at this
+     very moment must win, not be left on a refunded, cancelled ride */
+  const claimed = await prisma.booking.updateMany({
+    where: { id: bookingId, driverId: null, startedAt: null, status: { in: ["PENDING", "CONFIRMED"] } },
+    data: { status: "CANCELLED", cancelledAt: new Date(), cancelledBy: "system_timeout" },
   });
+  if (claimed.count === 0) return;
+
+  let refunded = false;
+  try {
+    /* Checkout payment plus any extras already charged (e.g. an added stop) */
+    const { refundIds } = await refundBooking({ bookingId, checkoutIntentId: booking.stripePaymentIntentId });
+    refunded = true;
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: { paymentStatus: "REFUNDED", refundId: refundIds[0] },
+    });
+  } catch (e) {
+    console.error("[standard dispatch timeout] refund failed:", e);
+  }
 
   dispatchBookingCancelled({
     bookingId,

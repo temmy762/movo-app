@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { verifyFareQuote } from "@/lib/fareQuote";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -21,10 +22,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { amount, paymentMethodId } = await req.json();
-    if (!amount || typeof amount !== "number" || amount <= 0 || !paymentMethodId) {
-      return NextResponse.json({ error: "amount and paymentMethodId required" }, { status: 400 });
+    const { quote: quoteToken, paymentMethodId } = await req.json();
+    if (!paymentMethodId) {
+      return NextResponse.json({ error: "paymentMethodId required" }, { status: 400 });
     }
+    /* Charge exactly the server-signed price, never a browser amount */
+    const quote = verifyFareQuote(quoteToken);
+    if (!quote) {
+      return NextResponse.json({ error: "Your fare quote has expired. Please refresh the page." }, { status: 400 });
+    }
+    const amount = quote.total;
 
     const user = await prisma.user.findUnique({
       where: { id: session.userId },
@@ -48,7 +55,7 @@ export async function POST(req: NextRequest) {
       confirm: true,
       off_session: false,
       automatic_payment_methods: { enabled: true, allow_redirects: "never" },
-      metadata: { userId: session.userId },
+      metadata: { purpose: "booking", userId: session.userId },
     });
 
     return NextResponse.json({

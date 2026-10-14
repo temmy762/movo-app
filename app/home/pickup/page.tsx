@@ -148,6 +148,10 @@ function PickupContent() {
      with the reservation lead time enforced (30 min; 45 min for Safe Ride). */
   const handleConfirm = (kind: "now" | "reserve") => {
     setScheduleError("");
+    if (pickup.trim().toLowerCase() === dropoff.trim().toLowerCase()) {
+      setScheduleError("Pickup and destination can't be the same address.");
+      return;
+    }
     if (kind === "reserve") {
       if (!date || !time) { setScheduleError("Please select a date and time for your reservation."); return; }
       const leadMin = service === "care" ? 45 : 30;
@@ -347,7 +351,7 @@ function PickupContent() {
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            disabled={!pickup || !dropoff}
+            disabled={!pickup || !dropoff || lookingUp}
             onClick={() => handleConfirm("now")}
             className="py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide disabled:opacity-50"
             style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}
@@ -356,7 +360,7 @@ function PickupContent() {
           </button>
           <button
             type="button"
-            disabled={!pickup || !dropoff}
+            disabled={!pickup || !dropoff || lookingUp}
             onClick={() => handleConfirm("reserve")}
             className="py-3.5 rounded-xl font-bold text-[15px] tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5"
             style={{ border: "1.5px solid #131936", color: "#131936", background: "white" }}

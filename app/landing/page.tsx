@@ -30,7 +30,7 @@ const WHY_ITEMS = [
   { iconKey: "shield",  title: "Vetted Chauffeurs",   desc: "Every driver is background-checked, licensed, and trained to Movo's luxury standard." },
   { iconKey: "pin",     title: "Real-Time Tracking",  desc: "Follow your chauffeur live from dispatch to arrival — no guessing, no waiting." },
   { iconKey: "clock",   title: "On-Time, Every Time", desc: "Precision scheduling so you are never left waiting at the kerb." },
-  { iconKey: "card",    title: "Transparent Pricing", desc: "Fare estimated before you book. No surge, no surprises." },
+  { iconKey: "card",    title: "Transparent Pricing", desc: "Your full fare is shown before you book. No surprises." },
   { iconKey: "car",     title: "Premium Fleet",       desc: "Curated vehicles kept to the highest maintenance and presentation standard." },
   { iconKey: "moon",    title: "24 / 7 Service",      desc: "Your personal driver, available round the clock, every day of the year." },
 ];
@@ -75,10 +75,10 @@ const TAB_ENABLED = { oneway: IN_CITY_RIDES_ENABLED, hourly: HOURLY_CHARTER_ENAB
 
 const FAQS = [
   { q: "What is Safe Ride?",         a: "A professional Movo chauffeur meets you and drives you home in your own vehicle, so you and your car both get home safely. We take care of getting your chauffeur back afterwards." },
-  { q: "How is pricing calculated?",      a: "Fares are calculated from base fare, distance, duration, and applicable fees (service, GST, airport if relevant). You see the full breakdown before you pay — no surprises." },
-  { q: "Can I book for someone else?",    a: "Yes. During booking you can specify the passenger name. The booking confirmation and receipt are sent to your registered account." },
-  { q: "What areas do you cover?",        a: "We currently operate across major cities. Live driver availability is shown at the time of booking." },
-  { q: "How do I cancel a ride?",         a: "You can cancel a confirmed ride from the tracking screen. Cancellation policies vary by service tier and how close to pickup time the cancellation is made." },
+  { q: "How is pricing calculated?",      a: "City Rides are priced on the real route: base fare, distance and time, plus a service fee and GST. Safe Ride is one all-inclusive fare that covers your chauffeur, getting them back afterwards, and GST. You see the full price before you pay." },
+  { q: "Can I book for someone else?",    a: "Yes. At checkout choose “Someone else” and enter the rider’s name and mobile number — your chauffeur will contact them directly. The confirmation and receipt are sent to you." },
+  { q: "What areas do you cover?",        a: "We currently operate in Winnipeg, Manitoba. More cities are coming soon." },
+  { q: "How do I cancel a ride?",         a: "Cancel from your ride’s tracking screen before the trip starts. It’s free within 5 minutes of booking or before a chauffeur is assigned. After that, 50% of the fare is refunded (for Safe Ride, the return portion is always refunded in full). If we can’t find you a chauffeur, you’re refunded in full automatically." },
   { q: "Are your drivers insured?",       a: "All Movo chauffeurs hold full commercial driving licences and are covered by Movo's professional liability insurance." },
 ];
 
@@ -586,7 +586,7 @@ export default function LandingPage() {
               <div className="p-6 flex flex-col justify-between gap-5">
                 <div>
                   <p className="text-[16px] font-bold text-white mb-4">Why Safe Ride?</p>
-                  {["Drive your own car", "Professional & discreet", "Perfect for late nights", "Available when you need it most"].map(f => (
+                  {["Your own car, driven for you", "Professional & discreet", "Perfect for late nights", "Available when you need it most"].map(f => (
                     <div key={f} className="flex items-center gap-2 mb-2">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                       <span className="text-[13px] text-white/70">{f}</span>

@@ -112,18 +112,17 @@ export async function POST(req: NextRequest) {
     const userId = session.userId;
 
     const body = await req.json();
-    const { pickup, dropoff, carTier, carName, quote: quoteToken, stripePaymentIntentId, scheduledAt } = body;
+    const { carTier, carName, quote: quoteToken, stripePaymentIntentId, scheduledAt } = body;
     const details = bookingDetails(body);
 
-    if (!pickup || !dropoff || !carTier || !carName) {
+    if (!carTier || !carName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    /* Price and payment status come only from the signed quote and a verified
-       Stripe payment — never from the request body. */
+    /* Price, trip and payment status come only from the signed quote and a
+       verified Stripe payment — never from the request body. */
     const verified = await verifyBookingPayment({
-      userId, quoteToken, paymentIntentId: stripePaymentIntentId, pickup, dropoff, tier: carTier,
-      stops: details.stops,
+      userId, quoteToken, paymentIntentId: stripePaymentIntentId, tier: carTier,
     });
     if (!verified.ok) {
       return NextResponse.json({ error: verified.error }, { status: verified.status });
@@ -133,6 +132,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(existing, { status: 200 });
     }
     const { fare, serviceFee, gst, additionalStopFee, airportFee, total } = verified.quote;
+    /* The trip exactly as quoted and paid for */
+    const { pickup, dropoff } = verified.quote;
+    details.stops = verified.quote.stops ?? [];
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

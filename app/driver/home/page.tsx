@@ -132,6 +132,8 @@ export default function DriverHomePage() {
   const [cancelNotice,     setCancelNotice]     = useState<string | null>(null);
   /* Rider changed the destination / stops mid-trip */
   const [routeNotice,      setRouteNotice]      = useState<string | null>(null);
+  /* Start / end ride failures, shown on the active ride panel */
+  const [rideError,        setRideError]        = useState<string | null>(null);
   /* Surfaced when the browser can't get a GPS fix while online — previously
      silent, so a chauffeur with location blocked/unavailable never learned
      why they weren't receiving nearby (especially Safe Ride) requests. */
@@ -633,13 +635,6 @@ export default function DriverHomePage() {
     }
   }, []);
 
-  const patchStatus = useCallback(async (id: string, status: string) => {
-    await fetch(`/api/bookings/${id}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-  }, []);
 
   const startCountdown = useCallback((onExpire: () => void) => {
     if (countdownRef.current) clearInterval(countdownRef.current);
@@ -838,8 +833,14 @@ export default function DriverHomePage() {
   async function handleStartRide() {
     if (!activeBooking) return;
     setActionLoading(true);
-    await fetch(`/api/bookings/${activeBooking.id}/start`, { method: "PATCH" });
+    setRideError(null);
+    const res = await fetch(`/api/bookings/${activeBooking.id}/start`, { method: "PATCH" }).catch(() => null);
     setActionLoading(false);
+    /* 409 = already started (e.g. a double tap) — carry on */
+    if (!res || (!res.ok && res.status !== 409)) {
+      setRideError("Couldn't start the trip — check your connection and try again.");
+      return;
+    }
     startLocationTracking(activeBooking.id);
     setRiderPos(null); /* rider is in the car now */
     setWaitInfo(null); /* waiting clock stops at trip start */
@@ -848,10 +849,23 @@ export default function DriverHomePage() {
 
   async function handleEndRide() {
     if (!activeBooking) return;
-    stopLocationTracking();
     setActionLoading(true);
-    await patchStatus(activeBooking.id, "COMPLETED");
+    setRideError(null);
+    const res = await fetch(`/api/bookings/${activeBooking.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "COMPLETED" }),
+    }).catch(() => null);
     setActionLoading(false);
+    if (!res?.ok) {
+      const d = await res?.json().catch(() => null);
+      /* Already completed (e.g. a retry after a dropped response) — fine */
+      if (res?.status !== 409 || !/already completed/i.test(d?.error ?? "")) {
+        setRideError(d?.error ?? "Couldn't end the ride — check your connection and try again.");
+        return;
+      }
+    }
+    stopLocationTracking();
     setShowTripComplete(true);
   }
 
@@ -1877,6 +1891,11 @@ export default function DriverHomePage() {
               </div>
             </div>
             <RideDetails booking={activeBooking} />
+            {rideError && (
+              <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                <p className="text-[12px] font-semibold text-red-600">{rideError}</p>
+              </div>
+            )}
 
             {ridePhase === "accepted" && (
               <div className="flex gap-3">

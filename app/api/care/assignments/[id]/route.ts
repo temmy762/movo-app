@@ -135,6 +135,16 @@ export async function PATCH(
       );
     }
 
+    /* Mid-trip (customer in the car, or PRIMARY being driven back) a chauffeur
+       can't just drop out — re-dispatching would send a new chauffeur to the
+       original pickup. Support handles it; admin can still force-cancel. */
+    if (newStatus === "CANCELLED" && assignment.status === "STARTED" && !isAdmin) {
+      return NextResponse.json(
+        { error: "This trip is in progress and can't be cancelled from the app. Please contact Movo support." },
+        { status: 422 },
+      );
+    }
+
     /* First-accept-wins: if another chauffeur already holds this role on the
        booking, this accept loses. (Previously only SUPPORT cancelled rivals,
        and neither role guarded against a second acceptance.) */
@@ -227,6 +237,22 @@ export async function PATCH(
         { error: "This request has expired. New requests will appear automatically." },
         { status: 409 },
       );
+    }
+    /* Two chauffeurs tapping Accept at the same instant both pass the rival
+       check above — the earliest acceptance keeps the job, this one backs out */
+    if (newStatus === "ACCEPTED") {
+      const accepted = await prisma.careAssignment.findMany({
+        where: { bookingId: assignment.bookingId, role: assignment.role, status: { in: ["ACCEPTED", "ARRIVED", "STARTED"] } },
+        select: { id: true, acceptedAt: true },
+        orderBy: [{ acceptedAt: "asc" }, { id: "asc" }],
+      });
+      if (accepted.length > 1 && accepted[0].id !== id) {
+        await prisma.careAssignment.updateMany({
+          where: { id, status: "ACCEPTED" },
+          data: { status: "CANCELLED", cancelledAt: new Date() },
+        });
+        return NextResponse.json({ error: "Another chauffeur accepted this request first." }, { status: 409 });
+      }
     }
     const updated = (await prisma.careAssignment.findUnique({ where: { id } }))!;
 

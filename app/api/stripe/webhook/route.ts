@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { ensureReceiptNumber } from "@/lib/references";
+import { scheduleOrphanPaymentCheck } from "@/lib/payments/orphanPayments";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -44,6 +45,8 @@ export async function POST(req: NextRequest) {
           select: { id: true },
         });
         if (booking) await ensureReceiptNumber(booking.id);
+        /* Checkout paid but no booking yet — refund later if it never appears */
+        else if (intent.metadata?.purpose === "booking") scheduleOrphanPaymentCheck(intent.id);
         break;
       }
 
@@ -68,7 +71,8 @@ export async function POST(req: NextRequest) {
       /* ── Charge fully refunded (e.g. via Stripe dashboard) ── */
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
-        if (charge.payment_intent && typeof charge.payment_intent === "string") {
+        /* Fires for partial refunds too — only a full refund marks it refunded */
+        if (charge.refunded && charge.payment_intent && typeof charge.payment_intent === "string") {
           await prisma.booking.updateMany({
             where: {
               stripePaymentIntentId: charge.payment_intent,

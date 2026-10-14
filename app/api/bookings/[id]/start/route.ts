@@ -30,10 +30,16 @@ export async function PATCH(
     return NextResponse.json({ error: "Trip already started" }, { status: 409 });
   }
 
-  const updated = await prisma.booking.update({
-    where: { id: bookingId },
-    data:  { startedAt: new Date() },
+  /* Atomic: a double tap must not start (and bill waiting) twice */
+  const startedAt = new Date();
+  const claimed = await prisma.booking.updateMany({
+    where: { id: bookingId, driverId: session.driverId, status: "CONFIRMED", startedAt: null },
+    data:  { startedAt },
   });
+  if (claimed.count === 0) {
+    return NextResponse.json({ error: "Trip already started" }, { status: 409 });
+  }
+  const updated = { startedAt };
 
   /* Bill any wait time beyond the free window (fire-and-forget) */
   prisma.pricingConfig.findFirst().catch(() => null).then((pricing) =>

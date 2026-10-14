@@ -4,7 +4,7 @@ import { normalizeTier } from "@/lib/normalizeTier";
 import { signFareQuote } from "@/lib/fareQuote";
 import { AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED } from "@/lib/launchConfig";
 import { getSafeRideSettings, getSafeRideServiceRates, priceSafeRide } from "@/lib/safeRide";
-import { routeLeg, routeVia } from "@/lib/routing";
+import { routeLeg, routeViaResult, routeLegResult } from "@/lib/routing";
 
 /* Prefer a dedicated server key: NEXT_PUBLIC_* keys are often HTTP-referrer
    restricted for the browser, which makes server-side Distance Matrix calls
@@ -35,14 +35,21 @@ async function estimateSafeRide(pickup: string, dropoff: string, pickupTimeParam
   const requested = pickupTimeParam ? new Date(pickupTimeParam) : null;
   const pickupAt  = requested && !isNaN(requested.getTime()) && requested.getTime() > Date.now() ? requested : new Date();
 
-  const [trip, back, settings, serviceRates, pricingConfig] = await Promise.all([
+  const [tripResult, back, settings, serviceRates, pricingConfig] = await Promise.all([
     /* The chauffeur's trip goes through any stops; their return doesn't */
-    stopAddresses.length ? routeVia([pickup, ...stopAddresses, dropoff]) : routeLeg(pickup, dropoff),
+    stopAddresses.length ? routeViaResult([pickup, ...stopAddresses, dropoff]) : routeLegResult(pickup, dropoff),
     routeLeg(dropoff, pickup),
     getSafeRideSettings(),
     getSafeRideServiceRates(),
     prisma.pricingConfig.findFirst().catch(() => null),
   ]);
+  if (tripResult.unroutable) {
+    return NextResponse.json(
+        { error: "We couldn't find a driving route between these addresses. Please check the pickup and destination." },
+        { status: 400 },
+      );
+  }
+  const trip = tripResult.leg;
   /* Same flat fallback as standard rides when Google can't route the trip */
   const tripKm  = trip?.km  ?? 10, tripMin  = trip?.min ?? 15;
   const backKm  = back?.km  ?? tripKm, backMin = back?.min ?? tripMin;
@@ -180,7 +187,14 @@ export async function GET(req: NextRequest) {
 
     /* With stops, price the real route through them */
     if (stopAddresses.length) {
-      const via = await routeVia([pickup, ...stopAddresses, dropoff!]);
+      const viaResult = await routeViaResult([pickup, ...stopAddresses, dropoff!]);
+      if (viaResult.unroutable) {
+        return NextResponse.json(
+        { error: "We couldn't find a driving route between these addresses. Please check the pickup and destination." },
+        { status: 400 },
+      );
+      }
+      const via = viaResult.leg;
       const result = via ? calcFares(via.km, via.min) : calcFares(10, 15);
       return NextResponse.json({
         ...result,
@@ -195,6 +209,15 @@ export async function GET(req: NextRequest) {
     const data = await resp.json();
 
     const element = data?.rows?.[0]?.elements?.[0];
+    /* The address itself can't be found or driven to — don't price (and take
+       payment for) a made-up 10 km trip; ask the rider to fix the address.
+       A Google outage / key problem still falls back to the flat estimate. */
+    if (data?.status === "OK" && (element?.status === "NOT_FOUND" || element?.status === "ZERO_RESULTS")) {
+      return NextResponse.json(
+        { error: "We couldn't find a driving route between these addresses. Please check the pickup and destination." },
+        { status: 400 },
+      );
+    }
     if (!element || element.status !== "OK") {
       /* Loud log — a referrer-restricted key fails here on EVERY request and
          silently degrades all fares to the flat estimate. */

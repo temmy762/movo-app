@@ -80,6 +80,10 @@ function RideTrackingContent() {
   const [showSupport,       setShowSupport]       = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling,        setCancelling]        = useState(false);
+  const [cancelError,       setCancelError]       = useState<string | null>(null);
+  const [cancelledResult,   setCancelledResult]   = useState<{ refundAmount: number | null; refundPending: boolean } | null>(null);
+  /* For the cancellation-policy wording */
+  const [bookingCreatedAt,  setBookingCreatedAt]  = useState<number | null>(null);
   const [dispatchFailed,    setDispatchFailed]    = useState(false);
   const [noDriverRefunded,  setNoDriverRefunded]  = useState(false);
   const [scheduledForLabel, setScheduledForLabel] = useState<string | null>(null);
@@ -288,41 +292,66 @@ function RideTrackingContent() {
   const dropoffCity = currentDropoff.split(",").slice(1, 3).join(",").trim();
   const driverInitial = driverName.charAt(0).toUpperCase() || "D";
 
-  /* ── 3DS redirect: no bookingId yet — create booking as PAID from URL params ── */
+  /* ── Paid but no booking yet (3DS redirect, or checkout lost its connection
+        right after paying): create it from the URL params. Same payment every
+        try — never a second charge. Stripe's redirect_status says whether the
+        3DS check passed. ── */
+  const redirectStatus = searchParams.get("redirect_status");
+  const [createState, setCreateState] = useState<"idle" | "creating" | "failed" | "payment_failed">(
+    paidFlag === "1" && !bookingIdParam ? (redirectStatus === "failed" ? "payment_failed" : "creating") : "idle",
+  );
+  const [createAttempt, setCreateAttempt] = useState(0);
+
   useEffect(() => {
-    if (paidFlag !== "1" || bookingId) return;
-    if (!intentId || !quotePm) return;
+    if (createState !== "creating" || bookingId) return;
+    if (!intentId || !quotePm) { setCreateState("failed"); return; }
+    let cancelled = false;
     const resolvedT = tier.toLowerCase() || "classic";
-    /* Safe Ride bookings must go through the Care route, or they'd be created
-       as standard rides (and refused while standard rides are switched off) */
-    fetch(isCareReturn ? "/api/bookings/care" : "/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pickup, dropoff, quote: quotePm,
-        ...(isCareReturn ? {} : { carTier: resolvedT, carName: car }),
-        stripePaymentIntentId: intentId,
-        ...(scheduledAtPm ? { scheduledAt: scheduledAtPm } : {}),
-        /* Stops / rider / vehicle saved before the 3DS redirect */
-        ...bookingExtras(isCareReturn, getSafeRideDraft().stops ?? []),
-      }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        const id = isCareReturn ? data?.bookingId : data?.id;
-        if (id) {
-          setBookingId(id);
-          clearSafeRideDraft();
-          /* Put the booking in the URL so a refresh loads it instead of
-             re-submitting the payment */
-          const q = new URLSearchParams({ bookingId: id, pickup, dropoff, car, tier });
-          if (isCareReturn) q.set("service", "care");
-          router.replace(`/home/ride/tracking?${q.toString()}`);
-        }
-      })
-      .catch(() => {});
+    const attempt = async (n: number): Promise<void> => {
+      /* Safe Ride bookings must go through the Care route, or they'd be created
+         as standard rides (and refused while standard rides are switched off) */
+      const res = await fetch(isCareReturn ? "/api/bookings/care" : "/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pickup, dropoff, quote: quotePm,
+          ...(isCareReturn ? {} : { carTier: resolvedT, carName: car }),
+          stripePaymentIntentId: intentId,
+          ...(scheduledAtPm ? { scheduledAt: scheduledAtPm } : {}),
+          /* Rider / vehicle saved before paying */
+          ...bookingExtras(isCareReturn, getSafeRideDraft().stops ?? []),
+        }),
+      }).catch(() => null);
+      const data = res ? await res.json().catch(() => null) : null;
+      if (cancelled) return;
+      const id = isCareReturn ? data?.bookingId : data?.id;
+      if (id) {
+        setBookingId(id);
+        clearSafeRideDraft();
+        setCreateState("idle");
+        /* Put the booking in the URL so a refresh loads it instead of
+           re-submitting the payment */
+        const q = new URLSearchParams({ bookingId: id, pickup, dropoff, car, tier });
+        if (isCareReturn) q.set("service", "care");
+        router.replace(`/home/ride/tracking?${q.toString()}`);
+        return;
+      }
+      /* Card authentication didn't complete — nothing to book */
+      if (res?.status === 402 && /not completed|has not completed/i.test(data?.error ?? "")) {
+        setCreateState("payment_failed");
+        return;
+      }
+      if (n < 3) {
+        await new Promise((r) => setTimeout(r, 1500 * (n + 1)));
+        if (!cancelled) return attempt(n + 1);
+        return;
+      }
+      setCreateState("failed");
+    };
+    attempt(0);
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [createState, createAttempt]);
 
   /* ── Fetch booking / driver details ── */
   useEffect(() => {
@@ -588,6 +617,7 @@ function RideTrackingContent() {
         .then((data) => {
           if (!data) return;
           if (data.bookingNumber) setBookingNumber(data.bookingNumber);
+          if (data.createdAt) setBookingCreatedAt(new Date(data.createdAt).getTime());
           if (typeof data.dropoff === "string" && data.dropoff) setCurrentDropoff(data.dropoff);
           if (Array.isArray(data.stops)) setRouteStops(data.stops as string[]);
 
@@ -759,19 +789,33 @@ function RideTrackingContent() {
   };
 
   const handleCancelRide = async () => {
+    if (!bookingId) { router.push("/home"); return; }
     setCancelling(true);
+    setCancelError(null);
     try {
-      if (bookingId) {
-        await fetch(`/api/bookings/${bookingId}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "CANCELLED", cancelledBy: "user" }),
-        });
+      const res = await fetch(`/api/bookings/${bookingId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED", cancelledBy: "user" }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!res.ok) {
+        /* Stay on the ride — it was NOT cancelled (e.g. the trip has started) */
+        setCancelError(d?.error ?? "We couldn't cancel this ride. Please try again.");
+        return;
       }
-    } catch { /* silent — still navigate away */ }
-    setCancelling(false);
-    setShowCancelConfirm(false);
-    router.push("/home");
+      if (statusPollRef.current) clearInterval(statusPollRef.current);
+      leaveBooking(bookingId);
+      setShowCancelConfirm(false);
+      setCancelledResult({
+        refundAmount: typeof d?.refundAmount === "number" ? d.refundAmount : null,
+        refundPending: d?.refunded === false && !!d?.refundError,
+      });
+    } catch {
+      setCancelError("Connection problem — your ride hasn't been cancelled. Please try again.");
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleSendChatMsg = async () => {
@@ -795,6 +839,13 @@ function RideTrackingContent() {
      rides only. Scheduled reservations and Care rides keep their own
      dedicated status views (Care already shows PRIMARY/SUPPORT progress
      individually, which an overlay would hide). */
+  /* Cancellation policy (mirrors app/api/bookings/[id]/status) */
+  const chauffeurAssigned = isCareRide
+    ? careAssignments.some(a => a.role === "PRIMARY" && ["ACCEPTED", "ARRIVED", "STARTED"].includes(a.status))
+    : driverName !== "Driver" || !!driverPhone;
+  const withinFreeWindow = bookingCreatedAt != null && nowTick - bookingCreatedAt < 5 * 60 * 1000;
+  const tripStarted = rideStatus === "STARTED";
+
   const showFindingOverlay =
     rideStatus === "PENDING" && !isCareRide && !scheduledForLabel && !awaitingSetOff;
 
@@ -1209,9 +1260,16 @@ function RideTrackingContent() {
       <div className={`fixed bottom-0 left-0 right-0 px-5 py-4 z-[1001] ${showFindingOverlay ? "" : "bg-white border-t border-gray-100"}`}
         style={showFindingOverlay ? { background: "linear-gradient(0deg, #0A0A0F 0%, rgba(10,10,15,0) 100%)" } : undefined}>
         <div className="w-full max-w-lg md:max-w-2xl mx-auto">
-          {view === "route" ? (
+          {view === "route" && tripStarted ? (
+            /* A started trip can't be cancelled — Support / Emergency instead */
+            <button type="button" onClick={() => setShowSupport(true)}
+              className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
+              style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 50%, #2A3055 100%)" }}>
+              Contact Support
+            </button>
+          ) : view === "route" ? (
             <>
-              <button type="button" onClick={() => setShowCancelConfirm(true)}
+              <button type="button" onClick={() => { setNowTick(Date.now()); setCancelError(null); setShowCancelConfirm(true); }}
                 className="w-full py-3.5 rounded-xl text-white font-bold text-[15px] tracking-wide"
                 style={showFindingOverlay
                   ? { background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.25)" }
@@ -1410,15 +1468,22 @@ function RideTrackingContent() {
               </div>
               <h3 className="text-[15px] font-bold text-gray-900">Cancel Ride?</h3>
             </div>
-            <p className="text-[12px] text-gray-500 mb-5">
-              {(searchMode || rideStatus === "PENDING")
-                ? "No driver has confirmed yet, so you'll receive a full refund right away."
-                : "Are you sure you want to cancel this ride? Your driver has already been assigned."}
+            <p className="text-[12px] text-gray-500 mb-5 leading-snug">
+              {(searchMode || rideStatus === "PENDING" || !chauffeurAssigned)
+                ? "No chauffeur has confirmed yet, so you'll receive a full refund."
+                : withinFreeWindow
+                  ? "You're within 5 minutes of booking, so you'll receive a full refund."
+                  : isCareRide
+                    ? "Your chauffeur is already assigned. The return allowance is refunded in full and 50% of the Safe Ride service portion is refunded."
+                    : "Your chauffeur is already on the way, so 50% of your fare will be refunded."}
             </p>
+            {cancelError && (
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">{cancelError}</p>
+            )}
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setShowCancelConfirm(false)}
+                onClick={() => { setShowCancelConfirm(false); setCancelError(null); }}
                 className="flex-1 py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700"
               >
                 Keep Ride
@@ -1455,6 +1520,72 @@ function RideTrackingContent() {
             <button
               type="button"
               onClick={() => router.replace("/home")}
+              className="w-full py-3.5 rounded-xl text-white font-bold text-[14px]"
+              style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
+              Back to Home
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paid → creating the booking / it failed / payment failed ── */}
+      {createState !== "idle" && (
+        <div className="fixed inset-0 z-[2200] flex items-center justify-center px-6"
+          style={{ background: "linear-gradient(135deg, #0A0A0F 0%, #131936 55%, #2A3055 100%)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl">
+            {createState === "creating" ? (
+              <>
+                <span className="w-10 h-10 border-[3px] border-gray-200 border-t-[#131936] rounded-full animate-spin mb-4" />
+                <p className="text-[16px] font-bold text-gray-900 mb-1">Payment received</p>
+                <p className="text-[13px] text-gray-500 leading-snug">Confirming your booking…</p>
+              </>
+            ) : createState === "payment_failed" ? (
+              <>
+                <p className="text-[16px] font-bold text-gray-900 mb-2">Payment not completed</p>
+                <p className="text-[13px] text-gray-500 mb-6 leading-snug">
+                  Your bank didn&apos;t approve the payment, so you haven&apos;t been charged. Please try again or use another card.
+                </p>
+                <button type="button" onClick={() => router.back()}
+                  className="w-full py-3.5 rounded-xl text-white font-bold text-[14px]"
+                  style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
+                  Back to checkout
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[16px] font-bold text-gray-900 mb-2">We couldn&apos;t confirm your booking</p>
+                <p className="text-[13px] text-gray-500 mb-6 leading-snug">
+                  Your payment went through, but we couldn&apos;t finish the booking. Please try again — you won&apos;t be charged twice.
+                  If it still doesn&apos;t work, contact support@movoprive.com. A payment that doesn&apos;t become a booking is refunded automatically.
+                </p>
+                <button type="button" onClick={() => { setCreateState("creating"); setCreateAttempt((n) => n + 1); }}
+                  className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mb-2"
+                  style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
+                  Try again
+                </button>
+                <button type="button" onClick={() => router.replace("/home")}
+                  className="w-full py-2.5 text-[13px] text-gray-500">
+                  Back to Home
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Ride cancelled — what was refunded ── */}
+      {cancelledResult && (
+        <div className="fixed inset-0 z-[2100] flex items-center justify-center px-5" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl">
+            <p className="text-[16px] font-bold text-gray-900 mb-2">Ride cancelled</p>
+            <p className="text-[13px] text-gray-500 mb-6 leading-snug">
+              {cancelledResult.refundPending
+                ? "Your refund is being processed by our team — you'll receive an email once it's sent."
+                : cancelledResult.refundAmount != null
+                  ? `$${cancelledResult.refundAmount.toFixed(2)} has been refunded to your card. It usually appears within 5–10 business days.`
+                  : "Your ride has been cancelled."}
+            </p>
+            <button type="button" onClick={() => router.replace("/home")}
               className="w-full py-3.5 rounded-xl text-white font-bold text-[14px]"
               style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
               Back to Home

@@ -22,7 +22,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { rating, review, feedback } = await req.json();
+  const { rating, review, feedback, careAssignmentId } = await req.json();
   const text: string | null = (review ?? feedback ?? null)?.toString().trim() || null;
 
   if (typeof rating !== "number" || rating < 1 || rating > 5) {
@@ -62,6 +62,19 @@ export async function POST(
   /* ── Rider rating the chauffeur ── */
   if (booking.userId && booking.userId !== session.userId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (booking.status !== "COMPLETED") {
+    return NextResponse.json({ error: "You can rate your chauffeur once the ride is complete." }, { status: 409 });
+  }
+  /* Safe Ride: the booking keeps the PRIMARY chauffeur's rating (the one who
+     drove the customer) — a Support rating must not overwrite it */
+  if (booking.bookingType === "CARE" && typeof careAssignmentId === "string") {
+    const a = await prisma.careAssignment.findFirst({
+      where: { id: careAssignmentId, bookingId: id },
+      select: { role: true },
+    });
+    if (!a) return NextResponse.json({ error: "Chauffeur not found on this ride" }, { status: 404 });
+    if (a.role !== "PRIMARY") return NextResponse.json({ ok: true });
   }
   const updated = await prisma.booking.update({
     where: { id },

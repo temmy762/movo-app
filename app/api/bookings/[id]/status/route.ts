@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { releaseRideToPool } from "@/lib/dispatch/releaseRide";
+import { refundBooking } from "@/lib/payments/refundBooking";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { BookingStatus } from "@prisma/client";
-import Stripe from "stripe";
 import { sendNotification } from "@/lib/notifications";
 import { pushToDriver } from "@/lib/webpush";
 import { normalizeCommissionRate } from "@/lib/earnings";
@@ -17,9 +17,6 @@ import {
   dispatchCareBookingClosed,
 } from "@/lib/socket/dispatcher";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-04-22.dahlia",
-});
 
 const VALID_STATUSES: BookingStatus[] = ["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"];
 
@@ -285,6 +282,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       /* Derived from the session — never trusted from the request body */
       const caller = isAdmin ? (cancelledBy === "system_timeout" ? "system_timeout" : "admin") : session.driverId ? "driver" : "user";
 
+      /* Safe Ride has no booking.driverId — its chauffeur is an accepted
+         PRIMARY assignment (checked before those are released below) */
+      const careChauffeurAssigned = existing.bookingType === "CARE" && !!(await prisma.careAssignment.findFirst({
+        where: { bookingId: id, role: "PRIMARY", status: { in: ["ACCEPTED", "ARRIVED", "STARTED"] } },
+        select: { id: true },
+      }));
+
       /* Safe Ride: release the chauffeurs on this booking */
       if (existing.bookingType === "CARE") {
         await prisma.careAssignment.updateMany({
@@ -299,7 +303,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           /* ── Cancellation policy ── */
           const msElapsed    = now.getTime() - new Date(existing.createdAt).getTime();
           const within5Min   = msElapsed < 5 * 60 * 1000;
-          const noDriver     = !existing.driverId;
+          const noDriver     = existing.bookingType === "CARE" ? !careChauffeurAssigned : !existing.driverId;
           const isAdminForce = caller === "admin";
           /* Driver bailing after accepting is the driver's fault, not the rider's —
              always a full refund regardless of how much time has elapsed. */
@@ -325,12 +329,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             policyRefundAmount = parseFloat((existing.total * 0.50).toFixed(2));
           }
 
-          const refundParams: Stripe.RefundCreateParams = { payment_intent: existing.stripePaymentIntentId };
-          if (policyRefundAmount && policyRefundAmount > 0 && policyRefundAmount < existing.total) {
-            refundParams.amount = Math.round(policyRefundAmount * 100); /* cents */
-          }
-          const refund = await stripe.refunds.create(refundParams);
-          const isPartial = !!refundParams.amount;
+          /* Across the checkout payment AND any extra charges (stops, destination
+             change, waiting) — booking.total includes those */
+          const isPartial = !!policyRefundAmount && policyRefundAmount > 0 && policyRefundAmount < existing.total;
+          const { refundIds } = await refundBooking({
+            bookingId: id,
+            checkoutIntentId: existing.stripePaymentIntentId,
+            ...(isPartial ? { amount: policyRefundAmount } : {}),
+          });
+          const refund = { id: refundIds[0] };
           const booking = await prisma.booking.update({
             where: { id },
             data: {
@@ -349,7 +356,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             refundAmount: isPartial ? policyRefundAmount : existing.total,
           }).catch(() => {});
           logAudit({ action: "booking.cancelled", entityType: "Booking", entityId: id, actorType: caller === "admin" ? "ADMIN" : caller === "driver" ? "DRIVER" : "USER", actorId: session?.userId ?? session?.driverId ?? null, detail: { cancelledBy: caller, refunded: true, partialRefund: isPartial } }).catch(() => {});
-          return NextResponse.json({ ...booking, refunded: true, partialRefund: isPartial });
+          return NextResponse.json({
+            ...booking, refunded: true, partialRefund: isPartial,
+            refundAmount: isPartial ? policyRefundAmount : existing.total,
+          });
         } catch (refundErr) {
           console.error("[Stripe] Refund failed:", refundErr);
           const booking = await prisma.booking.update({
@@ -397,12 +407,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       /* Atomic: only a CONFIRMED booking completes, exactly once — a repeat
          call must not credit the chauffeur's wallet again */
       const done = await prisma.booking.updateMany({
-        where: { id, status: "CONFIRMED" },
+        /* A chauffeur can only complete a trip they actually started */
+        where: { id, status: "CONFIRMED", ...(isAdmin ? {} : { startedAt: { not: null } }) },
         data: { status: "COMPLETED", completedAt: new Date() },
       });
       if (done.count === 0) {
         return NextResponse.json(
-          { error: existing.status === "COMPLETED" ? "Ride already completed" : "Only a confirmed ride can be completed" },
+          { error: existing.status === "COMPLETED" ? "Ride already completed"
+              : existing.status === "CONFIRMED" && !existing.startedAt ? "Start the trip before completing it"
+              : "Only a confirmed ride can be completed" },
           { status: 409 },
         );
       }

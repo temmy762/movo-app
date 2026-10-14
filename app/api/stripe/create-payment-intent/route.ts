@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { getOrCreateStripeCustomer } from "@/lib/stripeCustomer";
+import { verifyFareQuote } from "@/lib/fareQuote";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -10,11 +11,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
-    const { amount, idempotencyKey } = await req.json();
+    const { quote: quoteToken, idempotencyKey } = await req.json();
 
-    if (!amount || typeof amount !== "number" || amount <= 0) {
-      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    /* Charge exactly the server-signed price — never an amount from the
+       browser — so the payment always matches what booking creation verifies */
+    const quote = verifyFareQuote(quoteToken);
+    if (!quote) {
+      return NextResponse.json({ error: "Your fare quote has expired. Please refresh the page." }, { status: 400 });
     }
+    const amount = quote.total;
 
     /* Attach Stripe customer if user is authenticated */
     let customerId: string | undefined;
@@ -46,7 +51,7 @@ export async function POST(req: NextRequest) {
         currency: "cad",
         automatic_payment_methods: { enabled: true },
         /* Lets booking creation prove this rider owns the payment */
-        ...(userId ? { metadata: { userId } } : {}),
+        metadata: { purpose: "booking", ...(userId ? { userId } : {}) },
         /* Save the card to the customer for future bookings + mid-ride charges
            (additional stops). Without this, cards were never attached and the
            "saved payment methods" list stayed empty forever. */

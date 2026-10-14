@@ -63,49 +63,42 @@ async function createBookingAfterPayment(opts: {
   const { quote } = estimate;
   const resolvedTier = isCare ? "care" : (tier || carTierMap[carName] || "classic");
 
-  if (isCare) {
-    const careRes = await fetch("/api/bookings/care", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pickup, dropoff, quote,
-        stripePaymentIntentId: intentId,
-        ...(scheduledAt ? { scheduledAt } : {}),
-        ...bookingExtras(true, estimate.stopAddresses ?? []),
-      }),
-    }).then(r => r.json()).catch(() => null);
-    if (careRes?.bookingId) clearSafeRideDraft();
-
-    const cp: Record<string, string> = { pickup, dropoff, car: "Safe Ride", tier: "care", paid: "1", service: "care" };
-    if (careRes?.bookingId) cp.bookingId = careRes.bookingId;
-    push(`/home/ride/tracking?${new URLSearchParams(cp).toString()}`);
-    return;
-  }
-
-  const bookingRes = await fetch("/api/bookings", {
+  const res = await fetch(isCare ? "/api/bookings/care" : "/api/bookings", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       pickup, dropoff, quote,
-      carTier: resolvedTier, carName,
+      ...(isCare ? {} : { carTier: resolvedTier, carName }),
       stripePaymentIntentId: intentId,
       ...(scheduledAt ? { scheduledAt } : {}),
-      ...bookingExtras(false, estimate.stopAddresses ?? []),
+      ...bookingExtras(isCare, estimate.stopAddresses ?? []),
     }),
   }).then(r => r.json()).catch(() => null);
-  if (bookingRes?.id) clearSafeRideDraft();
+  const bookingId: string | undefined = isCare ? res?.bookingId : res?.id;
 
-  const tp: Record<string, string> = { pickup, dropoff, car: carName, paid: "1" };
-  if (bookingRes?.id) tp.bookingId = bookingRes.id;
-  if (tier)           tp.tier      = tier;
-  if (carImg && !carImg.startsWith("data:")) tp.carImg = carImg;
+  const tp: Record<string, string> = { pickup, dropoff, car: isCare ? "Safe Ride" : carName, tier: resolvedTier, paid: "1" };
+  if (isCare) tp.service = "care";
+  if (!isCare && carImg && !carImg.startsWith("data:")) tp.carImg = carImg;
+  if (bookingId) {
+    clearSafeRideDraft();
+    tp.bookingId = bookingId;
+  } else {
+    /* Paid, but the booking didn't go through (e.g. connection dropped):
+       the tracking page retries with the same payment — it never charges
+       again — and a payment that never becomes a booking is refunded. */
+    tp.intentId = intentId;
+    tp.quote = quote;
+    if (scheduledAt) tp.scheduledAt = scheduledAt;
+  }
   push(`/home/ride/tracking?${new URLSearchParams(tp).toString()}`);
 }
 
 /* ── Pay with a saved card (on-session; 3DS handled inline) ── */
-function SavedCardPay({ cards, amount, onPaid }: {
+function SavedCardPay({ cards, amount, quote, onPaid }: {
   cards: SavedCard[];
   amount: number;
+  /* Server-signed price — the server charges exactly its total */
+  quote: string;
   onPaid: (intentId: string) => Promise<void>;
 }) {
   const [selected, setSelected] = useState(cards[0]?.id ?? "");
@@ -120,7 +113,7 @@ function SavedCardPay({ cards, amount, onPaid }: {
       const res = await fetch("/api/stripe/charge-saved", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, paymentMethodId: selected }),
+        body: JSON.stringify({ quote, paymentMethodId: selected }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Payment failed");
@@ -361,15 +354,13 @@ function ConfirmPayContent() {
   useEffect(() => {
     if (userLoading || !clientName || clientName === "Guest" || !estimate) return;
 
-    const { total } = estimate;
-
     setIntentError(null);
     /* No idempotency key — always create a fresh intent so we never get a
        stale/already-confirmed secret back from Stripe on repeat visits */
     fetch("/api/stripe/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: total }),
+      body: JSON.stringify({ quote: estimate.quote }),
     })
       .then(r => r.json())
       .then(data => {
@@ -575,6 +566,7 @@ function ConfirmPayContent() {
                 <SavedCardPay
                   cards={savedCards}
                   amount={estimate.total}
+                  quote={estimate.quote}
                   onPaid={(paidIntentId) =>
                     createBookingAfterPayment({
                       isCare: !!isCare, pickup, dropoff, carName, tier, carImg,

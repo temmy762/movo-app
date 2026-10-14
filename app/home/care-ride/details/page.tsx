@@ -21,6 +21,16 @@ const YEARS = Array.from({ length: 30 }, (_, i) => String(new Date().getFullYear
 const inputCls = "w-full rounded-xl border border-gray-200 px-3.5 py-3 text-[14px] text-gray-900 bg-white focus:outline-none focus:border-[#131936]";
 const labelCls = "block text-[12px] font-semibold text-gray-700 mb-1.5";
 
+function Check({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}
+        className="mt-0.5 w-5 h-5 shrink-0 accent-[#131936]" />
+      <span className="text-[13px] text-gray-700 leading-snug">{children}</span>
+    </label>
+  );
+}
+
 function DetailsContent() {
   const router = useRouter();
   const params = useSearchParams();
@@ -99,14 +109,6 @@ function DetailsContent() {
     });
     router.push(`/home/ride/confirm?${params.toString()}`);
   };
-
-  const Check = ({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) => (
-    <label className="flex items-start gap-3 cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}
-        className="mt-0.5 w-5 h-5 shrink-0 accent-[#131936]" />
-      <span className="text-[13px] text-gray-700 leading-snug">{children}</span>
-    </label>
-  );
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "var(--font-body)" }}>
@@ -208,7 +210,7 @@ function DetailsContent() {
                   I agree to the <a href="/terms" target="_blank" className="underline">Terms</a> and Safe Ride consent.
                 </Check>
               </div>
-              <p className="text-[11px] text-gray-400">Required fields marked *; pickup instructions optional.</p>
+              <p className="text-[11px] text-gray-400">Fields marked * are required.</p>
             </div>
           </>
         )}

@@ -43,7 +43,7 @@ const helpTopics: Topic[] = [
       { heading: "Book in a few taps", body: "From the home screen, tap “Where are you heading?”, then set your pickup and destination. Your pickup defaults to your current location, and address suggestions appear as you type. Choose your service level, review the fare estimate, and pay to confirm." },
       { heading: "Choose your service", body: "Standard — comfortable everyday rides. Executive — more space and presence. Concierge — top-tier luxury. Safe Ride — a chauffeur drives you home in your own vehicle. Each tier shows an estimated total before you book." },
       { heading: "Schedule for later", body: "Pick a future date and time when booking. Scheduled rides are lined up with a chauffeur ahead of your pickup, and you’ll be notified when your chauffeur sets off. You can view and manage upcoming rides from the Rides tab." },
-      { heading: "Add a stop during your trip", body: "On the tracking screen, open Actions → Add Stop and enter the address. The additional stop fee (plus tax) is calculated automatically and charged to your card on file — you’ll see the updated total." },
+      { heading: "Change your route during the trip", body: "On the tracking screen, open Actions to add a stop or change your destination. You’ll see the extra cost before anything is charged, and your chauffeur is updated instantly. On the Route tab you can drag your stops into a different order at no extra cost." },
     ],
   },
   {

@@ -25,10 +25,7 @@ export async function verifyBookingPayment(opts: {
   userId: string;
   quoteToken: unknown;
   paymentIntentId: unknown;
-  pickup: string;
-  dropoff: string;
   tier: string;
-  stops?: string[];
 }): Promise<VerifiedPayment> {
   const intentId = opts.paymentIntentId;
   if (typeof intentId !== "string" || !intentId.startsWith("pi_")) {
@@ -54,13 +51,12 @@ export async function verifyBookingPayment(opts: {
   if (!quote) {
     return { ok: false, status: 400, error: "Your fare quote has expired. Please review the price and try again." };
   }
-  if (
-    quote.pickup !== opts.pickup ||
-    quote.dropoff !== opts.dropoff ||
-    quote.tier !== normalizeTier(opts.tier) ||
-    JSON.stringify(quote.stops ?? []) !== JSON.stringify(opts.stops ?? [])
-  ) {
-    return { ok: false, status: 400, error: "Fare quote does not match this trip" };
+  /* Only the service must match. The trip itself (pickup, destination,
+     stops) is taken from the signed quote by the booking routes — the quote is
+     what was priced and paid for, so a browser that lost or reordered its
+     stops can no longer leave a paid rider without a booking. */
+  if (quote.tier !== normalizeTier(opts.tier)) {
+    return { ok: false, status: 400, error: "Fare quote does not match this service" };
   }
 
   let intent: Stripe.PaymentIntent;
