@@ -185,44 +185,60 @@ export default function DriverHomePage() {
   const [driverPos,     setDriverPos]     = useState<{ lat: number; lng: number } | null>(null);
 
   // Restore online state + detect active booking on mount
+  /* Both kinds of active ride are checked together: a Safe Ride chauffeur has
+     no standard booking, and deciding "no ride → back to searching" before the
+     Safe Ride answer arrived dropped them to "looking for rides" whenever they
+     came back to this screen (e.g. from chat). */
   useEffect(() => {
-    fetch("/api/driver/active-booking")
-      .then(r => r.json())
-      .then(({ booking }) => {
-        if (booking) {
-          setActiveBooking(booking);
-          setIsOnline(true);
-          localStorage.setItem("driverOnline", "true");
-          /* Restore the exact step — a chauffeur who'd already tapped
-             "I've Arrived" was being sent back to the "accepted" step */
-          setRidePhase(booking.startedAt ? "started" : booking.arrivedAt ? "arrived" : "accepted");
-          if (booking.arrivedAt && !booking.startedAt) {
-            const arrivedAt = new Date(booking.arrivedAt).getTime();
-            fetch("/api/admin/pricing")
-              .then(r => (r.ok ? r.json() : null))
-              .then(d => setWaitInfo({ arrivedAt, freeMin: d?.global?.freeWaitingMinutes ?? 5, rate: d?.global?.waitingRatePerMin ?? 0.75 }))
-              .catch(() => setWaitInfo({ arrivedAt, freeMin: 5, rate: 0.75 }));
-          }
-          startOnlineLocationBroadcast();
-          if (booking.startedAt) startLocationTracking(booking.id);
-        } else {
-          const saved = localStorage.getItem("driverOnline") === "true";
-          if (saved) {
-            setIsOnline(true);
-            setRidePhase("searching");
-            startPolling(fetchNextPending);
-            startOnlineLocationBroadcast();
-          }
+    const getJson = (url: string) => fetch(url, { cache: "no-store" }).then(r => r.json()).catch(() => null);
+    Promise.all([getJson("/api/driver/active-booking"), getJson("/api/care/driver")]).then(([std, care]) => {
+      const booking = std?.booking as Booking | null | undefined;
+      const assignment = care?.assignment as CareAssignment | null | undefined;
+
+      if (assignment) {
+        setCareAssignment(assignment);
+        setCoDriver(care?.coDriver ?? null);
+        setCareEarning(care?.earning ?? 0);
+        const st = assignment.status;
+        if (st === "PENDING")         setCarePhase("requesting");
+        if (st === "ACCEPTED")        setCarePhase("accepted");
+        if (st === "ARRIVED")         setCarePhase("arrived");
+        if (st === "STARTED")         setCarePhase("started");
+        if (st === "AWAITING_RETURN") setCarePhase("awaiting_return");
+      }
+      const onSafeRide = !!assignment && assignment.status !== "PENDING";
+
+      if (booking) {
+        setActiveBooking(booking);
+        /* Restore the exact step — a chauffeur who'd already tapped
+           "I've Arrived" was being sent back to the "accepted" step */
+        setRidePhase(booking.startedAt ? "started" : booking.arrivedAt ? "arrived" : "accepted");
+        if (booking.arrivedAt && !booking.startedAt) {
+          const arrivedAt = new Date(booking.arrivedAt).getTime();
+          fetch("/api/admin/pricing")
+            .then(r => (r.ok ? r.json() : null))
+            .then(d => setWaitInfo({ arrivedAt, freeMin: d?.global?.freeWaitingMinutes ?? 5, rate: d?.global?.waitingRatePerMin ?? 0.75 }))
+            .catch(() => setWaitInfo({ arrivedAt, freeMin: 5, rate: 0.75 }));
         }
-      })
-      .catch(() => {
-        const saved = localStorage.getItem("driverOnline") === "true";
-        if (saved) {
-          setIsOnline(true);
-          setRidePhase("searching");
-          startPolling(fetchNextPending);
-        }
-      });
+        if (booking.startedAt) startLocationTracking(booking.id);
+      }
+
+      if (booking || onSafeRide) {
+        /* On a ride = on shift: reconnect live updates and location sharing */
+        setIsOnline(true);
+        localStorage.setItem("driverOnline", "true");
+        startOnlineLocationBroadcast();
+        if (assignment?.status === "STARTED") startLocationTracking(assignment.booking.id);
+        return;
+      }
+
+      if (localStorage.getItem("driverOnline") === "true") {
+        setIsOnline(true);
+        setRidePhase("searching");
+        startPolling(fetchNextPending);
+        startOnlineLocationBroadcast();
+      }
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -523,35 +539,6 @@ export default function DriverHomePage() {
     return () => clearInterval(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carePhase, careAssignment?.id, careAssignment?.booking?.returnMode]);
-
-  /* Poll for Care assignment on mount so a restored session restores Care state */
-  useEffect(() => {
-    fetch("/api/care/driver")
-      .then(r => r.json())
-      .then(({ assignment, coDriver: co, earning }) => {
-        if (assignment) {
-          setCareAssignment(assignment as CareAssignment);
-          setCoDriver(co ?? null);
-          setCareEarning(earning ?? 0);
-          /* A chauffeur on a Safe Ride is on shift: reconnect live updates and
-             location sharing after a refresh (they used to come back "offline") */
-          if (assignment.status !== "PENDING") {
-            setIsOnline(true);
-            localStorage.setItem("driverOnline", "true");
-            startOnlineLocationBroadcast();
-            if (assignment.status === "STARTED") startLocationTracking(assignment.booking.id);
-          }
-          const s = assignment.status;
-          if (s === "PENDING")  setCarePhase("requesting");
-          if (s === "ACCEPTED") setCarePhase("accepted");
-          if (s === "ARRIVED")  setCarePhase("arrived");
-          if (s === "STARTED")  setCarePhase("started");
-          if (s === "AWAITING_RETURN") setCarePhase("awaiting_return");
-        }
-      })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   /* One-time listener so a restored session gets audio unlocked on first tap */
   useEffect(() => {

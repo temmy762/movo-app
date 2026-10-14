@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { computeDriverEarning } from "@/lib/earnings";
 
+const RESERVATION_LEAD_MS = 25 * 60 * 1000;
+
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
   if (!session?.driverId) {
@@ -13,14 +15,15 @@ export async function GET(req: NextRequest) {
     where: {
       driverId: session.driverId,
       status: "CONFIRMED",
-      /* Exclude future reserved rides — a scheduled ride the chauffeur accepted
-         but hasn't set off for yet lives in Reserved Rides, not the active flow.
-         It becomes "active" once enRouteAt/startedAt is set, or once its
-         scheduled time has arrived. */
+      /* Exclude reservations for later — accepted, not set off for, and more
+         than 25 min away (the same rule the accept screen uses to send a ride
+         to Reserved Rides). A ride accepted closer to pickup is in the active
+         flow and must come back after leaving the screen (e.g. after chat). */
       NOT: {
         AND: [
-          { scheduledAt: { gt: new Date() } },
+          { scheduledAt: { gt: new Date(Date.now() + RESERVATION_LEAD_MS) } },
           { enRouteAt: null },
+          { arrivedAt: null },
           { startedAt: null },
         ],
       },

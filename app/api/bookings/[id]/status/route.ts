@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { releaseRideToPool } from "@/lib/dispatch/releaseRide";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { BookingStatus } from "@prisma/client";
@@ -244,6 +245,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       });
 
       return NextResponse.json(booking);
+    }
+
+    /* ── Chauffeur backing out of a ride they accepted: never cancel or refund
+          the rider's trip — release it so the rider keeps searching and the
+          next chauffeur can take it (same as the dashboard's cancel button) ── */
+    if (status === "CANCELLED" && isAssignedDriver && !isAdmin && !isRider) {
+      if (await releaseRideToPool(id, session.driverId!, null)) {
+        return NextResponse.json({ ok: true, released: true });
+      }
+      return NextResponse.json(
+        { error: "This ride can no longer be cancelled — it may have already started or completed." },
+        { status: 409 }
+      );
     }
 
     /* ── CANCELLED — issue Stripe refund if payment was collected ── */

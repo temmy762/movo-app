@@ -283,7 +283,7 @@ export default function MyRidesPage() {
               /* A reservation the chauffeur hasn't set off for lives in
                  Reserved Rides; everything else is on the dashboard */
               const reservedForLater = ride.bookingType !== "CARE" && !!ride.scheduledAt && !ride.enRouteAt &&
-                new Date(ride.scheduledAt).getTime() > Date.now();
+                new Date(ride.scheduledAt).getTime() > Date.now() + 25 * 60 * 1000;
               router.push(reservedForLater ? "/driver/home/planned" : "/driver/home");
             }}
             acting={acting}

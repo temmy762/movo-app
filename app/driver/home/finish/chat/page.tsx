@@ -75,7 +75,9 @@ function ChatInner() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
-          <button className="no-hover-fx" onClick={() => router.back()}>
+          {/* Back to the active ride — the dashboard restores it. Opened from a
+              notification there is no history, so go to the dashboard directly */}
+          <button className="no-hover-fx" onClick={() => (window.history.length > 1 ? router.back() : router.replace("/driver/home"))}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" fill="#f3f4f6" />
               <polyline points="14 8 10 12 14 16" stroke="#374151" strokeWidth="2.5" fill="none" />

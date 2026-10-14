@@ -17,12 +17,8 @@
  * their own dual-chauffeur cancel/reassign flow via CareAssignment.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { logAudit } from "@/lib/auditLog";
-import { scheduleStandardDispatchTimeout } from "@/lib/dispatch/standardTimeout";
-import { dispatchDriverReleased, dispatchBookingCreated } from "@/lib/socket/dispatcher";
-import { pushToUser, pushToOnlineDriversByTier } from "@/lib/webpush";
+import { releaseRideToPool } from "@/lib/dispatch/releaseRide";
 
 export async function PATCH(
   req: NextRequest,
@@ -38,83 +34,12 @@ export async function PATCH(
     const body = await req.json().catch(() => ({}));
     const reason = typeof body?.reason === "string" ? body.reason.trim().slice(0, 500) : null;
 
-    /* Only release if this driver currently holds it, it hasn't started, and
-       it isn't a Care Ride (those use CareAssignment-level cancel/reassign). */
-    const result = await prisma.booking.updateMany({
-      where: {
-        id,
-        driverId:    session.driverId,
-        status:      { in: ["PENDING", "CONFIRMED"] },
-        startedAt:   null,
-        bookingType: { not: "CARE" },
-      },
-      data: {
-        driverId:   null,
-        acceptedAt: null,
-        arrivedAt:  null,
-        enRouteAt:  null,
-      },
-    });
-
-    if (result.count === 0) {
+    if (!(await releaseRideToPool(id, session.driverId, reason))) {
       return NextResponse.json(
         { error: "This ride can no longer be cancelled — it may have already started, completed, or been reassigned." },
         { status: 409 }
       );
     }
-
-    const booking = await prisma.booking.findUnique({
-      where: { id },
-      select: {
-        userId: true, clientName: true, pickup: true, dropoff: true,
-        carTier: true, carName: true, total: true, status: true, createdAt: true,
-      },
-    });
-
-    /* Tell the rider we're finding them another chauffeur — NOT that the ride
-       was cancelled. Reuses the same UI path as an unresponsive pre-assigned
-       driver: "reassigned" search mode + a fresh countdown window. */
-    dispatchDriverReleased({ bookingId: id, userId: booking?.userId });
-    if (booking?.userId) {
-      pushToUser(booking.userId, {
-        title: "Finding you another chauffeur",
-        body:  "Your chauffeur is no longer able to complete this ride. We're contacting other chauffeurs nearby.",
-        tag:   `driver-released-${id}`,
-        data:  { type: "driver_released", bookingId: id },
-      }).catch(() => {});
-    }
-
-    /* Re-broadcast into the pool so every other online, tier-matched
-       chauffeur discovers it immediately (socket for open apps, push for
-       backgrounded ones) instead of waiting for their next 5s poll tick. */
-    if (booking) {
-      dispatchBookingCreated({
-        id, pickup: booking.pickup, dropoff: booking.dropoff,
-        carTier: booking.carTier ?? "", carName: booking.carName,
-        total: booking.total, status: booking.status,
-        createdAt: booking.createdAt.toISOString(),
-      });
-      pushToOnlineDriversByTier(booking.carTier ?? null, {
-        title: "🚗 New Ride Request",
-        body:  `Pickup: ${booking.pickup}`,
-        tag:   `booking-${id}`,
-        data:  { type: "new_booking", bookingId: id, requireInteraction: "true" },
-      }).catch(() => {});
-    }
-
-    /* Re-arm the safety net so the ride still auto-refunds if truly nobody
-       else accepts within the standard pool window. */
-    scheduleStandardDispatchTimeout(id, "pool");
-
-    logAudit({
-      action: "booking.driver_cancelled",
-      entityType: "Booking",
-      entityId: id,
-      actorType: "DRIVER",
-      actorId: session.driverId,
-      detail: { reason },
-    }).catch(() => {});
-
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[driver-cancel]", e);
