@@ -66,7 +66,7 @@ export function riderPaymentReceiptTemplate(
         <Text style={{ fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>
           Items
         </Text>
-        {payment.items.map((item, index) => (
+        {(payment.items ?? []).map((item, index) => (
           <Text
             key={index}
             style={{
@@ -124,7 +124,7 @@ Date: ${payment.date}
 Payment Method: ${payment.method}
 
 Items:
-${payment.items.map((i) => `- ${i.label}: $${i.amount.toFixed(2)}`).join("\n")}
+${(payment.items ?? []).map((i) => `- ${i.label}: $${i.amount.toFixed(2)}`).join("\n")}
 
 Total: $${payment.amount.toFixed(2)}
 

@@ -39,6 +39,13 @@ if (!process.env.RESEND_API_KEY) {
     pickup: "123 Portage Ave, Winnipeg, MB", dropoff: "456 Main St, Winnipeg, MB",
     carTier: "classic", serviceLabel: "In-City · Standard",
     fare: 20, gst: 1.2, total: 24.5, amount: 24.5, scheduledDate: "Tue, Oct 14, 5:00 PM",
+    /* Payment receipt */
+    paymentId: "pi_sample", method: "Visa •••• 4242", date: "Oct 14, 2026",
+    items: [
+      { label: "Ride fare", amount: 20 },
+      { label: "Service fee", amount: 3.3 },
+      { label: "GST", amount: 1.2 },
+    ],
   };
   const templates = [
     ["lib/notifications/templates/emails/rider/welcome.tsx", "riderWelcomeTemplate"],
