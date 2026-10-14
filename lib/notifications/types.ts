@@ -81,6 +81,8 @@ export interface EmailTemplateContext {
     appName: string;
     supportEmail: string;
     logoUrl: string;
+    /** Welcome email only — flips once; first frame is the full logo */
+    animatedLogoUrl?: string;
     baseUrl: string;
   };
 }
@@ -93,6 +95,7 @@ export interface NotificationConfig {
   appName: string;
   supportEmail: string;
   logoUrl: string;
+  animatedLogoUrl?: string;
   baseUrl: string;
 }
 

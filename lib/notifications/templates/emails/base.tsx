@@ -17,9 +17,13 @@ interface EmailLayoutProps {
   context: EmailTemplateContext;
   preview: string;
   children: React.ReactNode;
+  /** Welcome email: the logo flips once (static everywhere else) */
+  animatedLogo?: boolean;
+  /** Replaces the default footer */
+  footer?: React.ReactNode;
 }
 
-export function EmailLayout({ context, preview, children }: EmailLayoutProps) {
+export function EmailLayout({ context, preview, children, animatedLogo, footer }: EmailLayoutProps) {
   const { settings } = context;
 
   return (
@@ -30,11 +34,13 @@ export function EmailLayout({ context, preview, children }: EmailLayoutProps) {
         <Container style={container}>
           {/* Logo */}
           <Section style={logoSection}>
-            {/* PNG wordmark (600×167) — includes the name, so no text line */}
+            {/* MOVO logo (370×228, white background so it stays visible in
+                dark mode). Fixed width/height so clients that block images
+                still keep the layout. */}
             <Img
-              src={settings.logoUrl}
-              width="180"
-              height="50"
+              src={animatedLogo && settings.animatedLogoUrl ? settings.animatedLogoUrl : settings.logoUrl}
+              width="130"
+              height="80"
               alt="MOVO"
               style={logo}
             />
@@ -47,26 +53,28 @@ export function EmailLayout({ context, preview, children }: EmailLayoutProps) {
 
           {/* Footer */}
           <Hr style={hr} />
-          <Section style={footerSection}>
-            <Text style={footerText}>
-              © {new Date().getFullYear()} {settings.appName}. All rights reserved.
-            </Text>
-            <Text style={footerLinks}>
-              <Link href={`mailto:${settings.supportEmail}`} style={link}>
-                Support
-              </Link>
-              {" | "}
-              <Link href={settings.baseUrl} style={link}>
-                movoprive.com
-              </Link>
-            </Text>
-            <Text style={supportText}>
-              Need help? Contact us at{" "}
-              <Link href={`mailto:${settings.supportEmail}`} style={link}>
-                {settings.supportEmail}
-              </Link>
-            </Text>
-          </Section>
+          {footer ?? (
+            <Section style={footerSection}>
+              <Text style={footerText}>
+                © {new Date().getFullYear()} {settings.appName}. All rights reserved.
+              </Text>
+              <Text style={footerLinks}>
+                <Link href={`mailto:${settings.supportEmail}`} style={link}>
+                  Support
+                </Link>
+                {" | "}
+                <Link href={settings.baseUrl} style={link}>
+                  movoprive.com
+                </Link>
+              </Text>
+              <Text style={supportText}>
+                Need help? Contact us at{" "}
+                <Link href={`mailto:${settings.supportEmail}`} style={link}>
+                  {settings.supportEmail}
+                </Link>
+              </Text>
+            </Section>
+          )}
         </Container>
       </Body>
     </Html>
@@ -95,6 +103,8 @@ const logoSection = {
 const logo = {
   display: "block",
   margin: "0 auto",
+  borderRadius: "8px",
+  backgroundColor: "#ffffff",
   border: "0",
   outline: "none",
   textDecoration: "none",
@@ -137,9 +147,10 @@ const supportText = {
 };
 
 const link = {
-  color: "#2D0A53",
+  color: "#131936",
   textDecoration: "none",
 };
 
 // Re-export commonly used components
+export { footerSection, footerText, footerLinks, supportText, link };
 export { Heading, Text, Link, Hr, Section, Button } from "@react-email/components";

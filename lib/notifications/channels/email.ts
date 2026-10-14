@@ -12,10 +12,13 @@ const FROM_NAME = process.env.FROM_NAME || "MOVO";
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "MOVO";
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@movoprive.com";
 /* Email clients (Gmail, Outlook) don't render SVG — an SVG logo shows as a
-   broken "?" image. Always use a PNG; ignore an SVG override. */
+   broken "?" image. Always use a PNG/GIF; ignore an SVG override. Both are
+   on a white background so they stay visible in dark mode. */
 const LOGO_URL = process.env.LOGO_URL && !/\.svg(\?|$)/i.test(process.env.LOGO_URL)
   ? process.env.LOGO_URL
-  : "https://movoprive.com/images/logo/email-logo.png";
+  : "https://movoprive.com/images/logo/email-logo-static.png";
+/* Plays once (no loop); Outlook desktop shows only the first frame — the full logo */
+const ANIMATED_LOGO_URL = "https://movoprive.com/images/logo/email-logo-flip.gif";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://movoprive.com";
 
 /**
@@ -51,6 +54,7 @@ export async function sendEmail(
         appName: APP_NAME,
         supportEmail: SUPPORT_EMAIL,
         logoUrl: LOGO_URL,
+        animatedLogoUrl: ANIMATED_LOGO_URL,
         baseUrl: BASE_URL,
       },
     };
