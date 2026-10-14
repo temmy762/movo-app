@@ -273,9 +273,9 @@ function RideTrackingContent() {
   };
 
   const TIER_IMAGES: Record<string, string> = {
-    classic:  "/images/movo classic.png",
-    premium:  "/images/movo premium.png",
-    black:    "/images/prive black.png",
+    classic:  "/images/tiers/standard.png",
+    premium:  "/images/tiers/executive.png",
+    black:    "/images/tiers/concierge.png",
   };
   const TIER_LABELS: Record<string, string> = {
     classic:  "Standard",
@@ -283,7 +283,7 @@ function RideTrackingContent() {
     black:    "Concierge",
   };
   const resolvedTier = tier.toLowerCase().replace(/ /g, "") === "firstclass" ? "black" : tier.toLowerCase();
-  const carImg = vehicleImg || carImgParam || TIER_IMAGES[resolvedTier] || "/images/movo classic.png";
+  const carImg = vehicleImg || carImgParam || TIER_IMAGES[resolvedTier] || "/images/tiers/standard.png";
   const tierLabel = TIER_LABELS[resolvedTier] || tier || "";
   const dropoffCity = currentDropoff.split(",").slice(1, 3).join(",").trim();
   const driverInitial = driverName.charAt(0).toUpperCase() || "D";

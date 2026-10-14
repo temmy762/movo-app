@@ -5,9 +5,9 @@ import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 
 const carImages: Record<string, string> = {
-  classic: "/images/movo classic.png",
-  premium: "/images/movo premium.png",
-  black: "/images/prive black.png",
+  classic: "/images/tiers/standard.png",
+  premium: "/images/tiers/executive.png",
+  black: "/images/tiers/concierge.png",
 };
 
 const statusColors: Record<string, { bg: string; text: string; label: string }> = {
@@ -141,7 +141,7 @@ function BookingDetailContent() {
               >
                 <div className="relative w-48 h-28">
                   <Image
-                    src={carImages[booking.carTier] ?? "/images/movo classic.png"}
+                    src={carImages[booking.carTier] ?? "/images/tiers/standard.png"}
                     alt={booking.carName}
                     fill
                     className="object-contain drop-shadow-xl"

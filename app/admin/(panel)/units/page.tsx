@@ -245,8 +245,8 @@ interface Driver {
 
 // ── Add / Edit Modal ──────────────────────────────────────────────────────────
 type UnitForm = { brand: string; model: string; transmission: "Automatic" | "Manual"; seats: number; status: UnitStatus; units: number; price: number; image: string; };
-const IMAGES = ["/images/movo classic.png", "/images/movo premium.png", "/images/prive black.png"];
-const IMG_LABELS: Record<string, string> = { "/images/movo classic.png": "Standard", "/images/movo premium.png": "Executive", "/images/prive black.png": "Prive Black" };
+const IMAGES = ["/images/tiers/standard.png", "/images/tiers/executive.png", "/images/tiers/concierge.png"];
+const IMG_LABELS: Record<string, string> = { "/images/tiers/standard.png": "Standard", "/images/tiers/executive.png": "Executive", "/images/tiers/concierge.png": "Concierge" };
 
 function UnitModal({ initial, onSave, onClose }: {
   initial?: Unit | null;

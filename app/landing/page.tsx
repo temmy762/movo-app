@@ -42,25 +42,25 @@ const HOW_IT_WORKS = [
 
 const RIDE_TIERS = [
   {
-    standard: true, label: "Standard", img: "/images/movo classic.png", from: 18, href: "/home/pickup?tier=classic",
+    standard: true, label: "Standard", img: "/images/tiers/standard.png", from: 18, href: "/home/pickup?tier=classic",
     desc: "Reliable, comfortable rides for everyday travel.",
     specs: [["user", "1–4 passengers"], ["bag", "2 suitcases"], ["clock", "30 min advance booking"]],
     premium: false,
   },
   {
-    standard: true, label: "Executive", img: "/images/movo premium.png", from: 25, href: "/home/pickup?tier=premium",
+    standard: true, label: "Executive", img: "/images/tiers/executive.png", from: 25, href: "/home/pickup?tier=premium",
     desc: "More space, more comfort, perfect for business or leisure.",
     specs: [["user", "1–4 passengers"], ["bag", "3 suitcases"], ["clock", "30 min advance booking"]],
     premium: false,
   },
   {
-    standard: true, label: "Concierge", img: "/images/prive black.png", from: 35, href: "/home/pickup?tier=black",
+    standard: true, label: "Concierge", img: "/images/tiers/concierge.png", from: 35, href: "/home/pickup?tier=black",
     desc: "Top-tier luxury with refined vehicles and exceptional service.",
     specs: [["user", "1–3 passengers"], ["bag", "3 suitcases"], ["clock", "30 min advance booking"]],
     premium: false,
   },
   {
-    label: "Safe Ride", img: "/images/prive black.png", from: 129, href: "/home/pickup?service=care&tier=black",
+    label: "Safe Ride", img: "/images/tiers/safe-ride.png", from: 129, href: "/home/pickup?service=care&tier=black",
     desc: "You relax — we drive you and your car home.",
     specs: [["user", "Professional chauffeur"], ["car", "Your vehicle, safely driven"], ["clock", "45 min advance booking"]],
     premium: true,
@@ -817,7 +817,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="rounded-3xl overflow-hidden h-72 relative bg-gray-900 border border-white/10">
-            <Image src="/images/prive black.png" alt="Movo Care" fill className="object-contain p-8" unoptimized />
+            <Image src="/images/tiers/safe-ride.png" alt="Safe Ride" fill className="object-contain p-8" unoptimized />
           </div>
         </div>
       </section>

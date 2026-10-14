@@ -20,9 +20,9 @@ const TIER_NAMES: Record<string, string> = {
 };
 
 const TIER_IMAGES: Record<string, string> = {
-  classic: "/images/movo classic.png",
-  premium: "/images/movo premium.png",
-  black: "/images/prive black.png",
+  classic: "/images/tiers/standard.png",
+  premium: "/images/tiers/executive.png",
+  black: "/images/tiers/concierge.png",
 };
 
 export async function GET(req: NextRequest) {
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
         id: d.id,
         driverName: `${d.firstName} ${d.lastName}`,
         tierName: TIER_NAMES[driverTier] ?? driverTier,
-        tierImage: TIER_IMAGES[driverTier] ?? "/images/movo classic.png",
+        tierImage: TIER_IMAGES[driverTier] ?? "/images/tiers/standard.png",
         make: d.vehicle!.make,
         model: d.vehicle!.model,
         year: d.vehicle!.year,

@@ -43,7 +43,7 @@ interface Evt {
   ow?: 0 | 1;
 }
 const TIER_IMG: Record<string,string> = {
-  classic:"/images/movo classic.png", premium:"/images/movo premium.png", black:"/images/prive black.png",
+  classic:"/images/tiers/standard.png", premium:"/images/tiers/executive.png", black:"/images/tiers/concierge.png",
 };
 
 
@@ -263,7 +263,7 @@ export default function CalendarPage() {
             carType:  tier.charAt(0).toUpperCase() + tier.slice(1),
             carNum:   "—",
             trans:    "Automatic",
-            carImg:   TIER_IMG[tier] ?? "/images/movo premium.png",
+            carImg:   TIER_IMG[tier] ?? "/images/tiers/executive.png",
             agenda:   `Car ${label} at ${fmtTime(h, m)}`,
           };
         });

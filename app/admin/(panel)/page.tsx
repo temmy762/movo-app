@@ -501,7 +501,7 @@ function BookingsTable({ rawBookings, loading }: { rawBookings: RawBooking[]; lo
 type TierEntry  = { tier: string; count: number };
 type ActivityEntry = { id: string; clientName: string; carName: string; status: string; createdAt: string };
 
-const TIER_IMGS: Record<string, string> = { classic: "/images/movo classic.png", premium: "/images/movo premium.png", black: "/images/prive black.png" };
+const TIER_IMGS: Record<string, string> = { classic: "/images/tiers/standard.png", premium: "/images/tiers/executive.png", black: "/images/tiers/concierge.png" };
 const TIER_COLORS = ["#1e2d45", "#ef4444", "#8b5cf6", "#06b6d4", "#22c55e"];
 const ACT_COLORS  = ["#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","#06b6d4"];
 
@@ -632,7 +632,7 @@ function CarAvailabilityPanel({ tiers, activityItems, loading }: { tiers: TierEn
           {!loading && tiers.length === 0 && <p className="text-[12px] text-gray-400 text-center py-4">No vehicles registered.</p>}
           {tiers.map((c, idx) => {
             const pct = Math.round((c.count / tierTotal) * 100);
-            const img = TIER_IMGS[c.tier.toLowerCase()] ?? "/images/movo classic.png";
+            const img = TIER_IMGS[c.tier.toLowerCase()] ?? "/images/tiers/standard.png";
             return (
               <div key={c.tier} className="flex items-center gap-3 bg-gray-50 rounded-xl p-2">
                 <div className="relative w-16 h-10 shrink-0 rounded-lg overflow-hidden bg-white">

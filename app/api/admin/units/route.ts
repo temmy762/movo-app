@@ -4,9 +4,9 @@ import { normalizeTier } from "@/lib/normalizeTier";
 
 const TIER_PRICE: Record<string, number> = { classic: 50, premium: 80, black: 130 };
 const TIER_IMG:   Record<string, string> = {
-  classic: "/images/movo classic.png",
-  premium: "/images/movo premium.png",
-  black:   "/images/prive black.png",
+  classic: "/images/tiers/standard.png",
+  premium: "/images/tiers/executive.png",
+  black:   "/images/tiers/concierge.png",
 };
 
 function deriveStatus(driverStatus: string, isOnline: boolean): "Available" | "Maintenance" | "Unavailable" {
@@ -43,7 +43,7 @@ export async function GET() {
         status:       deriveStatus(v.driver.status, v.driver.isOnline),
         units:        v.driver.status === "ACTIVE" ? 1 : 0,
         price:        TIER_PRICE[tier] ?? 50,
-        image:        photoIds.has(v.id) ? `/api/admin/units/${v.id}/photo` : (TIER_IMG[tier] ?? "/images/movo classic.png"),
+        image:        photoIds.has(v.id) ? `/api/admin/units/${v.id}/photo` : (TIER_IMG[tier] ?? "/images/tiers/standard.png"),
         plate:        v.plate,
         tier,
         driverName:   `${v.driver.firstName} ${v.driver.lastName}`,

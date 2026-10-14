@@ -6,9 +6,9 @@ import { Suspense, useEffect, useState } from "react";
 import { IN_CITY_RIDES_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
 
 const TIER_IMAGES: Record<string, string> = {
-  classic: "/images/movo classic.png",
-  premium: "/images/movo premium.png",
-  black:   "/images/prive black.png",
+  classic: "/images/tiers/standard.png",
+  premium: "/images/tiers/executive.png",
+  black:   "/images/tiers/concierge.png",
 };
 
 const TIER_LABELS: Record<string, string> = {

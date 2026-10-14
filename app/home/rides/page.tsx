@@ -29,9 +29,9 @@ const emptyStates: Record<TabId, { title: string; desc: string }> = {
 };
 
 const carImages: Record<string, string> = {
-  classic: "/images/movo classic.png",
-  premium: "/images/movo premium.png",
-  black: "/images/prive black.png",
+  classic: "/images/tiers/standard.png",
+  premium: "/images/tiers/executive.png",
+  black: "/images/tiers/concierge.png",
 };
 
 interface Booking {
@@ -159,7 +159,7 @@ export default function RidesPage() {
                     <div className="flex items-center gap-2 shrink-0">
                       <div className="relative w-24 h-16 md:w-28 md:h-20">
                         <Image
-                          src={carImages[ride.carTier] ?? "/images/movo classic.png"}
+                          src={carImages[ride.carTier] ?? "/images/tiers/standard.png"}
                           alt={ride.carName}
                           fill
                           sizes="(max-width: 768px) 96px, 112px"

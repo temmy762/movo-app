@@ -5,11 +5,11 @@ import { getSession } from "@/lib/session";
 import { SAFE_RIDE_DEFAULTS, type SafeRideSettings } from "@/lib/safeRide";
 
 const TIER_SEEDS = [
-  { tier: "classic", name: "Standard",   image: "/images/movo classic.png", baseFare: 4.00,  ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00,  hourlyRate: 55.00,  hourlyMinHours: 2 },
-  { tier: "premium", name: "Executive",   image: "/images/movo premium.png", baseFare: 6.00,  ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00,  hourlyRate: 75.00,  hourlyMinHours: 2 },
-  { tier: "black",   name: "Movo Black",     image: "/images/prive black.png",  baseFare: 8.00,  ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00,  hourlyRate: 95.00,  hourlyMinHours: 2 },
+  { tier: "classic", name: "Standard",   image: "/images/tiers/standard.png", baseFare: 4.00,  ratePerKm: 1.25, ratePerMin: 0.25, minFare: 18.00,  hourlyRate: 55.00,  hourlyMinHours: 2 },
+  { tier: "premium", name: "Executive",   image: "/images/tiers/executive.png", baseFare: 6.00,  ratePerKm: 1.75, ratePerMin: 0.35, minFare: 25.00,  hourlyRate: 75.00,  hourlyMinHours: 2 },
+  { tier: "black",   name: "Concierge",      image: "/images/tiers/concierge.png",  baseFare: 8.00,  ratePerKm: 2.25, ratePerMin: 0.45, minFare: 35.00,  hourlyRate: 95.00,  hourlyMinHours: 2 },
   /* Safe Ride — dual-chauffeur service priced independently of vehicle tiers */
-  { tier: "care",    name: "Safe Ride", image: "/images/prive black.png",  baseFare: 15.00, ratePerKm: 2.75, ratePerMin: 0.55, minFare: 129.00, hourlyRate: 120.00, hourlyMinHours: 2 },
+  { tier: "care",    name: "Safe Ride", image: "/images/tiers/safe-ride.png",  baseFare: 15.00, ratePerKm: 2.75, ratePerMin: 0.55, minFare: 129.00, hourlyRate: 120.00, hourlyMinHours: 2 },
 ];
 
 /* Fractions are stored as 0–1; admins naturally type percentages (15), so

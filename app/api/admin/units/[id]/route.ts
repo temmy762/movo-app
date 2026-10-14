@@ -4,9 +4,9 @@ import { normalizeTier } from "@/lib/normalizeTier";
 
 const TIER_PRICE: Record<string, number> = { classic: 50, premium: 80, black: 130 };
 const TIER_IMG: Record<string, string> = {
-  classic: "/images/movo classic.png",
-  premium: "/images/movo premium.png",
-  black:   "/images/prive black.png",
+  classic: "/images/tiers/standard.png",
+  premium: "/images/tiers/executive.png",
+  black:   "/images/tiers/concierge.png",
 };
 
 export async function GET(
@@ -50,7 +50,7 @@ export async function GET(
       plate:       v.plate,
       tier,
       photoUrl:    v.photoUrl ?? null,
-      image:       v.photoUrl ?? TIER_IMG[tier] ?? "/images/movo classic.png",
+      image:       v.photoUrl ?? TIER_IMG[tier] ?? "/images/tiers/standard.png",
       price:       TIER_PRICE[tier] ?? 50,
       status,
       transmission: "Automatic",
