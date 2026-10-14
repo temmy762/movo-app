@@ -16,10 +16,13 @@ const OAUTH_ERRORS: Record<string, string> = {
   google_cancelled:      "Google sign-in was cancelled before completion. Please try again if you'd like to continue.",
 };
 
+/* Only follow links within this site (blocks "//evil.com" and full URLs) */
+const safeRedirect = (r: string | null) => (r && r.startsWith("/") && !r.startsWith("//") ? r : null);
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect");
+  const redirect = safeRedirect(searchParams.get("redirect"));
   const [mode, setMode] = useState<"email" | "phone">("email");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);

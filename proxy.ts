@@ -80,7 +80,9 @@ export async function proxy(req: NextRequest) {
   // ── No session: redirect to auth select ─────────────────────────────────────
   if (!session) {
     const selectUrl = new URL("/auth/select", req.url);
-    selectUrl.searchParams.set("from", pathname);
+    /* Keep the query too, so e.g. a Safe Ride booking link (?service=care)
+       still opens the Safe Ride flow after logging in */
+    selectUrl.searchParams.set("from", pathname + req.nextUrl.search);
     return NextResponse.redirect(selectUrl);
   }
 

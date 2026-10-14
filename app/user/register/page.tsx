@@ -28,6 +28,9 @@ const EyeIcon = ({ open }: { open: boolean }) =>
     </svg>
   );
 
+/* Only follow links within this site (blocks "//evil.com" and full URLs) */
+const safeRedirect = (r: string | null) => (r && r.startsWith("/") && !r.startsWith("//") ? r : null);
+
 function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,7 +81,7 @@ function RegisterContent() {
         }
         return;
       }
-      const redirect = searchParams.get("redirect");
+      const redirect = safeRedirect(searchParams.get("redirect"));
       if (redirect) { router.push(redirect); return; }
       try {
         const { getBookingDraft, clearBookingDraft, draftToUrl } = await import("@/lib/booking-draft");

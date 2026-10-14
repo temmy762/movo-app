@@ -7,7 +7,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? process.env.NEXT_PUBLIC_APP
 
 function loginRedirect(token: string, destination: string = "/home") {
   /* Only allow relative paths to prevent open redirect */
-  const safe = destination.startsWith("/") ? destination : "/home";
+  const safe = destination.startsWith("/") && !destination.startsWith("//") ? destination : "/home";
   return NextResponse.redirect(`${BASE_URL}${safe}`, {
     headers: { "Set-Cookie": buildSetCookieHeader(token) },
   });
