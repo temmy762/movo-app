@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { walletTotals } from "@/lib/wallet";
 
 export async function GET(req: NextRequest) {
   const session = await getSession(req);
@@ -38,8 +39,9 @@ export async function GET(req: NextRequest) {
     .filter((t) => t.type === "PAYOUT" && t.status === "PENDING")
     .reduce((sum, t) => sum + t.amount, 0);
 
-  /* Available = only settled earnings + topups - completed payouts */
-  const availableBalance = parseFloat((settledEarnings + totalTopups - totalPayouts).toFixed(2));
+  /* Same definition the payout request enforces (lib/wallet.ts): pending
+     payout requests are reserved, not still withdrawable */
+  const availableBalance = walletTotals(walletTxs).available;
   const totalEarned      = parseFloat((settledEarnings + pendingEarnings).toFixed(2));
 
   const walletEntries = walletTxs.map((t) => {

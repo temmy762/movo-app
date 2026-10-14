@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { sendNotification, notifyAdmins } from "@/lib/notifications";
+import { reservePayout } from "@/lib/wallet";
 
 export async function POST(req: NextRequest) {
   const session = await getSession(req);
@@ -15,57 +16,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
   }
 
-  /* Available balance = settled (>=48h old) EARNING wallet-tx + topups - completed payouts.
-     Must match GET /api/driver/wallet exactly — do NOT also sum raw booking.fare here, that
-     double-counts every trip (once as gross fare, once as the EARNING tx already created for
-     it at booking completion) and previously let drivers withdraw ~2x what they'd earned via
-     a real Stripe transfer. */
-  const SETTLEMENT_HOURS = 48;
-  const settlementCutoff = new Date(Date.now() - SETTLEMENT_HOURS * 60 * 60 * 1000);
-
-  const walletTxs = await prisma.walletTransaction.findMany({
-    where: { driverId: session.driverId },
-    select: { type: true, status: true, amount: true, createdAt: true },
-  });
-
-  const settledEarnings = walletTxs
-    .filter(t => t.type === "EARNING" && t.status === "COMPLETED" && t.createdAt <= settlementCutoff)
-    .reduce((s, t) => s + t.amount, 0);
-  const topups  = walletTxs.filter(t => t.type === "TOPUP"  && t.status === "COMPLETED").reduce((s, t) => s + t.amount, 0);
-  const payouts = walletTxs.filter(t => t.type === "PAYOUT" && t.status === "COMPLETED").reduce((s, t) => s + t.amount, 0);
-
-  const availableBalance = parseFloat((settledEarnings + topups - payouts).toFixed(2));
-
-  if (requested > availableBalance) {
-    return NextResponse.json(
-      { error: `Insufficient balance. Available: $${availableBalance.toFixed(2)}` },
-      { status: 400 }
-    );
-  }
-
-  /* Use Stripe Connect automatic payout if the driver is connected */
   const driver = await prisma.driver.findUnique({
     where: { id: session.driverId },
     select: { stripeAccountId: true, stripeAccountStatus: true, firstName: true, lastName: true, email: true },
   });
+  const automated = !!driver?.stripeAccountId && driver.stripeAccountStatus === "active";
 
-  if (driver?.stripeAccountId && driver.stripeAccountStatus === "active") {
-    /* Delegate to the Stripe Connect payout route logic inline */
+  /* Balance check + reservation under a per-chauffeur lock (lib/wallet.ts):
+     simultaneous requests can no longer both pass and pay out twice */
+  const reserved = await reservePayout(
+    session.driverId, requested,
+    automated ? "Bank transfer via Stripe Connect" : (typeof note === "string" && note.trim() ? note.trim().slice(0, 200) : "Send to bank"),
+  );
+  if (!reserved.ok) {
+    return NextResponse.json(
+      { error: `Insufficient balance. Available: $${reserved.available.toFixed(2)}` },
+      { status: 400 }
+    );
+  }
+
+  /* Stripe Connect: transfer now, then settle the reserved payout */
+  if (automated && driver) {
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-04-22.dahlia" });
-    const transfer = await stripe.transfers.create({
-      amount:      Math.round(requested * 100),
-      currency:    "cad",
-      destination: driver.stripeAccountId,
-    });
-    const tx = await prisma.walletTransaction.create({
-      data: {
-        driverId: session.driverId,
-        type:     "PAYOUT",
-        status:   "COMPLETED",
-        amount:   requested,
-        note:     `Bank transfer via Stripe Connect — ref ${transfer.id}`,
-      },
+    let transferId: string;
+    try {
+      const transfer = await stripe.transfers.create(
+        { amount: Math.round(requested * 100), currency: "cad", destination: driver.stripeAccountId! },
+        /* A retried request can never send the same payout twice */
+        { idempotencyKey: `payout-${reserved.payout.id}` },
+      );
+      transferId = transfer.id;
+    } catch (e) {
+      console.error("[payout] Stripe transfer failed:", e);
+      await prisma.walletTransaction.update({
+        where: { id: reserved.payout.id },
+        data: { status: "FAILED", note: "Bank transfer failed — not paid out" },
+      });
+      return NextResponse.json({ error: "The bank transfer couldn't be sent. Your balance is unchanged — please try again later." }, { status: 502 });
+    }
+    const tx = await prisma.walletTransaction.update({
+      where: { id: reserved.payout.id },
+      data: { status: "COMPLETED", note: `Bank transfer via Stripe Connect — ref ${transferId}` },
     });
     const processedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Winnipeg" });
     const payoutData = {
@@ -85,19 +77,11 @@ export async function POST(req: NextRequest) {
       }).catch(() => {});
     }
     notifyAdmins("ADMIN_PAYOUT_REQUEST", payoutData, ["EMAIL", "IN_APP"]).catch(() => {});
-    return NextResponse.json({ ...tx, automated: true, transferId: transfer.id });
+    return NextResponse.json({ ...tx, automated: true, transferId });
   }
 
   /* Manual payout — admin approval required */
-  const tx = await prisma.walletTransaction.create({
-    data: {
-      driverId: session.driverId,
-      type: "PAYOUT",
-      status: "PENDING",
-      amount: requested,
-      note: note ?? "Send to bank",
-    },
-  });
+  const tx = reserved.payout;
 
   const requestedAt = new Date().toLocaleString("en-CA", { timeZone: "America/Winnipeg" });
   const payoutData = {

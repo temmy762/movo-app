@@ -28,6 +28,7 @@ import { adminEmergencyIncidentTemplate } from "./admin/emergency-incident";
 import { adminPayoutRequestTemplate } from "./admin/payout-request";
 import { adminCareDispatchFailedTemplate } from "./admin/care-dispatch-failed";
 import { adminRideDispatchFailedTemplate } from "./admin/ride-dispatch-failed";
+import { adminReservationNoShowTemplate } from "./admin/reservation-no-show";
 
 // Generic fallback templates
 import { passwordResetTemplate } from "./generic/password-reset";
@@ -70,6 +71,7 @@ const TEMPLATES: Partial<Record<NotificationEventType, EmailTemplate>> = {
   ADMIN_PAYOUT_REQUEST: adminPayoutRequestTemplate,
   ADMIN_CARE_DISPATCH_FAILED: adminCareDispatchFailedTemplate,
   ADMIN_RIDE_DISPATCH_FAILED: adminRideDispatchFailedTemplate,
+  ADMIN_RESERVATION_NO_SHOW: adminReservationNoShowTemplate,
 
   // Generic (used by multiple channels)
   RIDER_EMAIL_VERIFICATION: emailVerificationTemplate,

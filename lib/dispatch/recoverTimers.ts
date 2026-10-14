@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { scheduleStandardDispatchTimeout, POOL_SEARCH_TIMEOUT_MS } from "@/lib/dispatch/standardTimeout";
 import { scheduleCareDispatch, CARE_DISPATCH_LEAD_MS } from "@/lib/care/scheduledDispatch";
 import { dispatchPrimary, dispatchSupport } from "@/lib/care/dispatch";
+import { scheduleReservationReminders } from "@/lib/dispatch/reservationReminders";
 
 const SCHEDULED_THRESHOLD_MS = 25 * 60 * 1000;
 /* A dispatch offer older than this was lost with the old process */
@@ -48,6 +49,23 @@ export async function recoverDispatchTimers(): Promise<void> {
     }
     if (overdue) expired++;
     scheduleStandardDispatchTimeout(b.id, "pool", overdue ? new Date(0) : anchor);
+  }
+
+  /* ── Accepted In-City reservations: chauffeur reminders + no-show alert.
+        Only upcoming / just-due ones, so a restart never re-alerts old rides ── */
+  const reservations = await prisma.booking.findMany({
+    where: {
+      bookingType: { not: "CARE" },
+      status: "CONFIRMED",
+      driverId: { not: null },
+      acceptedAt: { not: null },
+      enRouteAt: null, arrivedAt: null, startedAt: null,
+      scheduledAt: { gt: new Date(now - 30 * 60 * 1000) },
+    },
+    select: { id: true, scheduledAt: true, createdAt: true, driverId: true },
+  });
+  for (const r of reservations) {
+    if (isScheduledRide(r)) scheduleReservationReminders(r.id, r.scheduledAt!, r.driverId!);
   }
 
   /* ── Safe Ride ── */
@@ -108,5 +126,5 @@ export async function recoverDispatchTimers(): Promise<void> {
     }
   }
 
-  console.log(`[recover timers] re-armed ${waiting.length} In-City timeout(s) (${expired} already overdue → cancel + refund), ${care.length} Safe Ride booking(s) checked, ${reDispatched} re-dispatched`);
+  console.log(`[recover timers] re-armed ${waiting.length} In-City timeout(s) (${expired} already overdue → cancel + refund), ${reservations.length} reservation reminder set(s), ${care.length} Safe Ride booking(s) checked, ${reDispatched} re-dispatched`);
 }

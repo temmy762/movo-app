@@ -44,6 +44,7 @@ const EVENT_TITLES: Record<NotificationEventType, string> = {
   ADMIN_CARE_SUPPORT_STRANDED: "Safe Ride: chauffeur awaiting pickup",
   ADMIN_SAFE_RIDE_BOOK_UBER: "Safe Ride: book the chauffeur's Uber return",
   ADMIN_RIDE_DISPATCH_FAILED: "Ride dispatch failed",
+  ADMIN_RESERVATION_NO_SHOW: "Reserved ride: chauffeur hasn't set off",
   ADMIN_RENTAL_REQUEST: "New vehicle rental request",
   ADMIN_RENTAL_RETURN_REQUESTED: "Chauffeur returning rental vehicle",
   // Support events
@@ -91,6 +92,7 @@ const EVENT_MESSAGES: Record<NotificationEventType, string> = {
   ADMIN_CARE_SUPPORT_STRANDED: "A Safe Ride chauffeur has delivered the customer but has no support chauffeur to return them to their vehicle. A replacement search is running — dispatch one manually if it doesn't fill.",
   ADMIN_SAFE_RIDE_BOOK_UBER: "A Safe Ride customer has been delivered. Book an Uber in Uber Central to return the chauffeur to the original pickup, then record it in the Safe Ride panel.",
   ADMIN_RIDE_DISPATCH_FAILED: "No driver accepted a ride in time. The rider has been refunded.",
+  ADMIN_RESERVATION_NO_SHOW: "A reserved ride's pickup time has passed and the assigned chauffeur hasn't set off. Contact the chauffeur, or reassign or cancel the ride.",
   ADMIN_RENTAL_REQUEST: "A chauffeur has requested to rent a Movo vehicle. Review and approve or decline in the Rentals section.",
   ADMIN_RENTAL_RETURN_REQUESTED: "A chauffeur has flagged their rental vehicle as ready for return. Inspect and finalize it in the Rentals section.",
   // Support events

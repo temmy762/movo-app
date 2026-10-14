@@ -6,19 +6,17 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { pushToDriver } from "@/lib/webpush";
 import { dispatchSupport } from "@/lib/care/dispatch";
 import { creditSafeRideEarning } from "@/lib/earnings";
+import { refundBooking } from "@/lib/payments/refundBooking";
+import { sendSafeRideReceipt } from "@/lib/care/receipt";
 import { sendNotification } from "@/lib/notifications";
 import { logAudit } from "@/lib/auditLog";
 import { dispatchCareBookingClosed, dispatchCareAssignmentStatus, dispatchCarePrimaryDispatched, dispatchCareSupportDispatched } from "@/lib/socket/dispatcher";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-04-22.dahlia",
-});
 
 export async function GET(req: NextRequest) {
   try {
@@ -119,17 +117,36 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "force_complete") {
+      if (booking.status === "CANCELLED") {
+        return NextResponse.json({ error: "This booking was cancelled — it can't be completed" }, { status: 409 });
+      }
+      const now = new Date();
       await prisma.$transaction([
+        /* Unanswered offers were never this job's chauffeurs — cancel them, so
+           they're never marked completed (or paid) */
         prisma.careAssignment.updateMany({
-          where: { bookingId, status: { in: ["PENDING", "ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"] } },
-          data:  { status: "COMPLETED", completedAt: new Date() },
+          where: { bookingId, status: "PENDING" },
+          data:  { status: "CANCELLED", cancelledAt: now },
+        }),
+        prisma.careAssignment.updateMany({
+          where: { bookingId, status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"] } },
+          data:  { status: "COMPLETED", completedAt: now },
         }),
         prisma.booking.update({
           where: { id: bookingId },
-          data:  { status: "COMPLETED", completedAt: new Date() },
+          data:  { status: "COMPLETED", completedAt: booking.completedAt ?? now },
         }),
       ]);
       dispatchCareBookingClosed({ bookingId, userId: booking.userId });
+      /* Pay whoever did the job (idempotent per role) and give the customer
+         their receipt if the normal flow never got that far */
+      await Promise.all([
+        creditSafeRideEarning(bookingId, "PRIMARY").catch((e) => console.error("[admin force_complete PRIMARY]", e)),
+        creditSafeRideEarning(bookingId, "SUPPORT").catch((e) => console.error("[admin force_complete SUPPORT]", e)),
+      ]);
+      if (booking.status !== "COMPLETED") {
+        sendSafeRideReceipt(bookingId).catch((e) => console.error("[admin force_complete receipt]", e));
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -143,15 +160,20 @@ export async function PATCH(req: NextRequest) {
       /* Movo Team rule: the Return Logistics Allowance is refunded unless Movo
          already paid a real return-related cost — admin enters that amount and
          it is kept back from the (otherwise full) refund. */
+      if (booking.status === "CANCELLED") {
+        return NextResponse.json({ error: "This booking is already cancelled" }, { status: 409 });
+      }
       const deduction = Math.max(0, Math.min(Number(body.returnCostDeduction) || 0, booking.total));
       if (booking.stripePaymentIntentId && booking.paymentStatus === "PAID" && deduction < booking.total) {
         try {
-          const refund = await stripe.refunds.create({
-            payment_intent: booking.stripePaymentIntentId,
-            ...(deduction > 0 ? { amount: Math.round((booking.total - deduction) * 100) } : {}),
+          /* Checkout payment plus any extras (stops, destination, waiting) */
+          const { refundIds } = await refundBooking({
+            bookingId,
+            checkoutIntentId: booking.stripePaymentIntentId,
+            ...(deduction > 0 ? { amount: booking.total - deduction } : {}),
           });
           refunded = true;
-          refundId = refund.id;
+          refundId = refundIds[0];
         } catch (refundErr) {
           console.error("[admin care cancel] Stripe refund failed:", refundErr);
           refundError = "Refund could not be processed automatically. Please refund manually via the Stripe dashboard.";

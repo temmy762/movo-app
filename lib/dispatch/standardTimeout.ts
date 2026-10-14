@@ -17,6 +17,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { setLongTimeout } from "@/lib/longTimeout";
 import { refundBooking } from "@/lib/payments/refundBooking";
 import { notifyAdmins, sendNotification } from "@/lib/notifications";
 import { dispatchBookingCancelled, dispatchBookingCreated, dispatchDriverReleased } from "@/lib/socket/dispatcher";
@@ -42,7 +43,7 @@ export function scheduleStandardDispatchTimeout(
   const windowMs = kind === "direct" ? DIRECT_RESPONSE_TIMEOUT_MS : POOL_SEARCH_TIMEOUT_MS;
   const anchorMs = anchor ? anchor.getTime() : Date.now();
   const delay = Math.max(0, anchorMs + windowMs - Date.now());
-  setTimeout(() => {
+  setLongTimeout(() => {
     resolveStaleBooking(bookingId).catch((e) =>
       console.error("[standard dispatch timeout]", e)
     );

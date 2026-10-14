@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { releaseRideToPool } from "@/lib/dispatch/releaseRide";
 import { refundBooking } from "@/lib/payments/refundBooking";
+import { scheduleReservationReminders } from "@/lib/dispatch/reservationReminders";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { BookingStatus } from "@prisma/client";
@@ -228,6 +229,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             data: { bookingId: id, pickup: booking?.pickup, dropoff: booking?.dropoff },
           }).catch(() => {});
         }
+      }
+
+      /* Reserved for later: remind the chauffeur, alert admins on a no-show */
+      if (isScheduledAccept && booking?.scheduledAt && booking.bookingType !== "CARE") {
+        scheduleReservationReminders(id, new Date(booking.scheduledAt), session.driverId);
       }
 
       /* Socket: instant update to rider + admin */

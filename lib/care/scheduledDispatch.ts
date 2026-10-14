@@ -15,6 +15,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { setLongTimeout } from "@/lib/longTimeout";
 import { dispatchPrimary } from "@/lib/care/dispatch";
 
 /** Begin PRIMARY dispatch this long before the scheduled pickup time, so a
@@ -23,7 +24,7 @@ export const CARE_DISPATCH_LEAD_MS = 20 * 60 * 1000; // 20 minutes
 
 export function scheduleCareDispatch(bookingId: string, scheduledAt: Date): void {
   const delay = Math.max(0, scheduledAt.getTime() - CARE_DISPATCH_LEAD_MS - Date.now());
-  setTimeout(() => {
+  setLongTimeout(() => {
     fireCareDispatch(bookingId).catch((e) => console.error("[care scheduled dispatch]", e));
   }, delay);
 }

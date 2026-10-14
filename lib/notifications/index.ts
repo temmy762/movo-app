@@ -69,6 +69,7 @@ const DEFAULT_CHANNELS: Record<NotificationEventType, NotificationType[]> = {
   ADMIN_CARE_SUPPORT_STRANDED: ["IN_APP", "SMS"],
   ADMIN_SAFE_RIDE_BOOK_UBER: ["IN_APP", "SMS"],
   ADMIN_RIDE_DISPATCH_FAILED: ["EMAIL", "IN_APP", "SMS"],
+  ADMIN_RESERVATION_NO_SHOW: ["EMAIL", "IN_APP", "SMS"],
   ADMIN_RENTAL_REQUEST: ["IN_APP"],
   ADMIN_RENTAL_RETURN_REQUESTED: ["IN_APP"],
   // Support events: Email + In-app
