@@ -48,17 +48,15 @@ function AvailableCarsContent() {
   const [loading,       setLoading]       = useState(true);
   const [minFares,      setMinFares]      = useState<Record<string, number>>(FALLBACK_MIN_FARES);
   const [tierEstimates, setTierEstimates] = useState<Record<string, TierEstimate>>({});
-  const [showCareWarning, setShowCareWarning] = useState(false);
   const [booking,       setBooking]       = useState(false);
 
   /* Instant fare estimates — one per tier as soon as pickup + dropoff are known
      (or hourly mode, which needs no destination). Uses admin-configured rates. */
   useEffect(() => {
-    if (!IN_CITY_RIDES_ENABLED) return;
+    if (!IN_CITY_RIDES_ENABLED || isCare) return;
     if (!pickup || (!dropoff && mode !== "hourly")) return;
     let stale = false;
-    /* Safe Ride arrivals also need the Safe Ride ("care") price for its card */
-    const tiers: string[] = isCare ? [...TIERS, "care"] : [...TIERS];
+    const tiers: string[] = [...TIERS];
     Promise.all(
       tiers.map(t => {
         const p = new URLSearchParams({ pickup, dropoff, tier: t });
@@ -112,35 +110,20 @@ function AvailableCarsContent() {
     router.push(`/home/ride/confirm?${params.toString()}`);
   };
 
-  const [pendingTier, setPendingTier] = useState<string | null>(null);
-  const handleTierClick = (t: string) => {
-    if (isCare) { setPendingTier(t); setShowCareWarning(true); }
-    else goToConfirm(t);
-  };
-
-  const handleBookCare = () => {
-    setBooking(true);
-    const params = new URLSearchParams({ pickup, dropoff, service: "care", tier: "care", car: "Safe Ride" });
-    if (date)       params.set("date", date);
-    if (time)       params.set("time", time);
-    if (passengers) params.set("passengers", passengers);
-    /* Safe Ride steps 2–3: the customer's vehicle + authorization */
-    router.push(`/home/care-ride/details?${params.toString()}`);
-  };
-
-  /* With In-City switched off there are no tiers to pick, so go straight to
-     the Safe Ride review screen with whatever trip details were carried here. */
+  /* Safe Ride never shows the In-City tiers (nor does anything when In-City
+     is switched off) — send it to step 1 of its own 4-step flow, pre-filled. */
+  const skipTiers = isCare || !IN_CITY_RIDES_ENABLED;
   useEffect(() => {
-    if (IN_CITY_RIDES_ENABLED) return;
-    const params = new URLSearchParams({ pickup, dropoff, service: "care", tier: "care", car: "Safe Ride" });
+    if (!skipTiers) return;
+    const params = new URLSearchParams({ pickup, dropoff, service: "care", tier: "black" });
     if (date)       params.set("date", date);
     if (time)       params.set("time", time);
     if (passengers) params.set("passengers", passengers);
-    router.replace(`/home/care-ride/details?${params.toString()}`);
+    router.replace(`/home/pickup?${params.toString()}`);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!IN_CITY_RIDES_ENABLED) {
+  if (skipTiers) {
     return <div className="min-h-screen bg-white" />;
   }
 
@@ -182,56 +165,6 @@ function AvailableCarsContent() {
       {/* Tier cards */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8">
         <div className="max-w-lg mx-auto space-y-3">
-          {isCare && (
-            <>
-              <div className="mb-1 flex items-center gap-2 px-1">
-                <span className="w-2 h-2 rounded-full bg-[#C6BFB2] animate-pulse" />
-                <p className="text-[12px] font-semibold text-gray-500">You&apos;re booking a <span className="text-[#131936] font-bold">Safe Ride</span></p>
-              </div>
-              <div
-                className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border-2 cursor-pointer active:scale-[0.99] transition-transform"
-                style={{ borderColor: "#131936", background: "linear-gradient(135deg,#0A0A0F 0%,#131936 60%,#2A3055 100%)" }}
-                onClick={handleBookCare}
-              >
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-[16px] font-bold text-white">Safe Ride</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 text-white">Premium</span>
-                      </div>
-                      <p className="text-[12px] text-white/70 leading-snug mb-2">We drive you home safely in your own car — one seamless booking.</p>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                          <span className="text-[11px] text-white/70 font-medium">Your car, our chauffeur</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                          {tierEstimates.care ? (
-                            <span className="text-[11px] text-white/70 font-medium">~${tierEstimates.care.total.toFixed(2)} est.</span>
-                          ) : (
-                            <span className="text-[11px] text-white/70 font-medium">From ${minFares["care"]}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                      </div>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6BFB2" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
-                    </div>
-                  </div>
-              </div>
-            </>
-          )}
-
-          {isCare && (
-            <div className="mt-1 mb-2">
-              <p className="text-[11px] text-center text-gray-400">Not looking for a Safe Ride? Choose a regular category below.</p>
-            </div>
-          )}
-
           {loading ? (
             [1, 2, 3].map(i => (
               <div key={i} className="bg-gray-50 border border-gray-200 rounded-2xl px-4 pt-4 pb-4 animate-pulse">
@@ -251,7 +184,7 @@ function AvailableCarsContent() {
               return (
                 <div key={t}
                   className="rounded-2xl px-4 pt-4 pb-4 flex flex-col gap-3 border border-gray-200 bg-gray-50 cursor-pointer active:scale-[0.99] transition-transform"
-                  onClick={() => handleTierClick(t)}
+                  onClick={() => goToConfirm(t)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
@@ -275,7 +208,7 @@ function AvailableCarsContent() {
                         <Image src={TIER_IMAGES[t]} alt={TIER_LABELS[t]} fill className="object-contain p-1.5" unoptimized />
                       </div>
                       <button type="button" disabled={booking}
-                        onClick={(e) => { e.stopPropagation(); handleTierClick(t); }}
+                        onClick={(e) => { e.stopPropagation(); goToConfirm(t); }}
                         className="no-hover-fx text-[10px] font-bold px-3 py-1.5 rounded-full text-white disabled:opacity-60"
                         style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
                         {booking ? "…" : "Book Now"}
@@ -289,40 +222,6 @@ function AvailableCarsContent() {
         </div>
       </div>
 
-      {/* Care flow exit warning */}
-      {showCareWarning && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-          onClick={() => setShowCareWarning(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center shadow-2xl"
-            onClick={e => e.stopPropagation()}>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
-              style={{ background: "linear-gradient(135deg,#131936,#2A3055)" }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            </div>
-            <p className="text-[16px] font-bold text-gray-900 mb-1">Switch to Regular Ride?</p>
-            <p className="text-[12px] text-gray-500 text-center mb-5">
-              You came here for a <strong>Safe Ride</strong>. Selecting a regular category will exit the Safe Ride booking flow.
-            </p>
-            <div className="flex gap-3 w-full">
-              <button type="button"
-                onClick={() => setShowCareWarning(false)}
-                className="no-hover-fx flex-1 py-2.5 rounded-xl font-semibold text-[13px] border border-gray-300 text-gray-700">
-                Stay on Safe Ride
-              </button>
-              <button type="button"
-                onClick={() => { setShowCareWarning(false); if (pendingTier) goToConfirm(pendingTier); }}
-                className="no-hover-fx flex-1 py-2.5 rounded-xl text-white font-bold text-[13px]"
-                style={{ background: "linear-gradient(90deg,#131936,#C6BFB2)" }}>
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

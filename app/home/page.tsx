@@ -17,7 +17,7 @@ const ALL_SERVICES = [
   { id: 1, title: "In-City Rides",    desc: "Cruise the city in comfort and class.",                          img: "/images/In-city ride.png",     href: "/home/pickup",              enabled: IN_CITY_RIDES_ENABLED },
   { id: 2, title: "Airport Transfer", desc: "From doorstep to departure gate—effortlessly.",                  img: "/images/airport transfer.png", href: "/home/pickup?mode=airport", enabled: AIRPORT_TRANSFER_ENABLED },
   { id: 3, title: "Hourly Chauffeur", desc: "Your personal driver, available by the hour.",                   img: "/images/By the hour.png",      href: "/home/pickup?mode=hourly",  enabled: HOURLY_CHARTER_ENABLED },
-  { id: 4, title: "Safe Ride",        desc: "We drive you home safely in your own car.",                  img: "/images/In-city ride.png",     href: "/home/care-ride",           enabled: true },
+  { id: 4, title: "Safe Ride",        desc: "We drive you home safely in your own car.",                  img: "/images/In-city ride.png",     href: "/home/pickup?service=care&tier=black",           enabled: true },
 ];
 const services = ALL_SERVICES.filter((s) => s.enabled);
 

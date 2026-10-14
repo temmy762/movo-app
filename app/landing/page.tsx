@@ -60,7 +60,7 @@ const RIDE_TIERS = [
     premium: false,
   },
   {
-    label: "Safe Ride", img: "/images/prive black.png", from: 129, href: "/home/care-ride",
+    label: "Safe Ride", img: "/images/prive black.png", from: 129, href: "/home/pickup?service=care&tier=black",
     desc: "You relax — we drive you and your car home.",
     specs: [["user", "Professional chauffeur"], ["car", "Your vehicle, safely driven"], ["clock", "45 min advance booking"]],
     premium: true,
@@ -239,7 +239,10 @@ export default function LandingPage() {
 
     saveBookingDraft({ pickup, dropoff, date, time, passengers, tab, tier, service });
 
-    const targetUrl = `/home/pickup/available-cars?${p.toString()}`;
+    /* Safe Ride starts its own 4-step flow at step 1 (addresses pre-filled) */
+    const targetUrl = tab === "care"
+      ? `/home/pickup?${p.toString()}`
+      : `/home/pickup/available-cars?${p.toString()}`;
     try {
       const res  = await fetch("/api/auth/me");
       if (res.ok) {
@@ -807,7 +810,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <Link href="/home/care-ride"
+            <Link href="/home/pickup?service=care&tier=black"
               className="inline-block px-6 py-3 rounded-full font-bold text-[13px]"
               style={{ background: GOLD, color: DARK }}>
               Book Now
@@ -981,7 +984,7 @@ export default function LandingPage() {
               {HOURLY_CHARTER_ENABLED && (
                 <Link href="/home/pickup?tier=all&mode=hourly" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Hourly Chauffeur</Link>
               )}
-              <Link href="/home/care-ride" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Safe Ride</Link>
+              <Link href="/home/pickup?service=care&tier=black" className="text-white/40 text-[12px] hover:text-white/70 transition-colors">Safe Ride</Link>
             </div>
           </div>
           <div>

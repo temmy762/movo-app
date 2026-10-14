@@ -48,5 +48,7 @@ export function draftToUrl(draft: BookingDraft): string {
   p.set("passengers", String(draft.passengers));
   if (draft.tier)    p.set("tier",    draft.tier);
   if (draft.service) p.set("service", draft.service);
+  /* Safe Ride: its own 4-step flow, starting at step 1 */
+  if (draft.service === "care") return `/home/pickup?${p.toString()}`;
   return `/home/pickup/available-cars?${p.toString()}`;
 }
