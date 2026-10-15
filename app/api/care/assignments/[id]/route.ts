@@ -30,6 +30,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { isActiveDriver, INACTIVE_DRIVER_ERROR } from "@/lib/driverAccess";
 import { dispatchSupport } from "@/lib/care/dispatch";
 import { creditSafeRideEarning } from "@/lib/earnings";
 import { getSafeRideSettings } from "@/lib/safeRide";
@@ -103,6 +104,11 @@ export async function PATCH(
         { error: `Cannot transition from ${assignment.status} to ${newStatus}` },
         { status: 422 },
       );
+    }
+
+    /* A chauffeur suspended after the offer went out can't take it */
+    if (newStatus === "ACCEPTED" && !isAdmin && !(await isActiveDriver(session!.driverId!))) {
+      return NextResponse.json({ error: INACTIVE_DRIVER_ERROR }, { status: 403 });
     }
 
     /* Mid-trip (customer in the car, or PRIMARY being driven back) a chauffeur

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { isActiveDriver, INACTIVE_DRIVER_ERROR } from "@/lib/driverAccess";
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -10,6 +11,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     const { isOnline } = await req.json();
+    if (isOnline && !(await isActiveDriver(session.driverId))) {
+      return NextResponse.json({ error: INACTIVE_DRIVER_ERROR }, { status: 403 });
+    }
 
     await prisma.driver.update({
       where: { id: session.driverId },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { isActiveDriver } from "@/lib/driverAccess";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +17,8 @@ export async function POST(req: NextRequest) {
 
     await prisma.driver.update({
       where: { id: session.driverId },
-      data: { lat, lng, isOnline: true },
+      /* A ping only marks an ACTIVE chauffeur online */
+      data: { lat, lng, isOnline: await isActiveDriver(session.driverId) },
     });
 
     return NextResponse.json({ ok: true });

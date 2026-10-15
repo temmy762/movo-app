@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { DocumentType } from "@prisma/client";
+import { sniffDocumentType } from "@/lib/uploads";
 
 const VALID_TYPES: DocumentType[] = [
   "DRIVERS_LICENSE", "BACKGROUND_CHECK", "DRIVERS_ABSTRACT",
@@ -31,10 +32,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large (max 10 MB)" }, { status: 400 });
   }
 
-  const bytes  = await file.arrayBuffer();
-  const base64 = Buffer.from(bytes).toString("base64");
-  const mimeType = file.type || "application/octet-stream";
-  const fileUrl  = `data:${mimeType};base64,${base64}`;
+  const bytes  = Buffer.from(await file.arrayBuffer());
+  /* Photos and PDFs only, checked by content — not just the name or the
+     browser-supplied type. Anything else (HTML, SVG…) could run code in an
+     admin's session when they open the document. */
+  const mimeType = sniffDocumentType(bytes);
+  if (!mimeType) {
+    return NextResponse.json({ error: "Please upload a photo (JPG, PNG, WebP, HEIC) or a PDF." }, { status: 400 });
+  }
+  const fileUrl  = `data:${mimeType};base64,${bytes.toString("base64")}`;
 
   let onboarding = await prisma.driverOnboarding.findUnique({
     where: { driverId: session.driverId },

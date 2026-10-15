@@ -75,6 +75,7 @@ export default function VehicleInformationPage() {
     const requiredFields = [
       { key: "firstVehicleYear", label: "Vehicle Year" },
       { key: "firstVehicleBrand", label: "Vehicle Brand" },
+      { key: "firstVehicleModel", label: "Vehicle Model" },
       { key: "firstVehicleClass", label: "Vehicle Class" },
       { key: "firstVehicleColor", label: "Vehicle Color" },
       { key: "firstVehiclePlate", label: "License Plate" },
@@ -149,10 +150,16 @@ export default function VehicleInformationPage() {
               onChange={(val) => updateData({ firstVehicleYear: val })}
             />
             <SelectField 
-              label="Vehicle Brand and Model" 
+              label="Vehicle Brand" 
               options={brands}
               value={data.firstVehicleBrand}
-              onChange={(val) => updateData({ firstVehicleBrand: val, firstVehicleModel: val })}
+              onChange={(val) => updateData({ firstVehicleBrand: val })}
+            />
+            {/* Its own field — the model used to be saved as the brand ("BMW BMW") */}
+            <TextField 
+              label="Vehicle Model (e.g. S-Class)" 
+              value={data.firstVehicleModel}
+              onChange={(val) => updateData({ firstVehicleModel: val })}
             />
 
             {/* Class + Color side by side */}

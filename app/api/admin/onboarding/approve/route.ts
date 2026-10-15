@@ -1,3 +1,4 @@
+import { normalizeTier } from "@/lib/normalizeTier";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -30,7 +31,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!approve) {
-      // REJECT onboarding
+      // REJECT onboarding — and take the chauffeur off the road if they had
+      // been approved before (they stayed ACTIVE and could keep taking rides)
+      await prisma.driver.update({
+        where: { id: onboarding.driver.id },
+        data: { status: "PENDING", isOnline: false },
+      });
       await prisma.driverOnboarding.update({
         where: { id: onboardingId },
         data: {
@@ -88,7 +94,9 @@ export async function POST(req: NextRequest) {
               model: onboarding.vehicleModel,
               year: parseInt(onboarding.vehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.vehiclePlate,
-              tier: onboarding.vehicleTier || "classic",
+              /* The form stores labels ("Economy (Standard)") — rides match on
+                 the internal code, so an un-normalised tier got no rides */
+              tier: normalizeTier(onboarding.vehicleTier || "classic"),
             },
           });
           console.log(`[Admin] Vehicle created for individual chauffeur: ${driver.id}`);
@@ -105,7 +113,7 @@ export async function POST(req: NextRequest) {
               model: onboarding.firstVehicleModel,
               year: parseInt(onboarding.firstVehicleYear || new Date().getFullYear().toString()),
               plate: onboarding.firstVehiclePlate,
-              tier: onboarding.firstVehicleClass || "classic",
+              tier: normalizeTier(onboarding.firstVehicleClass || "classic"),
             },
           });
           console.log(`[Admin] Vehicle created for fleet partner: ${driver.id}`);

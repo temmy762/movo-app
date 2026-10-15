@@ -134,6 +134,8 @@ export default function DriverHomePage() {
   const [routeNotice,      setRouteNotice]      = useState<string | null>(null);
   /* Start / end ride failures, shown on the active ride panel */
   const [rideError,        setRideError]        = useState<string | null>(null);
+  /* Suspended / not activated by Movo — can't go online */
+  const [accountInactive,  setAccountInactive]  = useState(false);
   /* Surfaced when the browser can't get a GPS fix while online — previously
      silent, so a chauffeur with location blocked/unavailable never learned
      why they weren't receiving nearby (especially Safe Ride) requests. */
@@ -257,6 +259,11 @@ export default function DriverHomePage() {
           router.replace("/driver/onboarding/pending");
         } else if (d.adminStatus === "NOT_SUBMITTED" || !d.adminStatus) {
           router.replace(d.type === "FLEET" ? "/driver/onboarding/partner" : "/driver/onboarding/chauffeur");
+        } else if (d.driverStatus && d.driverStatus !== "ACTIVE") {
+          /* Approved but suspended (or not yet activated): can't take rides */
+          setAccountInactive(true);
+          setIsOnline(false);
+          localStorage.setItem("driverOnline", "false");
         }
         // adminStatus === "APPROVED" → stay on dashboard
       })
@@ -699,6 +706,10 @@ export default function DriverHomePage() {
 
   async function handleToggleOnline() {
     const next = !isOnline;
+    if (next && accountInactive) {
+      setCancelNotice("Your chauffeur account isn't active right now, so you can't go online. Please contact Movo support.");
+      return;
+    }
     setIsOnline(next);
     localStorage.setItem("driverOnline", String(next));
     if (next) {
@@ -2023,7 +2034,7 @@ export default function DriverHomePage() {
                 <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
               </svg>
             </div>
-            <p className="text-[16px] font-bold text-gray-900 mb-1">Ride Cancelled</p>
+            <p className="text-[16px] font-bold text-gray-900 mb-1">{cancelNotice.startsWith("Your chauffeur account") ? "Account not active" : "Ride Cancelled"}</p>
             <p className="text-[13px] text-gray-500 text-center mb-5">{cancelNotice}</p>
             <button type="button" onClick={() => setCancelNotice(null)}
               className="no-hover-fx w-full py-3 rounded-xl text-white font-bold text-[15px]"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { sniffImageType } from "@/lib/uploads";
 
 const MAX_BYTES = 2 * 1024 * 1024; /* 2 MB limit */
 
@@ -18,17 +19,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No photo provided" }, { status: 400 });
     }
 
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 });
-    }
-
-    const buffer = await file.arrayBuffer();
+    const buffer = Buffer.from(await file.arrayBuffer());
     if (buffer.byteLength > MAX_BYTES) {
       return NextResponse.json({ error: "Image exceeds 2 MB limit" }, { status: 413 });
     }
+    /* Checked by content: JPG/PNG/WebP/HEIC/GIF only (no SVG/HTML) */
+    const mime = sniffImageType(buffer);
+    if (!mime) {
+      return NextResponse.json({ error: "Please upload a JPG, PNG or WebP photo" }, { status: 400 });
+    }
 
-    const base64 = Buffer.from(buffer).toString("base64");
-    const photoUrl = `data:${file.type};base64,${base64}`;
+    const photoUrl = `data:${mime};base64,${buffer.toString("base64")}`;
 
     await prisma.driver.update({
       where: { id: session.driverId },

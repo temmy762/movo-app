@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    /* Removed by admin (soft delete) — the account can no longer sign in */
+    if (driver.deletedAt) {
+      return NextResponse.json({ error: "This chauffeur account has been closed. Please contact Movo support." }, { status: 403 });
+    }
 
     const token = await createSession("DRIVER", undefined, driver.id);
 

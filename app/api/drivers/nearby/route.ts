@@ -1,35 +1,30 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
-export async function GET() {
-  // Return ALL active approved drivers who have a vehicle registered.
-  // isOnline + GPS are included so the UI can show "Available Now" vs "Schedule"
-  // but they are NOT used as filters — the fleet is always browsable.
-  // Keep this payload minimal: it's polled by the rider map and gated the
-  // available-cars skeleton. vehicle.photoUrl in particular is often a
-  // multi-MB base64 data URI — including it per driver made this endpoint
-  // take tens of seconds. No consumer needs it (map uses id/lat/lng,
-  // available-cars uses isOnline + tier), and names/plates shouldn't be
-  // exposed on a public endpoint anyway.
+/* Online chauffeurs for the rider's pickup map. Logged-in riders only, and
+   positions are rounded (~100 m): this was public and returned every active
+   chauffeur's exact last GPS fix — offline ones included, i.e. often their
+   home. Payload stays minimal (no names, plates or photos). */
+const round3 = (n: number | null) => (n == null ? null : Math.round(n * 1000) / 1000);
+
+export async function GET(req: NextRequest) {
+  const session = await getSession(req);
+  if (!session?.userId) return NextResponse.json([], { status: 401 });
+
   const drivers = await prisma.driver.findMany({
     where: {
       status: "ACTIVE",
+      isOnline: true,
+      lat: { not: null },
+      lng: { not: null },
       vehicle: { isNot: null },
     },
-    select: {
-      id: true,
-      isOnline: true,
-      lat: true,
-      lng: true,
-      vehicle: {
-        select: {
-          tier: true,
-        },
-      },
-    },
+    select: { id: true, isOnline: true, lat: true, lng: true, vehicle: { select: { tier: true } } },
   });
 
-  return NextResponse.json(drivers, {
-    headers: { "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60" },
-  });
+  return NextResponse.json(
+    drivers.map((d) => ({ ...d, lat: round3(d.lat), lng: round3(d.lng) })),
+    { headers: { "Cache-Control": "private, max-age=20" } },
+  );
 }

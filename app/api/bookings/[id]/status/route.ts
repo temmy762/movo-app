@@ -4,6 +4,7 @@ import { refundBooking } from "@/lib/payments/refundBooking";
 import { scheduleReservationReminders } from "@/lib/dispatch/reservationReminders";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { isActiveDriver, INACTIVE_DRIVER_ERROR } from "@/lib/driverAccess";
 import { BookingStatus } from "@prisma/client";
 import { sendNotification } from "@/lib/notifications";
 import { pushToDriver } from "@/lib/webpush";
@@ -138,6 +139,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     /* ── Atomic claim: only succeeds if booking is unclaimed + still available ── */
     if (status === "CONFIRMED" && session?.driverId) {
+      if (!(await isActiveDriver(session.driverId))) {
+        return NextResponse.json({ error: INACTIVE_DRIVER_ERROR }, { status: 403 });
+      }
       const result = await prisma.booking.updateMany({
         where: {
           id,

@@ -25,11 +25,11 @@ export async function GET(req: NextRequest) {
 
     const driver = await prisma.driver.findUnique({
       where: { id: session.driverId },
-      select: { vehicle: { select: { tier: true } } },
+      select: { status: true, vehicle: { select: { tier: true } } },
     });
 
     if (!onboarding) {
-      return NextResponse.json({ adminStatus: "NOT_SUBMITTED", driverId: session.driverId, tier: driver?.vehicle?.tier ?? null });
+      return NextResponse.json({ adminStatus: "NOT_SUBMITTED", driverId: session.driverId, tier: driver?.vehicle?.tier ?? null, driverStatus: driver?.status ?? null });
     }
 
     return NextResponse.json({
@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
       reviewedAt: onboarding.reviewedAt,
       driverId: session.driverId,
       tier: driver?.vehicle?.tier ?? null,
+      /* ACTIVE / PENDING / SUSPENDED — the app blocks going online unless ACTIVE */
+      driverStatus: driver?.status ?? null,
     });
   } catch (error) {
     console.error("Onboarding status error:", error);

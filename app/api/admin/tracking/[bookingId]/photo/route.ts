@@ -16,6 +16,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { safeFileHeaders } from "@/lib/uploads";
 
 export async function GET(
   req: NextRequest,
@@ -48,7 +49,7 @@ export async function GET(
     const raw = vehicle.photoUrl;
 
     /* Already a real URL (e.g. once photos move to object storage) → redirect. */
-    if (/^https?:\/\//i.test(raw)) {
+    if (/^https:\/\//i.test(raw)) {
       return NextResponse.redirect(raw);
     }
 
@@ -71,7 +72,7 @@ export async function GET(
 
     return new NextResponse(new Uint8Array(bytes), {
       headers: {
-        "Content-Type": mime,
+        ...safeFileHeaders(mime),
         "Content-Length": String(bytes.length),
         "Cache-Control": "private, max-age=86400",
         ETag: etag,

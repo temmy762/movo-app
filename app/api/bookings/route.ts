@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { isActiveDriver, INACTIVE_DRIVER_ERROR } from "@/lib/driverAccess";
 import { geocodeAddresses } from "@/lib/geocoding";
 import { PaymentStatus } from "@prisma/client";
 import { sendNotification } from "@/lib/notifications";
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
 
     /* ── Driver requesting available bookings → tier-match + unassigned only ── */
     if (session?.driverId && status === "PENDING") {
+      if (!(await isActiveDriver(session.driverId))) return NextResponse.json([]);
       const driver = await prisma.driver.findUnique({
         where: { id: session.driverId },
         select: { vehicle: { select: { tier: true } }, fleetDriverSplit: true },

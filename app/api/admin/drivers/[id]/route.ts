@@ -24,7 +24,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (phone)   updateData.phone   = toE164(phone.trim());
     if (city)    updateData.city    = city;
     if (country) updateData.country = country;
-    if (status)  updateData.status  = statusMap[status] ?? "PENDING";
+    /* An unrecognised label used to silently make the chauffeur PENDING
+       (unable to take rides) — refuse it instead */
+    if (status) {
+      if (!statusMap[status]) return NextResponse.json({ error: `Unknown status "${status}"` }, { status: 400 });
+      updateData.status = statusMap[status];
+    }
 
     const driver = await prisma.driver.update({ where: { id }, data: updateData as never });
     return NextResponse.json({ id: driver.id });

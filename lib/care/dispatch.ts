@@ -115,6 +115,7 @@ async function findNearbyDrivers(
   const candidates = await prisma.driver.findMany({
     where: {
       status:   "ACTIVE",
+      deletedAt: null,
       isOnline: true,
       vehicle:  { isNot: null },
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,
@@ -184,6 +185,7 @@ async function findDriversWithUnknownLocation(
   const candidates = await prisma.driver.findMany({
     where: {
       status:   "ACTIVE",
+      deletedAt: null,
       isOnline: true,
       vehicle:  { isNot: null },
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safeFileHeaders } from "@/lib/uploads";
 import { getSession } from "@/lib/session";
 
 /**
@@ -32,13 +33,14 @@ export async function GET(
     const buffer = Buffer.from(dataUrlMatch[2], "base64");
     return new NextResponse(buffer, {
       headers: {
-        "Content-Type":   dataUrlMatch[1],
+        ...safeFileHeaders(dataUrlMatch[1]),
         "Content-Length": buffer.length.toString(),
         "Cache-Control":  "private, max-age=3600",
       },
     });
   }
 
-  /* Plain URL — redirect to it */
-  return NextResponse.redirect(vehicle.photoUrl);
+  /* A stored https link — never redirect anywhere else */
+  if (/^https:\/\//i.test(vehicle.photoUrl)) return NextResponse.redirect(vehicle.photoUrl);
+  return NextResponse.json({ error: "No photo" }, { status: 404 });
 }

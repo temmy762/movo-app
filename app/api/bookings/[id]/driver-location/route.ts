@@ -84,6 +84,22 @@ export async function POST(
     return NextResponse.json({ error: "lat and lng are required" }, { status: 400 });
   }
 
+  /* Only this ride's chauffeur may report its location (any chauffeur could
+     post positions into any booking and fake the rider's map). Safe Ride:
+     an active PRIMARY/SUPPORT on the booking. */
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { driverId: true, bookingType: true, status: true },
+  });
+  if (!booking || booking.status === "CANCELLED" || (booking.status === "COMPLETED" && booking.bookingType !== "CARE")) {
+    return NextResponse.json({ error: "Ride is not active" }, { status: 409 });
+  }
+  const onThisRide = booking.driverId === session.driverId || (booking.bookingType === "CARE" && !!(await prisma.careAssignment.findFirst({
+    where: { bookingId, driverId: session.driverId, status: { in: ["ACCEPTED", "ARRIVED", "STARTED", "AWAITING_RETURN"] } },
+    select: { id: true },
+  })));
+  if (!onThisRide) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   /* Persist snapshot + update driver's last-known position */
   await Promise.all([
     prisma.tripLocation.create({

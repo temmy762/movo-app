@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { safeFileHeaders } from "@/lib/uploads";
 
 export async function GET(
   req: NextRequest,
@@ -28,16 +29,17 @@ export async function GET(
     const buffer    = Buffer.from(dataUrlMatch[2], "base64");
     const ext       = doc.fileName.split(".").pop() ?? "";
     const safeName  = encodeURIComponent(doc.fileName || `document.${ext}`);
+    /* Photos and PDFs display; anything else downloads (lib/uploads.ts) */
     return new NextResponse(buffer, {
       headers: {
-        "Content-Type":        mimeType,
-        "Content-Disposition": `inline; filename="${safeName}"`,
-        "Content-Length":      buffer.length.toString(),
-        "Cache-Control":       "private, max-age=3600",
+        ...safeFileHeaders(mimeType, decodeURIComponent(safeName)),
+        "Content-Length": buffer.length.toString(),
+        "Cache-Control":  "private, max-age=3600",
       },
     });
   }
 
-  /* Fallback: regular URL — redirect to it */
-  return NextResponse.redirect(doc.fileUrl);
+  /* Fallback: a stored https link — never redirect anywhere else */
+  if (/^https:\/\//i.test(doc.fileUrl)) return NextResponse.redirect(doc.fileUrl);
+  return NextResponse.json({ error: "Document not available" }, { status: 404 });
 }

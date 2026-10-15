@@ -68,6 +68,21 @@ export async function proxy(req: NextRequest) {
     if (redirect) return NextResponse.redirect(new URL(redirect[1], req.url));
   }
 
+  /* Admin APIs: admins only, enforced here for every route. Many admin
+     endpoints had no check of their own (and /api is otherwise public), so
+     anyone could list customers or delete accounts and payments. Reading
+     pricing stays public — customer and chauffeur screens use it, and it
+     already hides the internal settings from non-admins. */
+  if (matchesPrefix(pathname, ["/api/admin"])) {
+    const publicRead = req.method === "GET" && pathname === "/api/admin/pricing";
+    if (!publicRead) {
+      const session = await getSessionFromCookieHeader(req.headers.get("cookie"));
+      if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      if (session.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
+
   // Skip public routes (static assets, API, auth pages)
   if (isPublicRoute(pathname)) {
     return NextResponse.next();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { isActiveDriver } from "@/lib/driverAccess";
 
 export async function POST(req: NextRequest) {
   const session = await getSession(req);
@@ -19,7 +20,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.driver.update({
     where: { id: session.driverId },
-    data: { lat, lng, isOnline },
+    /* Only an ACTIVE chauffeur can be online */
+    data: { lat, lng, isOnline: isOnline && !!session.driverId && (await isActiveDriver(session.driverId)) },
   });
 
   return NextResponse.json({ ok: true });
