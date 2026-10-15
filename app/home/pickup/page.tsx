@@ -1,5 +1,6 @@
 "use client";
 
+import { winnipegDateTime, winnipegNextSlot, winnipegToday } from "@/lib/winnipegTime";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useEffect, useCallback, Suspense } from "react";
@@ -13,12 +14,10 @@ const MapComponent = dynamic(() => import("./MapComponent"), { ssr: false });
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 const LIBRARIES: ("places" | "geometry")[] = ["places", "geometry"];
 
-const todayStr = () => new Date().toISOString().split("T")[0];
-const nowTimeStr = () => {
-  const d = new Date();
-  d.setMinutes(Math.ceil(d.getMinutes() / 30) * 30, 0, 0);
-  return d.toTimeString().slice(0, 5);
-};
+/* Pickers are Winnipeg time (lib/winnipegTime.ts) — the old UTC date made
+   "today" unselectable every evening after 7 pm */
+const todayStr = () => winnipegToday();
+const nowTimeStr = () => winnipegNextSlot().time;
 
 function PickupContent() {
   const router = useRouter();
@@ -155,7 +154,7 @@ function PickupContent() {
     if (kind === "reserve") {
       if (!date || !time) { setScheduleError("Please select a date and time for your reservation."); return; }
       const leadMin = service === "care" ? 45 : 30;
-      const when = new Date(`${date}T${time}:00`);
+      const when = winnipegDateTime(date, time) ?? new Date(NaN);
       if (isNaN(when.getTime()) || when.getTime() < Date.now() + leadMin * 60_000) {
         setScheduleError(`Reservations need at least ${leadMin} minutes' notice. For an immediate pickup, use Book Now.`);
         return;

@@ -1503,7 +1503,7 @@ function RideTrackingContent() {
       )}
 
       {/* ── Care Dispatch Failed overlay ── */}
-      {dispatchFailed && (
+      {dispatchFailed && !cancelledResult && (
         <div className="fixed inset-0 z-[2100] flex items-end justify-center px-4 pb-10"
           style={{ background: "rgba(0,0,0,0.75)" }}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 flex flex-col items-center text-center shadow-2xl">
@@ -1513,16 +1513,28 @@ function RideTrackingContent() {
                 <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
               </svg>
             </div>
-            <p className="text-[16px] font-bold text-gray-900 mb-2">No chauffeurs available</p>
+            <p className="text-[16px] font-bold text-gray-900 mb-2">No chauffeur available yet</p>
             <p className="text-[13px] text-gray-500 mb-6 leading-snug">
-              We were unable to find a Safe Ride chauffeur in your area at this time. Please try again shortly or contact support.
+              We couldn&apos;t find a Safe Ride chauffeur nearby right now. Our team has been alerted and may still
+              assign one — or you can cancel now for a full refund.
             </p>
+            {cancelError && (
+              <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3 w-full">{cancelError}</p>
+            )}
+            {/* No chauffeur was ever assigned, so cancelling is a full refund */}
             <button
               type="button"
-              onClick={() => router.replace("/home")}
-              className="w-full py-3.5 rounded-xl text-white font-bold text-[14px]"
+              disabled={cancelling}
+              onClick={async () => { await handleCancelRide(); }}
+              className="w-full py-3.5 rounded-xl text-white font-bold text-[14px] mb-2 disabled:opacity-60"
               style={{ background: "linear-gradient(135deg,#0A0A0F,#131936,#2A3055)" }}>
-              Back to Home
+              {cancelling ? "Cancelling…" : "Cancel for a full refund"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDispatchFailed(false)}
+              className="w-full py-3 rounded-xl border border-gray-200 text-[13px] font-semibold text-gray-700">
+              Keep my booking
             </button>
           </div>
         </div>

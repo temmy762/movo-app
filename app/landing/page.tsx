@@ -1,5 +1,6 @@
 "use client";
 
+import { winnipegDateTime, winnipegNextSlot, winnipegToday } from "@/lib/winnipegTime";
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
@@ -13,12 +14,10 @@ const GMAPS_KEY  = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
    between pages throws "Loader must not be called again with different options" */
 const GMAPS_LIBS: ("places" | "geometry")[] = ["places", "geometry"];
 
-const todayStr = () => new Date().toISOString().split("T")[0];
-const nowTimeStr = () => {
-  const d = new Date();
-  d.setMinutes(Math.ceil(d.getMinutes() / 30) * 30, 0, 0);
-  return d.toTimeString().slice(0, 5);
-};
+/* Pickers are Winnipeg time (lib/winnipegTime.ts) — the old UTC date made
+   "today" unselectable every evening after 7 pm */
+const todayStr = () => winnipegToday();
+const nowTimeStr = () => winnipegNextSlot().time;
 
 /* ── Brand tokens ──────────────────────────────────────────────────────────── */
 const NAVY  = "#131936";
@@ -215,7 +214,7 @@ export default function LandingPage() {
     if (kind === "reserve") {
       if (!date || !time) { setWidgetError("Please select a date and time for your reservation."); return; }
       const leadMin = tab === "care" ? 45 : 30;
-      const when = new Date(`${date}T${time}:00`);
+      const when = winnipegDateTime(date, time) ?? new Date(NaN);
       if (isNaN(when.getTime()) || when.getTime() < Date.now() + leadMin * 60_000) {
         setWidgetError(`Reservations need at least ${leadMin} minutes' notice. For an immediate pickup, use Book Now.`);
         return;

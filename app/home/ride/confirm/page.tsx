@@ -8,6 +8,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { IN_CITY_RIDES_ENABLED, AIRPORT_TRANSFER_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
 import { bookingExtras, clearSafeRideDraft, getSafeRideDraft, saveSafeRideDraft, vehicleLabel } from "@/lib/safeRideDraft";
 import SafeRideSteps from "../../components/SafeRideSteps";
+import { winnipegDateTime } from "@/lib/winnipegTime";
 import StopsEditor from "../../components/StopsEditor";
 
 const STRIPE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
@@ -261,8 +262,9 @@ function ConfirmPayContent() {
   const timeParam = searchParams.get("time") || "";
   const scheduledAt = (() => {
     if (!dateParam || !timeParam) return null;
-    const d = new Date(`${dateParam}T${timeParam}:00`);
-    return isNaN(d.getTime()) ? null : d.toISOString();
+    /* The pickers mean Winnipeg time, whatever the phone's time zone */
+    const d = winnipegDateTime(dateParam, timeParam);
+    return d ? d.toISOString() : null;
   })();
   const isScheduled = !!scheduledAt && new Date(scheduledAt).getTime() - Date.now() > 25 * 60 * 1000;
 
@@ -466,7 +468,7 @@ function ConfirmPayContent() {
               <p className="text-[12px] md:text-[13px] text-gray-400 mt-2 ml-7">
                 ~{estimate.durationMin} min trip · arrives around{" "}
                 {new Date((scheduledAt ? new Date(scheduledAt).getTime() : Date.now()) + estimate.durationMin * 60_000)
-                  .toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" })}
+                  .toLocaleTimeString("en-CA", { timeZone: "America/Winnipeg", hour: "numeric", minute: "2-digit" })}
               </p>
             ) : null}
 
