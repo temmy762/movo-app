@@ -9,6 +9,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { name, email, phone, city, country, status } = body;
 
     const statusMap: Record<string, string> = {
+      "Active":        "ACTIVE",
+      "Suspended":     "SUSPENDED",
+      "Inactive":      "PENDING",
+      /* old labels, in case an open admin tab still sends them */
       "On Duty":       "ACTIVE",
       "Sick Leave":    "SUSPENDED",
       "Half-Day Leave":"PENDING",

@@ -108,7 +108,7 @@ async function findNearbyDrivers(
   excludeIds: string[] = [],
   limit = 1,
 ): Promise<Array<{ id: string; firstName: string; lastName: string; distKm: number }>> {
-  /* Fetch all ACTIVE + online drivers who have a vehicle; the tier priority is
+  /* Fetch all ACTIVE + online drivers (vehicle optional); the tier priority is
      applied in JS below (case-insensitively). Filtering tier at the DB level
      with `{ in: [...], mode: "insensitive" }` is unsupported for `in` and was
      both fragile (case-sensitive in practice) and a silent-throw risk. */
@@ -117,7 +117,8 @@ async function findNearbyDrivers(
       status:   "ACTIVE",
       deletedAt: null,
       isOnline: true,
-      vehicle:  { isNot: null },
+      /* No own-vehicle requirement: a Safe Ride chauffeur drives the
+         customer's car */
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,
       /* Skip anyone already mid-Safe-Ride. This matters most for a PRIMARY in
          AWAITING_RETURN: they've delivered the customer but are stranded at the
@@ -141,8 +142,10 @@ async function findNearbyDrivers(
     return i === -1 ? CARE_TIER_PRIORITY.length : i;
   };
 
+  /* Chauffeurs with no vehicle on file are eligible too (ranked after the
+     tiered ones by tierRank) */
   const eligible = candidates.filter((d) =>
-    (CARE_TIER_PRIORITY as readonly string[]).includes((d.vehicle?.tier ?? "").toLowerCase()),
+    !d.vehicle || (CARE_TIER_PRIORITY as readonly string[]).includes((d.vehicle.tier ?? "").toLowerCase()),
   );
 
   /* Pickup geocoding itself failed (rare) — nobody's distance can be judged,
@@ -187,7 +190,8 @@ async function findDriversWithUnknownLocation(
       status:   "ACTIVE",
       deletedAt: null,
       isOnline: true,
-      vehicle:  { isNot: null },
+      /* No own-vehicle requirement: a Safe Ride chauffeur drives the
+         customer's car */
       id:       excludeIds.length ? { notIn: excludeIds } : undefined,
       OR: [{ lat: null }, { lng: null }],
     },
@@ -200,7 +204,7 @@ async function findDriversWithUnknownLocation(
   };
 
   return candidates
-    .filter((d) => (CARE_TIER_PRIORITY as readonly string[]).includes((d.vehicle?.tier ?? "").toLowerCase()))
+    .filter((d) => !d.vehicle || (CARE_TIER_PRIORITY as readonly string[]).includes((d.vehicle.tier ?? "").toLowerCase()))
     .map((d) => ({ d, rank: tierRank(d.vehicle?.tier), jitter: Math.random() }))
     .sort((a, b) => a.rank - b.rank || a.jitter - b.jitter)
     .slice(0, limit)

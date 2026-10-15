@@ -59,10 +59,10 @@ export async function GET(req: NextRequest) {
       const avgRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
       const perfLabel = avgRating >= 4.5 ? "Excellent" : avgRating >= 4.0 ? "Good" : avgRating >= 3.0 ? "Average" : avgRating > 0 ? "Poor" : "New";
 
-      const statusMap: Record<string, "On Duty" | "Sick Leave" | "Half-Day Leave"> = {
-        ACTIVE: "On Duty",
-        SUSPENDED: "Sick Leave",
-        PENDING: "Half-Day Leave",
+      const statusMap: Record<string, "Active" | "Suspended" | "Inactive"> = {
+        ACTIVE: "Active",
+        SUSPENDED: "Suspended",
+        PENDING: "Inactive",
       };
 
       return {
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
         email: d.email,
         phone: d.phone ?? "",
         address: [d.city, d.country].filter(Boolean).join(", "),
-        status: statusMap[d.status] ?? "Half-Day Leave",
+        status: statusMap[d.status] ?? "Inactive",
         dbStatus: d.status,
         isOnline: d.isOnline,
         workHours: completedBookings.length * 2,
@@ -107,7 +107,8 @@ export async function POST(req: NextRequest) {
     const tempPass = randomBytes(10).toString("hex");
     const hashed = createHash("sha256").update(tempPass).digest("hex");
 
-    const dbStatus = status === "On Duty" ? "ACTIVE" : status === "Sick Leave" ? "SUSPENDED" : "PENDING";
+    const dbStatus = status === "Active" || status === "On Duty" ? "ACTIVE"
+      : status === "Suspended" || status === "Sick Leave" ? "SUSPENDED" : "PENDING";
 
     const driver = await prisma.driver.create({
       data: {

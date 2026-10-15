@@ -4,7 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type DriverStatus = "On Duty" | "Sick Leave" | "Half-Day Leave";
+/* Active = can take rides · Suspended = blocked by Movo · Inactive = not yet activated */
+type DriverStatus = "Active" | "Suspended" | "Inactive";
 type ScheduleEntry = { id: string; date: string; time: string; client: string; car: string; status: string; createdAt: string; };
 type Driver = {
   id: string; name: string; email: string; phone: string; address: string;
@@ -22,9 +23,9 @@ const avatarColor = (n: string) => AVATAR_COLORS[n.charCodeAt(0) % AVATAR_COLORS
 const initials = (n: string) => n.split(" ").slice(0,2).map(w => w[0]).join("").toUpperCase();
 
 const STATUS_STYLE: Record<DriverStatus, { bg: string; color: string; dot: string }> = {
-  "On Duty":       { bg:"#eff6ff", color:"#1d4ed8", dot:"#3b82f6" },
-  "Sick Leave":    { bg:"#fef2f2", color:"#dc2626", dot:"#ef4444" },
-  "Half-Day Leave":{ bg:"#1e2d45", color:"white",   dot:"rgba(255,255,255,0.5)" },
+  "Active":        { bg:"#eff6ff", color:"#1d4ed8", dot:"#3b82f6" },
+  "Suspended":     { bg:"#fef2f2", color:"#dc2626", dot:"#ef4444" },
+  "Inactive":      { bg:"#1e2d45", color:"white",   dot:"rgba(255,255,255,0.5)" },
 };
 
 function StatusBadge({ status }: { status: DriverStatus }) {
@@ -232,7 +233,7 @@ function DriverModal({ initial, onSave, onClose }: { initial?: Driver; onSave:(d
   const [form, setForm] = useState<DriverForm>({
     name: initial?.name??"", email: initial?.email??"",
     phone: initial?.phone??"", address: initial?.address??"",
-    status: initial?.status??"On Duty",
+    status: initial?.status??"Active",
   });
   const set = (k: keyof DriverForm, v: string) => setForm(f => ({ ...f, [k]: v }));
   return (
@@ -259,7 +260,7 @@ function DriverModal({ initial, onSave, onClose }: { initial?: Driver; onSave:(d
             <div><p className="text-[11px] text-gray-500 font-medium mb-1">Status</p>
               <select value={form.status} onChange={e=>set("status",e.target.value)}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-[12px] text-gray-900 focus:outline-none" suppressHydrationWarning>
-                <option>On Duty</option><option>Sick Leave</option><option>Half-Day Leave</option>
+                <option>Active</option><option>Suspended</option><option>Inactive</option>
               </select></div>
           </div>
           <div><p className="text-[11px] text-gray-500 font-medium mb-1">Address</p>
@@ -398,7 +399,7 @@ export default function DriversPage() {
             </button>
             {showFilt&&(
               <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg py-1 z-10">
-                {(["All","On Duty","Sick Leave","Half-Day Leave"] as const).map(s=>(
+                {(["All","Active","Suspended","Inactive"] as const).map(s=>(
                   <button key={s} onClick={()=>{setStatusFilt(s);setShowFilt(false);setPage(1);}}
                     className="no-hover-fx w-full px-3 py-2 text-left text-[12px] hover:bg-gray-50 flex items-center justify-between"
                     style={{ color: statusFilt===s?"#ef4444":"#374151" }}>
