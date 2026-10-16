@@ -19,14 +19,17 @@ export async function GET(req: NextRequest) {
          than 25 min away (the same rule the accept screen uses to send a ride
          to Reserved Rides). A ride accepted closer to pickup is in the active
          flow and must come back after leaving the screen (e.g. after chat). */
-      NOT: {
-        AND: [
-          { scheduledAt: { gt: new Date(Date.now() + RESERVATION_LEAD_MS) } },
-          { enRouteAt: null },
-          { arrivedAt: null },
-          { startedAt: null },
-        ],
-      },
+      /* Written as a positive OR on purpose: the old NOT(scheduledAt > … AND …)
+         evaluated to NULL for immediate rides (scheduledAt is null) and SQL
+         drops NULL rows — so EVERY immediate ride vanished from the
+         chauffeur's screen after a refresh, chat or "Go to Ride". */
+      OR: [
+        { scheduledAt: null },
+        { scheduledAt: { lte: new Date(Date.now() + RESERVATION_LEAD_MS) } },
+        { enRouteAt: { not: null } },
+        { arrivedAt: { not: null } },
+        { startedAt: { not: null } },
+      ],
     },
     orderBy: { createdAt: "desc" },
     select: {
