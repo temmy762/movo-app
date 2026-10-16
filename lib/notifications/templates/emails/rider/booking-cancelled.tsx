@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -29,7 +29,7 @@ export function riderBookingCancelledTemplate(
   const refundLine = info.refundPending
     ? "Your refund is being processed and will be confirmed shortly."
     : info.refunded && info.refundAmount != null
-      ? `A refund of $${info.refundAmount.toFixed(2)} has been issued to your original payment method.`
+      ? `A refund of $${money(info.refundAmount)} has been issued to your original payment method.`
       : info.refunded
         ? "A full refund has been issued to your original payment method."
         : null;
@@ -70,7 +70,7 @@ export function riderBookingCancelledTemplate(
         )}
         {info.refunded && info.refundAmount != null && (
           <Text style={{ fontSize: "14px", color: "#666666" }}>
-            <strong>Refunded:</strong> ${info.refundAmount.toFixed(2)}
+            <strong>Refunded:</strong> ${money(info.refundAmount)}
           </Text>
         )}
       </Section>
@@ -109,7 +109,7 @@ Hi ${recipient.firstName}, ${who}.${refundLine ? ` ${refundLine}` : ""}
 Booking: #${info.bookingId?.slice(0, 8)}
 ${info.pickup ? `Pickup: ${info.pickup}` : ""}
 ${info.dropoff ? `Dropoff: ${info.dropoff}` : ""}
-${info.refunded && info.refundAmount != null ? `Refunded: $${info.refundAmount.toFixed(2)}` : ""}
+${info.refunded && info.refundAmount != null ? `Refunded: $${money(info.refundAmount)}` : ""}
 
 ${refundLine ? "Refunds typically appear on your statement within 5-10 business days." : ""}
 

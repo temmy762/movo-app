@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Hr, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -93,22 +93,22 @@ export function riderBookingConfirmedTemplate(
           Fare Breakdown
         </Text>
         <Text style={{ fontSize: "14px", color: "#333333" }}>
-          Ride fare: ${booking.fare.toFixed(2)}
+          Ride fare: ${money(booking.fare)}
         </Text>
         {booking.serviceFee > 0 && (
           <Text style={{ fontSize: "14px", color: "#333333" }}>
-            Service fee: ${booking.serviceFee.toFixed(2)}
+            Service fee: ${money(booking.serviceFee)}
           </Text>
         )}
         {!!booking.gst && (
           <Text style={{ fontSize: "14px", color: "#333333" }}>
-            GST: ${booking.gst.toFixed(2)}
+            GST: ${money(booking.gst)}
           </Text>
         )}
         <Text
           style={{ fontSize: "16px", fontWeight: "700", color: "#2D0A53", marginTop: "8px" }}
         >
-          Total: ${booking.total.toFixed(2)}
+          Total: ${money(booking.total)}
         </Text>
       </Section>
 
@@ -144,10 +144,10 @@ Pickup Location: ${booking.pickup}
 Dropoff Location: ${booking.dropoff}
 
 Fare Breakdown:
-Ride fare: $${booking.fare.toFixed(2)}
-${booking.serviceFee > 0 ? `Service fee: $${booking.serviceFee.toFixed(2)}
-` : ""}${booking.gst ? `GST: $${booking.gst.toFixed(2)}` : ""}
-Total: $${booking.total.toFixed(2)}
+Ride fare: $${money(booking.fare)}
+${booking.serviceFee > 0 ? `Service fee: $${money(booking.serviceFee)}
+` : ""}${booking.gst ? `GST: $${money(booking.gst)}` : ""}
+Total: $${money(booking.total)}
 
 Track your ride: ${settings.baseUrl}/home/rides/${booking.bookingId}
 

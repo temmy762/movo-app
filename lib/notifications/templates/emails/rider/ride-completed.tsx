@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Hr, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -55,7 +55,7 @@ export function riderRideCompletedTemplate(
 
       <Section>
         <Text style={{ fontSize: "18px", fontWeight: "700", color: "#2D0A53" }}>
-          Total Paid: ${ride.total.toFixed(2)}
+          Total Paid: ${money(ride.total)}
         </Text>
       </Section>
 
@@ -92,7 +92,7 @@ Vehicle: ${ride.vehicleInfo}
 From: ${ride.pickup}
 To: ${ride.dropoff}
 
-Total Paid: $${ride.total.toFixed(2)}
+Total Paid: $${money(ride.total)}
 
 How was your ride? Your feedback helps us improve.
 Rate your ride: ${settings.baseUrl}/home/rides/${ride.bookingId}

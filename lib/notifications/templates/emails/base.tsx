@@ -13,6 +13,13 @@ import {
 } from "@react-email/components";
 import type { EmailTemplateContext } from "../../types";
 
+/** Safe 2-decimal money for emails: a missing amount used to throw inside the
+    template ("reading 'toFixed'") and the whole email silently never sent */
+export function money(n: unknown): string {
+  const v = typeof n === "number" ? n : Number(n);
+  return (Number.isFinite(v) ? v : 0).toFixed(2);
+}
+
 interface EmailLayoutProps {
   context: EmailTemplateContext;
   preview: string;

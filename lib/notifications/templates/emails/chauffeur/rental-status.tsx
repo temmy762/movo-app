@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -43,7 +43,7 @@ export function chauffeurRentalApprovedTemplate(
         )}
         {info.amount != null && (
           <Text style={{ fontSize: "14px", color: "#666666", marginBottom: "4px" }}>
-            <strong>Paid:</strong> ${info.amount.toFixed(2)} CAD
+            <strong>Paid:</strong> ${money(info.amount)} CAD
           </Text>
         )}
         {info.endDate && (
@@ -72,7 +72,7 @@ Hi ${recipient.firstName}, your vehicle rental has been approved. The vehicle is
 
 ${info.vehicle ? `Vehicle: ${info.vehicle}` : ""}
 ${info.plan ? `Plan: ${PLAN_LABELS[info.plan] ?? info.plan}` : ""}
-${info.amount != null ? `Paid: $${info.amount.toFixed(2)} CAD` : ""}
+${info.amount != null ? `Paid: $${money(info.amount)} CAD` : ""}
 ${info.endDate ? `Return by: ${info.endDate}` : ""}
 
 Reminder: the vehicle is provided with a full tank. Please return it clean and with a full tank — otherwise the fuel cost plus a $20 refueling service fee applies.
@@ -99,7 +99,7 @@ export function chauffeurRentalDeclinedTemplate(
       <Text style={{ fontSize: "16px", color: "#333333" }}>
         Hi {recipient.firstName}, unfortunately we couldn&apos;t approve your vehicle rental
         request{info.vehicle ? ` for the ${info.vehicle}` : ""}. Your payment
-        {info.amount != null ? ` of $${info.amount.toFixed(2)} CAD` : ""} has been refunded in
+        {info.amount != null ? ` of $${money(info.amount)} CAD` : ""} has been refunded in
         full to your card.
       </Text>
       {info.reason && (
@@ -124,7 +124,7 @@ export function chauffeurRentalDeclinedTemplate(
   const text = `
 Rental Request Declined
 
-Hi ${recipient.firstName}, unfortunately we couldn't approve your vehicle rental request${info.vehicle ? ` for the ${info.vehicle}` : ""}. Your payment${info.amount != null ? ` of $${info.amount.toFixed(2)} CAD` : ""} has been refunded in full to your card.
+Hi ${recipient.firstName}, unfortunately we couldn't approve your vehicle rental request${info.vehicle ? ` for the ${info.vehicle}` : ""}. Your payment${info.amount != null ? ` of $${money(info.amount)} CAD` : ""} has been refunded in full to your card.
 
 ${info.reason ? `Reason: ${info.reason}` : ""}
 

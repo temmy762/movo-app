@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Hr, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -77,14 +77,14 @@ export function riderPaymentReceiptTemplate(
             }}
           >
             <span>{item.label}</span>
-            <span>${item.amount.toFixed(2)}</span>
+            <span>${money(item.amount)}</span>
           </Text>
         ))}
 
         <Hr style={{ borderColor: "#e6e6e6", margin: "16px 0" }} />
 
         <Text style={{ fontSize: "18px", fontWeight: "700", color: "#2D0A53" }}>
-          Total: ${payment.amount.toFixed(2)}
+          Total: ${money(payment.amount)}
         </Text>
       </Section>
 
@@ -124,9 +124,9 @@ Date: ${payment.date}
 Payment Method: ${payment.method}
 
 Items:
-${(payment.items ?? []).map((i) => `- ${i.label}: $${i.amount.toFixed(2)}`).join("\n")}
+${(payment.items ?? []).map((i) => `- ${i.label}: $${money(i.amount)}`).join("\n")}
 
-Total: $${payment.amount.toFixed(2)}
+Total: $${money(payment.amount)}
 
 View ride details: ${settings.baseUrl}/home/rides/${payment.bookingId}
 

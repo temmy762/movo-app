@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { releaseRideToPool } from "@/lib/dispatch/releaseRide";
 import { refundBooking } from "@/lib/payments/refundBooking";
+import { computeDriverEarning } from "@/lib/earnings";
 import { scheduleReservationReminders } from "@/lib/dispatch/reservationReminders";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -227,10 +228,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             },
           }).catch(() => {});
         } else {
+          /* Their real payout — the email used to show a made-up 75% of the
+             fare, and crashed (no fare passed) so it never sent */
+          const earning = await computeDriverEarning(
+            booking.fare, booking.carTier,
+            await prisma.driver.findUnique({ where: { id: booking.driver.id }, select: { fleetDriverSplit: true } }),
+          ).catch(() => undefined);
           sendNotification({
             eventType: "CHAUFFEUR_BOOKING_ASSIGNED",
             recipient: { type: "driver", id: booking.driver.id, email: booking.driver.email ?? "", firstName: booking.driver.firstName, phone: booking.driver.phone ?? undefined },
-            data: { bookingId: id, pickup: booking?.pickup, dropoff: booking?.dropoff },
+            data: {
+              bookingId: id, pickup: booking.pickup, dropoff: booking.dropoff,
+              clientName: booking.clientName, carTier: booking.carTier ?? "classic", fare: booking.fare, earning,
+            },
           }).catch(() => {});
         }
       }

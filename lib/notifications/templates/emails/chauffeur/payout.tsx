@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Hr, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -40,7 +40,7 @@ export function chauffeurPayoutTemplate(context: EmailTemplateContext): EmailTem
           Amount Deposited
         </Text>
         <Text style={{ fontSize: "32px", fontWeight: "700", color: "#ffffff" }}>
-          ${payout.amount.toFixed(2)}
+          ${money(payout.amount)}
         </Text>
       </Section>
 
@@ -103,7 +103,7 @@ Payout Processed
 
 Great news, ${recipient.firstName}! Your earnings have been processed.
 
-Amount Deposited: $${payout.amount.toFixed(2)}
+Amount Deposited: $${money(payout.amount)}
 
 Payout ID: ${payout.payoutId}
 Period: ${payout.periodStart} - ${payout.periodEnd}
@@ -121,7 +121,7 @@ Keep up the great work! Your dedication helps make ${settings.appName} the best 
 `;
 
   return {
-    subject: `Payout processed: $${payout.amount.toFixed(2)} - ${settings.appName}`,
+    subject: `Payout processed: $${money(payout.amount)} - ${settings.appName}`,
     html,
     text,
   };

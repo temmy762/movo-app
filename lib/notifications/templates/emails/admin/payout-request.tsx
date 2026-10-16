@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -17,7 +17,7 @@ export function adminPayoutRequestTemplate(
     automated: boolean;
   };
 
-  const preview = `Payout ${payout.automated ? "processed" : "requested"}: CAD $${payout.amount.toFixed(2)} — ${payout.driverName}`;
+  const preview = `Payout ${payout.automated ? "processed" : "requested"}: CAD $${money(payout.amount)} — ${payout.driverName}`;
 
   const html = render(
     <EmailLayout context={context} preview={preview}>
@@ -45,7 +45,7 @@ export function adminPayoutRequestTemplate(
           {payout.automated ? "Amount Transferred" : "Amount Requested"}
         </Text>
         <Text style={{ fontSize: "32px", fontWeight: "700", color: "#2D0A53", margin: "0" }}>
-          CAD ${payout.amount.toFixed(2)}
+          CAD ${money(payout.amount)}
         </Text>
         <Text style={{ fontSize: "12px", color: "#9ca3af", marginTop: "4px" }}>
           {payout.automated ? "✓ Stripe Connect — Automated" : "⏳ Pending manual approval"}
@@ -101,7 +101,7 @@ Driver Payout ${payout.automated ? "Processed" : "Requested"}
 
 Driver: ${payout.driverName}
 Email: ${payout.driverEmail}
-Amount: CAD $${payout.amount.toFixed(2)}
+Amount: CAD $${money(payout.amount)}
 Type: ${payout.type}
 Transaction ID: ${payout.transactionId}
 Requested At: ${payout.requestedAt}
@@ -113,7 +113,7 @@ View payouts: ${settings.baseUrl}/admin/financials/payouts
 `;
 
   return {
-    subject: `Driver payout ${payout.automated ? "processed" : "requested"}: CAD $${payout.amount.toFixed(2)} — ${payout.driverName}`,
+    subject: `Driver payout ${payout.automated ? "processed" : "requested"}: CAD $${money(payout.amount)} — ${payout.driverName}`,
     html,
     text,
   };

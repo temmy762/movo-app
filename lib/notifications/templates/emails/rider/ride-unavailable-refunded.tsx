@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 
@@ -47,7 +47,7 @@ export function riderRideUnavailableRefundedTemplate(
         )}
         {info.total != null && (
           <Text style={{ fontSize: "14px", color: "#666666" }}>
-            <strong>Refunded amount:</strong> ${info.total.toFixed(2)}
+            <strong>Refunded amount:</strong> ${money(info.total)}
           </Text>
         )}
       </Section>
@@ -83,7 +83,7 @@ Hi ${recipient.firstName}, we're sorry — we weren't able to find a driver for 
 
 ${info.pickup ? `Pickup: ${info.pickup}` : ""}
 ${info.dropoff ? `Dropoff: ${info.dropoff}` : ""}
-${info.total != null ? `Refunded amount: $${info.total.toFixed(2)}` : ""}
+${info.total != null ? `Refunded amount: $${money(info.total)}` : ""}
 
 Refunds typically appear on your statement within 5-10 business days.
 

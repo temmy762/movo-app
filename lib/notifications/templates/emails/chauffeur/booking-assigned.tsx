@@ -1,5 +1,5 @@
 import { Button, Heading, Text, Hr, Section } from "@react-email/components";
-import { EmailLayout } from "../base";
+import { EmailLayout, money } from "../base";
 import type { EmailTemplateContext, EmailTemplateResult } from "../../types";
 import { render } from "@react-email/render";
 import { serviceLabel } from "@/lib/tierLabels";
@@ -13,7 +13,9 @@ export function chauffeurBookingAssignedTemplate(
     pickup: string;
     dropoff: string;
     carTier: string;
-    fare: number;
+    fare?: number;
+    /* The chauffeur's actual payout for this ride (same figure as the app) */
+    earning?: number;
     clientName: string;
     clientPhone?: string;
     scheduledTime?: string;
@@ -88,21 +90,16 @@ export function chauffeurBookingAssignedTemplate(
         )}
       </Section>
 
-      <Hr style={{ borderColor: "#e6e6e6", margin: "24px 0" }} />
-
-      <Section>
-        <Text style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>
-          Fare Breakdown
-        </Text>
-        <Text style={{ fontSize: "14px", color: "#333333" }}>
-          Ride fare: ${booking.fare.toFixed(2)}
-        </Text>
-        <Text
-          style={{ fontSize: "16px", fontWeight: "700", color: "#2D0A53", marginTop: "8px" }}
-        >
-          Your Earnings: ${(booking.fare * 0.75).toFixed(2)}
-        </Text>
-      </Section>
+      {booking.earning != null && (
+        <>
+          <Hr style={{ borderColor: "#e6e6e6", margin: "24px 0" }} />
+          <Section>
+            <Text style={{ fontSize: "16px", fontWeight: "700", color: "#131936" }}>
+              Your earnings: ${money(booking.earning)}
+            </Text>
+          </Section>
+        </>
+      )}
 
       <Button
         href={`${settings.baseUrl}/driver/home`}
@@ -139,9 +136,7 @@ Dropoff Location: ${booking.dropoff}
 Client: ${booking.clientName}
 ${booking.clientPhone ? `Phone: ${booking.clientPhone}` : ""}
 
-Fare Breakdown:
-Ride fare: $${booking.fare.toFixed(2)}
-Your Earnings: $${(booking.fare * 0.75).toFixed(2)}
+${booking.earning != null ? `Your earnings: $${money(booking.earning)}` : ""}
 
 Open the app to view booking details: ${settings.baseUrl}/driver/home
 
