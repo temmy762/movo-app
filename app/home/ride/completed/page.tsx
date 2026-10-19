@@ -277,6 +277,12 @@ function RideCompletedContent() {
               <p className="text-[10px] text-gray-400 mt-2">
                 A copy of this receipt has been emailed to you. All prices in CAD.
               </p>
+              {bookingId && (
+                <button type="button" onClick={() => router.push(`/home/rides/${bookingId}/receipt`)}
+                  className="no-hover-fx mt-2 text-[12px] font-semibold underline text-gray-700">
+                  View &amp; download receipt (PDF)
+                </button>
+              )}
             </div>
           )}
 
