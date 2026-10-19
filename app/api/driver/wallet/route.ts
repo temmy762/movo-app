@@ -44,10 +44,24 @@ export async function GET(req: NextRequest) {
   const availableBalance = walletTotals(walletTxs).available;
   const totalEarned      = parseFloat((settledEarnings + pendingEarnings).toFixed(2));
 
+  /* Booking reference (MOVO-B-…) for each earning — the note carries the
+     booking id ("… booking <id> …") */
+  const bookingIdOf = (note: string | null) => note?.match(/booking (c[a-z0-9]{20,})/i)?.[1] ?? null;
+  const ids = [...new Set(walletTxs.map((t) => bookingIdOf(t.note)).filter((x): x is string => !!x))];
+  const refs = new Map(
+    (ids.length
+      ? await prisma.booking.findMany({ where: { id: { in: ids } }, select: { id: true, bookingNumber: true } })
+      : []
+    ).map((b) => [b.id, b.bookingNumber]),
+  );
+
   const walletEntries = walletTxs.map((t) => {
     const isPendingEarning = t.type === "EARNING" && t.createdAt > settlementCutoff;
+    const bookingId = bookingIdOf(t.note);
     return {
       id: t.id,
+      kind: t.type,
+      reference: bookingId ? (refs.get(bookingId) ?? null) : null,
       label: t.note ?? (t.type === "PAYOUT" ? "Send to bank" : t.type === "EARNING" ? "Trip earning" : "Add money"),
       date: t.createdAt.toISOString(),
       amount: t.amount,
