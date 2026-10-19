@@ -9,19 +9,22 @@ const TrackingMap = dynamic(() => import("./TrackingMap"), {
 });
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type TripStatus = "On Way" | "Active Trip" | "Returned";
+type TripStatus = "Accepted" | "On the way" | "Arrived" | "Trip started" | "Completed";
 type Vehicle = {
   id:string; client:string; car:string; carType:string; carNumber:string;
   status:TripStatus; startDate:string; endDate:string; tripTime:string; distance:string;
   pos:[number,number]; route:[number,number][]; heading?:number;
   driverName?:string; vehiclePhoto?:string|null;
+  timeline?:{step:string;at:string|null}[]; bookingNumber?:string|null;
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ST: Record<TripStatus,{bg:string;color:string}> = {
-  "On Way":      {bg:"#dbeafe",color:"#1d4ed8"},
-  "Active Trip": {bg:"#dcfce7",color:"#16a34a"},
-  "Returned":    {bg:"#fce7f3",color:"#db2777"},
+  "Accepted":     {bg:"#f1f5f9",color:"#475569"},
+  "On the way":   {bg:"#dbeafe",color:"#1d4ed8"},
+  "Arrived":      {bg:"#fef3c7",color:"#b45309"},
+  "Trip started": {bg:"#dcfce7",color:"#16a34a"},
+  "Completed":    {bg:"#ede9fe",color:"#6d28d9"},
 };
 const AVATAR_COLS=["#ef4444","#f97316","#eab308","#22c55e","#06b6d4","#6366f1","#ec4899","#8b5cf6"];
 const ac=(n:string)=>AVATAR_COLS[n.charCodeAt(0)%AVATAR_COLS.length];
@@ -43,7 +46,7 @@ function CarThumb({color="#94a3b8"}:{color?:string}){
 
 // ── Add Car Modal ─────────────────────────────────────────────────────────────
 function AddCarModal({ onSave, onClose, drivers=[] }: { onSave:(v:Omit<Vehicle,"id"|"pos"|"route">,driverId?:string)=>void; onClose:()=>void; drivers?:any[] }) {
-  const[f,setF]=useState({client:"",car:"",carType:"SUV",carNumber:"",status:"On Trip" as TripStatus,startDate:"",endDate:"",tripTime:"",distance:"",driverId:""});
+  const[f,setF]=useState({client:"",car:"",carType:"SUV",carNumber:"",status:"Accepted" as TripStatus,startDate:"",endDate:"",tripTime:"",distance:"",driverId:""});
   const s=(k:string,v:string)=>setF(p=>({...p,[k]:v}));
   return(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -179,7 +182,6 @@ export default function TrackingPage() {
             heading:d.heading??v.heading,
             /* Extend the drawn trail so the selected vehicle's path grows live */
             route:[...(v.route??[]),[d.lat,d.lng] as [number,number]].slice(-150),
-            status:(v.status==="Returned"?"Returned":"Active Trip") as TripStatus,
           };
         });
         if(!changed) return prev;
@@ -194,10 +196,13 @@ export default function TrackingPage() {
     const unsubCreated=on(SOCKET_EVENTS.BOOKING_CREATED,reload);
     const unsubAccepted=on(SOCKET_EVENTS.BOOKING_ACCEPTED,reload);
     const unsubCompleted=on(SOCKET_EVENTS.BOOKING_COMPLETED,reload);
+    /* Step changes: arrived / trip started */
+    const unsubArrived=on(SOCKET_EVENTS.DRIVER_ARRIVED,reload);
+    const unsubStarted=on(SOCKET_EVENTS.TRIP_STARTED,reload);
     const unsubCancelled=on(SOCKET_EVENTS.BOOKING_CANCELLED,reload);
 
     return()=>{
-      unsubLoc(); unsubCreated(); unsubAccepted(); unsubCompleted(); unsubCancelled();
+      unsubLoc(); unsubCreated(); unsubAccepted(); unsubCompleted(); unsubCancelled(); unsubArrived(); unsubStarted();
     };
   },[on,load]);
 
@@ -446,6 +451,30 @@ export default function TrackingPage() {
               </button>
             </div>
           </div>
+
+          {/* Trip progress: accepted → on the way → arrived → started → completed */}
+          {active.timeline && (
+            <div className="shrink-0 border-b border-gray-100 bg-white px-5 py-3">
+              {active.bookingNumber && <p className="text-[10px] font-mono text-gray-400 mb-2">{active.bookingNumber}</p>}
+              <div className="flex items-start">
+                {active.timeline.map((t, i) => {
+                  const done = !!t.at;
+                  return (
+                    <div key={t.step} className="flex-1 flex flex-col items-center text-center relative">
+                      {i > 0 && (
+                        <span className="absolute top-[7px] right-1/2 w-full h-0.5"
+                          style={{ background: done ? "#16a34a" : "#e5e7eb" }} />
+                      )}
+                      <span className="relative z-10 w-4 h-4 rounded-full border-2"
+                        style={done ? { background: "#16a34a", borderColor: "#16a34a" } : { background: "white", borderColor: "#d1d5db" }} />
+                      <p className={`text-[10px] mt-1 font-semibold ${done ? "text-gray-900" : "text-gray-400"}`}>{t.step}</p>
+                      <p className="text-[10px] text-gray-500">{t.at ?? "—"}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Map */}
           <div className="flex-1 overflow-hidden">

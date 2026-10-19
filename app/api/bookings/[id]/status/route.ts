@@ -9,7 +9,7 @@ import { isActiveDriver, INACTIVE_DRIVER_ERROR } from "@/lib/driverAccess";
 import { BookingStatus } from "@prisma/client";
 import { sendNotification } from "@/lib/notifications";
 import { pushToDriver } from "@/lib/webpush";
-import { normalizeCommissionRate } from "@/lib/earnings";
+import { normalizeCommissionRate, fleetSplit } from "@/lib/earnings";
 import { logAudit } from "@/lib/auditLog";
 import { serviceLabel } from "@/lib/tierLabels";
 import {
@@ -232,7 +232,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
              fare, and crashed (no fare passed) so it never sent */
           const earning = await computeDriverEarning(
             booking.fare, booking.carTier,
-            await prisma.driver.findUnique({ where: { id: booking.driver.id }, select: { fleetDriverSplit: true } }),
+            await prisma.driver.findUnique({ where: { id: booking.driver.id }, select: { fleetDriverSplit: true, fleetOwnerId: true } }),
           ).catch(() => undefined);
           sendNotification({
             eventType: "CHAUFFEUR_BOOKING_ASSIGNED",
@@ -457,7 +457,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const commission = normalizeCommissionRate(tierConfig?.commissionRate);
         const netAfterPlatform = parseFloat((existing.fare * (1 - commission)).toFixed(2));
 
-        const driverSplit     = driver?.fleetDriverSplit ?? 1.0;
+        /* Fleet split only for chauffeurs under a fleet owner (lib/earnings) */
+        const driverSplit     = fleetSplit(driver);
         const driverEarning   = parseFloat((netAfterPlatform * driverSplit).toFixed(2));
         const fleetEarning    = parseFloat((netAfterPlatform * (1 - driverSplit)).toFixed(2));
 

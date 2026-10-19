@@ -16,6 +16,17 @@ export function normalizeCommissionRate(rate: number | null | undefined): number
 }
 
 /**
+ * Share of the post-commission amount the chauffeur keeps. The fleet split
+ * only applies to a chauffeur working under a fleet owner (the owner gets the
+ * rest). Independent chauffeurs keep 100% — the 85% default was being applied
+ * to everyone, so they lost 15% of their 70% to nobody.
+ */
+export function fleetSplit(driver: { fleetDriverSplit: number; fleetOwnerId?: string | null } | null): number {
+  if (!driver?.fleetOwnerId) return 1;
+  return driver.fleetDriverSplit ?? 1;
+}
+
+/**
  * A chauffeur's take-home for a standard ride, mirroring EXACTLY the credit
  * formula applied at trip completion in app/api/bookings/[id]/status/route.ts:
  *   net    = fare × (1 − platform commission for the tier)
@@ -25,7 +36,7 @@ export function normalizeCommissionRate(rate: number | null | undefined): number
 export async function computeDriverEarning(
   fare: number,
   carTier: string | null | undefined,
-  driver: { fleetDriverSplit: number } | null,
+  driver: { fleetDriverSplit: number; fleetOwnerId?: string | null } | null,
 ): Promise<number> {
   if (!fare || fare <= 0) return 0;
   const tierConfig = await prisma.vehicleTierConfig
@@ -36,7 +47,7 @@ export async function computeDriverEarning(
     .catch(() => null);
   const commission = normalizeCommissionRate(tierConfig?.commissionRate);
   const net = fare * (1 - commission);
-  const split = driver?.fleetDriverSplit ?? 1.0;
+  const split = fleetSplit(driver);
   return parseFloat((net * split).toFixed(2));
 }
 

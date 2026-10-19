@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 
   const driver = await prisma.driver.findUnique({
     where: { id: session.driverId },
-    select: { fleetDriverSplit: true },
+    select: { fleetDriverSplit: true, fleetOwnerId: true },
   });
   const earning = await computeDriverEarning(booking.fare, booking.carTier, driver);
 

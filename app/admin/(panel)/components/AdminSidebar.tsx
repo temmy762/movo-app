@@ -104,6 +104,7 @@ const navItems: NavEntry[] = [
     ),
     children: [
       { label: "Payments",  href: "/admin/financials/payments" },
+      { label: "GST Collected", href: "/admin/financials/gst" },
       { label: "Expenses",  href: "/admin/financials/expenses" },
       { label: "Payouts",   href: "/admin/financials/payouts" },
       { label: "Analytics", href: "/admin/financials/analytics" },

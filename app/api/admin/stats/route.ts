@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { winnipegDateTime, winnipegToday } from "@/lib/winnipegTime";
 
 export async function GET(req: NextRequest) {
   try {
@@ -42,10 +43,14 @@ export async function GET(req: NextRequest) {
       tierBreakdown,
     ] = await Promise.all([
       prisma.booking.groupBy({ by: ["status"], _count: { id: true } }),
-      prisma.booking.aggregate({ where: { paymentStatus: "PAID" }, _sum: { total: true } }),
+      prisma.booking.aggregate({ where: { paymentStatus: "PAID" }, _sum: { total: true, gst: true } }),
       prisma.driver.count(),
-      prisma.driver.count({ where: { status: "ACTIVE" } }),
-      prisma.driver.count({ where: { isOnline: true } }),
+      prisma.driver.count({ where: { status: "ACTIVE", deletedAt: null } }),
+      /* Online NOW: flagged online AND their app checked in recently (the
+         flag alone stays on when a chauffeur just closes the app) */
+      prisma.driver.count({
+        where: { status: "ACTIVE", deletedAt: null, isOnline: true, updatedAt: { gte: new Date(Date.now() - 10 * 60 * 1000) } },
+      }),
       prisma.user.count({ where: { role: "USER" } }),
       prisma.booking.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
       prisma.booking.findMany({
@@ -112,9 +117,18 @@ export async function GET(req: NextRequest) {
       monthlyBookings.push({ m: month, total: bookingsMap[key]?.total ?? 0, done: bookingsMap[key]?.done ?? 0, cancelled: bookingsMap[key]?.cancelled ?? 0 });
     }
 
+    /* Bookings created since midnight Winnipeg time */
+    const bookingsToday = await prisma.booking.count({
+      where: { createdAt: { gte: winnipegDateTime(winnipegToday(), "00:00") ?? new Date(new Date().setHours(0, 0, 0, 0)) } },
+    });
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const grossPaid = revenueAgg._sum.total ?? 0;
+    const gstCollected = revenueAgg._sum.gst ?? 0;
+
     return NextResponse.json({
-      counts: { ...counts, totalDrivers, activeDrivers, onlineDrivers, totalClients },
-      revenue: { total: Math.round((revenueAgg._sum.total ?? 0) * 100) / 100 },
+      counts: { ...counts, totalDrivers, activeDrivers, onlineDrivers, totalClients, bookingsToday },
+      /* GST is the government's money — shown apart from revenue */
+      revenue: { total: round2(grossPaid), exGst: round2(grossPaid - gstCollected), gst: round2(gstCollected) },
       rentStatus,
       monthlyEarnings,
       monthlyBookings,

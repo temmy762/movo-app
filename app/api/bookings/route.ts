@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       if (!(await isActiveDriver(session.driverId))) return NextResponse.json([]);
       const driver = await prisma.driver.findUnique({
         where: { id: session.driverId },
-        select: { vehicle: { select: { tier: true } }, fleetDriverSplit: true },
+        select: { vehicle: { select: { tier: true } }, fleetDriverSplit: true, fleetOwnerId: true },
       });
       const tier = driver?.vehicle?.tier ?? null;
 

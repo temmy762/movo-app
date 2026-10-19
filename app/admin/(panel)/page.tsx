@@ -8,9 +8,9 @@ import { useSocket, SOCKET_EVENTS } from "@/context/SocketContext";
 type ApiStats = {
   counts: {
     total: number; pending: number; confirmed: number; completed: number; cancelled: number;
-    totalDrivers: number; activeDrivers: number; onlineDrivers: number; totalClients: number;
+    totalDrivers: number; activeDrivers: number; onlineDrivers: number; totalClients: number; bookingsToday?: number;
   };
-  revenue: { total: number };
+  revenue: { total: number; exGst?: number; gst?: number };
   rentStatus: { hired: number; pending: number; cancelled: number };
   monthlyEarnings: { month: string; v: number }[];
   monthlyBookings: { m: string; total: number; done: number; cancelled: number }[];
@@ -27,9 +27,9 @@ type ApiStats = {
 // ── Stat Card Icons ────────────────────────────────────────────────────────
 const STAT_ICONS = [
   <svg key="rev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  <svg key="gst" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="17" x2="15" y2="11"/><circle cx="9.5" cy="11.5" r="0.8"/><circle cx="14.5" cy="16.5" r="0.8"/></svg>,
   <svg key="bk"  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-  <svg key="rent" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h14l4 4v4a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>,
-  <svg key="avail" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+  <svg key="online" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3.1-7 7-7s7 3 7 7"/><circle cx="19" cy="6" r="2.5" fill="#22c55e" stroke="none"/></svg>,
 ];
 
 function StatCard({ label, value, icon, loading }: { label: string; value: string; icon: ReactNode; loading: boolean }) {
@@ -140,7 +140,7 @@ function RentStatusChart({ hired, pending, cancelled, period, onPeriodChange }: 
   return (
     <div className="bg-white rounded-2xl p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[14px] font-bold text-gray-900">Rent Status</p>
+        <p className="text-[14px] font-bold text-gray-900">Booking Status</p>
         <select value={period} onChange={e => onPeriodChange(e.target.value)} className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 text-gray-500 focus:outline-none" suppressHydrationWarning>
           <option value="3m">Last 3 Months</option>
           <option value="6m">Last 6 Months</option>
@@ -164,7 +164,7 @@ function RentStatusChart({ hired, pending, cancelled, period, onPeriodChange }: 
         </svg>
         <div className="flex flex-col gap-2.5">
           {[
-            { label: "Hired",     pct: `${hired}%`,     color: "#1e2d45" },
+            { label: "Confirmed / completed", pct: `${hired}%`, color: "#1e2d45" },
             { label: "Pending",   pct: `${pending}%`,   color: "#ef4444" },
             { label: "Cancelled", pct: `${cancelled}%`, color: "#d1d5db" },
           ].map(l => (
@@ -719,11 +719,12 @@ export default function AdminDashboard() {
   }, [earningsPeriod]);
 
   const c = apiData?.counts;
+  const cad = (n: number | undefined) => `$${(n ?? 0).toLocaleString("en-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const statCards = [
-    { label: "Total Revenue",  value: c ? `$${apiData!.revenue.total.toLocaleString()}` : "—" },
-    { label: "New Bookings",   value: c ? String(c.total) : "—" },
-    { label: "Rented Cars",    value: c ? `${c.confirmed + c.completed} Units` : "—" },
-    { label: "Available Cars", value: c ? `${c.activeDrivers} Units` : "—" },
+    { label: "Revenue (excl. GST)", value: c ? cad(apiData!.revenue.exGst ?? apiData!.revenue.total) : "—" },
+    { label: "GST Collected",       value: c ? cad(apiData!.revenue.gst) : "—" },
+    { label: "Bookings Today",      value: c ? String(c.bookingsToday ?? 0) : "—" },
+    { label: "Chauffeurs Online",   value: c ? `${c.onlineDrivers} of ${c.activeDrivers}` : "—" },
   ];
 
   return (
@@ -739,7 +740,7 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Earnings + Rent Status */}
+        {/* Earnings + Booking Status */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 sm:gap-4 mb-4 sm:mb-5">
           <EarningsChart data={apiData?.monthlyEarnings ?? []} period={earningsPeriod} onPeriodChange={setEarningsPeriod} />
           <RentStatusChart

@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true, clientName: true, status: true, driverId: true,
         createdAt: true, updatedAt: true, startedAt: true,
+        acceptedAt: true, enRouteAt: true, arrivedAt: true, completedAt: true, bookingNumber: true,
         pickupLat: true, pickupLng: true, dropoffLat: true, dropoffLng: true,
       },
     });
@@ -98,10 +99,23 @@ export async function GET(req: NextRequest) {
         const live = latestMap.get(b.id);
         const hasLocationData = !!live;
 
-        let status: "On Way" | "Active Trip" | "Returned";
-        if (b.status === "COMPLETED") status = "Returned";
-        else if (b.startedAt || hasLocationData) status = "Active Trip";
-        else status = "On Way";
+        void hasLocationData;
+        /* The ride's real step — chauffeur location pings alone don't mean the
+           trip has started (they also stream on the way to pickup) */
+        const status: "Accepted" | "On the way" | "Arrived" | "Trip started" | "Completed" =
+          b.status === "COMPLETED" ? "Completed"
+          : b.startedAt ? "Trip started"
+          : b.arrivedAt ? "Arrived"
+          : b.enRouteAt ? "On the way"
+          : "Accepted";
+        const t = (d: Date | null) => (d ? new Date(d).toLocaleTimeString("en-US", { timeZone: "America/Winnipeg", hour: "numeric", minute: "2-digit" }) : null);
+        const timeline = [
+          { step: "Accepted",     at: t(b.acceptedAt) },
+          { step: "On the way",   at: t(b.enRouteAt) },
+          { step: "Arrived",      at: t(b.arrivedAt) },
+          { step: "Trip started", at: t(b.startedAt) },
+          { step: "Completed",    at: t(b.completedAt) },
+        ];
 
         const lat = live?.lat ?? d.lat ?? b.pickupLat ?? 0;
         const lng = live?.lng ?? d.lng ?? b.pickupLng ?? 0;
@@ -113,6 +127,8 @@ export async function GET(req: NextRequest) {
           carType: v.tier ?? "Unknown",
           carNumber: v.plate ?? "—",
           status,
+          timeline,
+          bookingNumber: b.bookingNumber,
           startDate: fmtDate(b.createdAt),
           endDate: fmtDate(b.updatedAt),
           tripTime: b.startedAt

@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     }),
     prisma.driver.findUnique({
       where: { id: session.driverId },
-      select: { fleetDriverSplit: true },
+      select: { fleetDriverSplit: true, fleetOwnerId: true },
     }),
   ]);
 
