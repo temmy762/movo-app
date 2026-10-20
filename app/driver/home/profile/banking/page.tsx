@@ -48,7 +48,7 @@ function BankingInner() {
     setConnecting(true);
     try {
       const res  = await fetch("/api/driver/stripe-connect", { method: "POST" });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.url) window.location.href = data.url;
       else showToast(data.error ?? "Could not start bank onboarding.", false);
     } catch {
@@ -69,7 +69,7 @@ function BankingInner() {
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), ok ? 3500 : 8000);
   };
 
   const handleSave = async () => {
