@@ -70,6 +70,15 @@ export async function GET(req: NextRequest) {
     const bookings = await prisma.booking.findMany({
       where: status ? { status: status as never } : undefined,
       orderBy: { createdAt: "desc" },
+      /* Which chauffeur handled each ride — only what the admin table shows */
+      include: {
+        driver: {
+          select: {
+            id: true, firstName: true, lastName: true, phone: true,
+            vehicle: { select: { make: true, model: true, plate: true } },
+          },
+        },
+      },
     });
     return NextResponse.json(bookings);
   } catch (e) {

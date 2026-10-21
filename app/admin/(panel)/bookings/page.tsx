@@ -207,7 +207,37 @@ type Booking = {
   cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  driver?: {
+    id: string; firstName: string; lastName: string; phone: string | null;
+    vehicle: { make: string; model: string; plate: string } | null;
+  } | null;
 };
+
+/* Chauffeur who handled the ride + trip times (Winnipeg) */
+const wpgTime = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/Winnipeg", hour: "numeric", minute: "2-digit" }) : null;
+function tripLine(b: Booking): string | null {
+  const start = wpgTime(b.startedAt), end = wpgTime(b.completedAt);
+  if (!start && !end) return null;
+  const mins = b.startedAt && b.completedAt
+    ? Math.max(0, Math.round((new Date(b.completedAt).getTime() - new Date(b.startedAt).getTime()) / 60000))
+    : null;
+  return [start && `Started ${start}`, end && `Completed ${end}`, mins != null && `${mins} min`].filter(Boolean).join(" · ");
+}
+function ChauffeurCell({ b }: { b: Booking }) {
+  if (!b.driver) return <span className="text-gray-400">{b.status === "CANCELLED" ? "—" : "Not assigned"}</span>;
+  const v = b.driver.vehicle;
+  return (
+    <div className="leading-tight">
+      <p className="font-semibold text-gray-800">{`${b.driver.firstName} ${b.driver.lastName}`.trim()}</p>
+      {b.driver.phone && <a href={`tel:${b.driver.phone}`} className="text-[10px] text-gray-500 underline">{b.driver.phone}</a>}
+      {v && <p className="text-[10px] text-gray-400">{v.make} {v.model} · {v.plate}</p>}
+      {tripLine(b) && <p className="text-[10px] text-gray-500 mt-0.5">{tripLine(b)}</p>}
+    </div>
+  );
+}
 
 const statusConfig: Record<BookingStatus, { bg: string; color: string; label: string }> = {
   PENDING:   { bg: "#fef3c7", color: "#d97706", label: "Pending"   },
@@ -223,7 +253,7 @@ const tierColor: Record<string, string> = {
   classic: "#64748b", premium: "#16a34a", black: "white",
 };
 
-const COLS = ["Booking ID","Date","Client","Car","Pickup","Dropoff","Payment","Status","Actions"];
+const COLS = ["Booking ID","Date","Client","Chauffeur","Car","Pickup","Dropoff","Payment","Status","Actions"];
 
 function SortIcon() {
   return (
@@ -322,6 +352,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
     (b.clientName.toLowerCase().includes(search.toLowerCase()) ||
      b.id.toLowerCase().includes(search.toLowerCase()) ||
      (b.bookingNumber ?? "").toLowerCase().includes(search.toLowerCase()) ||
+     `${b.driver?.firstName ?? ""} ${b.driver?.lastName ?? ""}`.toLowerCase().includes(search.toLowerCase()) ||
      (b.receiptNumber ?? "").toLowerCase().includes(search.toLowerCase()) ||
      b.carName.toLowerCase().includes(search.toLowerCase()))
   );
@@ -339,7 +370,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" placeholder="Search client, booking or receipt no."
+            <input type="text" placeholder="Search client, chauffeur, booking or receipt no."
               value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
               className="text-[12px] w-full sm:w-44 focus:outline-none placeholder-gray-300"
               suppressHydrationWarning />
@@ -387,10 +418,10 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-[13px] text-gray-400">Loading bookings…</td></tr>
+              <tr><td colSpan={10} className="px-4 py-8 text-center text-[13px] text-gray-400">Loading bookings…</td></tr>
             )}
             {!loading && paged.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-[13px] text-gray-400">No bookings found.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-8 text-center text-[13px] text-gray-400">No bookings found.</td></tr>
             )}
             {!loading && paged.map(b => {
               const sc = statusConfig[b.status];
@@ -403,6 +434,7 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                   </td>
                   <td className="px-4 py-3.5 text-gray-500 whitespace-nowrap">{date}</td>
                   <td className="px-4 py-3.5 font-medium text-gray-800 whitespace-nowrap">{b.clientName}</td>
+                  <td className="px-4 py-3.5 whitespace-nowrap"><ChauffeurCell b={b} /></td>
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="text-gray-800 font-medium mr-1.5">{b.carName}</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-medium"
@@ -509,6 +541,11 @@ function FullBookingsTable({ onCountsChange }: { onCountsChange?: (counts: Count
                   <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />
                   <p className="text-[11px] text-gray-500 leading-tight truncate">{b.dropoff}</p>
                 </div>
+              </div>
+              {/* Chauffeur who handled it */}
+              <div className="mb-2 text-[11px]">
+                <span className="text-gray-400">Chauffeur: </span>
+                <ChauffeurCell b={b} />
               </div>
               {/* Row 4: Payment + Date + Action */}
               <div className="flex items-center justify-between mt-1">
