@@ -24,9 +24,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updateData.firstName = parts[0] ?? "";
       updateData.lastName  = parts.slice(1).join(" ") || "";
     }
-    if (email)   updateData.email   = email;
+    if (email)   updateData.email   = String(email).trim();
     if (phone)   updateData.phone   = toE164(phone.trim());
-    if (city)    updateData.city    = city;
+    /* The form sends the address as shown ("Winnipeg, Canada") — store the
+       parts, or every save appended another ", Canada" to the city */
+    if (city) {
+      const [c, ...rest] = String(city).split(",").map((s) => s.trim()).filter(Boolean);
+      if (c) updateData.city = c;
+      if (rest.length && !country) updateData.country = rest.join(", ");
+    }
     if (country) updateData.country = country;
     /* An unrecognised label used to silently make the chauffeur PENDING
        (unable to take rides) — refuse it instead */
@@ -37,8 +43,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const driver = await prisma.driver.update({ where: { id }, data: updateData as never });
     return NextResponse.json({ id: driver.id });
-  } catch (e) {
-    console.error(e);
+  } catch (e: any) {
+    console.error("[admin drivers PATCH]", e);
+    if (e?.code === "P2002") {
+      const field = String(e?.meta?.target ?? "").includes("phone") ? "phone number" : "email";
+      return NextResponse.json({ error: `Another account already uses this ${field}.` }, { status: 409 });
+    }
+    if (e?.code === "P2025") return NextResponse.json({ error: "Driver not found" }, { status: 404 });
     return NextResponse.json({ error: "Failed to update driver" }, { status: 500 });
   }
 }

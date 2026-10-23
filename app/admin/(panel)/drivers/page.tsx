@@ -297,7 +297,7 @@ export default function DriversPage() {
 
   const loadDrivers = () => {
     setLoading(true);
-    fetch("/api/admin/drivers")
+    fetch("/api/admin/drivers", { cache: "no-store" })
       .then(r => r.json())
       .then((data: Driver[]) => {
         setDrivers(data);
@@ -344,14 +344,30 @@ export default function DriversPage() {
     loadDrivers();
   };
 
+  /* Failed saves used to close the modal silently, so edits looked like they
+     "didn't stick" — surface the reason and keep the form open */
   const handleEdit = async (f: DriverForm) => {
-    await fetch(`/api/admin/drivers/${editDriver!.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: f.name, email: f.email, phone: f.phone, city: f.address, status: f.status }),
-    });
-    setEditDriver(null);
-    loadDrivers();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      const res = await fetch(`/api/admin/drivers/${editDriver!.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: f.name, email: f.email, phone: f.phone, city: f.address, status: f.status }),
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`Couldn't save changes: ${data.error || `error ${res.status}`}`);
+        return;
+      }
+      setEditDriver(null);
+      loadDrivers();
+    } catch {
+      alert("Couldn't save changes — please check your connection and try again.");
+    } finally {
+      clearTimeout(timeout);
+    }
   };
 
   const handleDelete = async (id: string) => {
