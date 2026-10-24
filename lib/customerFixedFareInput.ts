@@ -5,6 +5,7 @@ export const FIXED_FARE_TIERS = ["classic", "premium", "black"] as const;
 export type FixedFareInput = {
   label?: unknown; pickup?: unknown; dropoff?: unknown;
   tier?: unknown; fare?: unknown; weekdays?: unknown; active?: unknown;
+  pickupTime?: unknown; timeWindowMin?: unknown;
 };
 
 type Parsed =
@@ -50,6 +51,17 @@ export async function parseFixedFareInput(body: FixedFareInput, partial = false)
     const days = Array.isArray(body.weekdays) ? [...new Set(body.weekdays.map(Number))].filter(d => Number.isInteger(d) && d >= 0 && d <= 6) : [];
     if (!days.length) return { ok: false, error: "Pick at least one day" };
     data.weekdays = days.sort();
+  }
+  if (has("pickupTime")) {
+    /* Empty = any time of day */
+    const t = typeof body.pickupTime === "string" ? body.pickupTime.trim() : "";
+    if (t && !/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) return { ok: false, error: "Pickup time must look like 06:30" };
+    data.pickupTime = t || null;
+  }
+  if (has("timeWindowMin")) {
+    const w = Number(body.timeWindowMin);
+    if (!Number.isInteger(w) || w < 0 || w > 180) return { ok: false, error: "Time window must be 0–180 minutes" };
+    data.timeWindowMin = w;
   }
   if (body.active !== undefined) data.active = !!body.active;
 

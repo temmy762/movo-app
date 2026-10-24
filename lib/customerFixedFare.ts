@@ -16,6 +16,20 @@ export function winnipegWeekday(at: Date): number {
   return WEEKDAY_INDEX[day] ?? at.getDay();
 }
 
+/** Minutes since midnight, in Winnipeg time */
+export function winnipegMinuteOfDay(at: Date): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: MOVO_TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(at);
+  const n = (t: string) => Number(parts.find(p => p.type === t)?.value ?? 0);
+  return n("hour") * 60 + n("minute");
+}
+
+/* "06:30" → 390. Windows don't wrap past midnight (commute times don't need it). */
+function withinWindow(minuteOfDay: number, pickupTime: string | null, windowMin: number): boolean {
+  if (!pickupTime) return true;
+  const [h, m] = pickupTime.split(":").map(Number);
+  return Math.abs(minuteOfDay - (h * 60 + m)) <= windowMin;
+}
+
 /** Fixed fares are before GST and carry no service fee */
 export function fixedFareAmounts(fare: number, gstRate: number) {
   const gst = parseFloat((fare * gstRate).toFixed(2));
@@ -25,7 +39,7 @@ export function fixedFareAmounts(fare: number, gstRate: number) {
 /**
  * The customer's agreed fare for this trip, if one applies: same service tier,
  * pickup and drop-off within MATCH_RADIUS_KM of a saved route, on one of its
- * weekdays. Only geocodes when the customer actually has fixed fares.
+ * weekdays and inside its pickup-time window. Only geocodes when the customer actually has fixed fares.
  */
 export async function findFixedFare(opts: {
   userId: string;
@@ -35,9 +49,10 @@ export async function findFixedFare(opts: {
   pickupAt: Date;
 }) {
   const weekday = winnipegWeekday(opts.pickupAt);
-  const fares = await prisma.customerFixedFare.findMany({
+  const minute = winnipegMinuteOfDay(opts.pickupAt);
+  const fares = (await prisma.customerFixedFare.findMany({
     where: { userId: opts.userId, tier: opts.tier, active: true, weekdays: { has: weekday } },
-  });
+  })).filter(f => withinWindow(minute, f.pickupTime, f.timeWindowMin));
   if (!fares.length) return null;
 
   const [from, to] = await Promise.all([geocodeAddress(opts.pickup), geocodeAddress(opts.dropoff)]);

@@ -535,8 +535,9 @@ model DeviceToken {
 /* Agreed price for one customer's regular route (e.g. a daily commute).
    The estimate uses `fare` instead of the metered price when the customer is
    signed in and both ends are within ~200 m of the saved points, on one of
-   `weekdays` (0 = Sunday … 6 = Saturday, Winnipeg time). `fare` is before GST;
-   no service fee is added. */
+   `weekdays` (0 = Sunday … 6 = Saturday, Winnipeg time) and — when
+   `pickupTime` ("HH:MM") is set — within ±`timeWindowMin` of it. `fare` is
+   before GST; no service fee is added. */
 model CustomerFixedFare {
   id         String   @id @default(cuid())
   userId     String
@@ -551,6 +552,8 @@ model CustomerFixedFare {
   tier       String   @default("classic")
   fare       Float
   weekdays   Int[]    @default([1, 2, 3, 4, 5])
+  pickupTime    String?
+  timeWindowMin Int     @default(30)
   active     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

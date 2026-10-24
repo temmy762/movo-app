@@ -8,6 +8,7 @@ type FixedFare = {
   id: string; userId: string; label: string;
   pickup: string; dropoff: string; tier: string;
   fare: number; weekdays: number[]; active: boolean;
+  pickupTime: string | null; timeWindowMin: number;
   user: Customer;
 };
 
@@ -17,14 +18,26 @@ type Draft = {
   id?: string; userId: string; label: string;
   pickup: string; dropoff: string; tier: string;
   fare: string; weekdays: number[];
+  pickupTime: string; timeWindowMin: string;
 };
 
 const TIER_NAMES: Record<string, string> = { classic: "Standard", premium: "Executive", black: "Concierge" };
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const BLANK: Draft = { userId: "", label: "", pickup: "", dropoff: "", tier: "classic", fare: "", weekdays: [1, 2, 3, 4, 5] };
+const BLANK: Draft = { userId: "", label: "", pickup: "", dropoff: "", tier: "classic", fare: "", weekdays: [1, 2, 3, 4, 5], pickupTime: "", timeWindowMin: "30" };
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/* "06:30" → "6:30 AM" */
+function clock(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+}
+
+function timeLabel(pickupTime: string | null, windowMin: number) {
+  if (!pickupTime) return "any time";
+  return windowMin ? `${clock(pickupTime)} ±${windowMin} min` : clock(pickupTime);
+}
 
 function daysLabel(days: number[]) {
   const key = [...days].sort().join(",");
@@ -93,6 +106,7 @@ export default function CustomerFixedFares({ gstRate }: { gstRate: number }) {
     const body = {
       label: draft.label, pickup: draft.pickup, dropoff: draft.dropoff,
       tier: draft.tier, fare: parseFloat(draft.fare), weekdays: draft.weekdays,
+      pickupTime: draft.pickupTime, timeWindowMin: parseInt(draft.timeWindowMin || "0", 10),
       ...(draft.id ? {} : { userId: draft.userId }),
     };
     try {
@@ -205,7 +219,7 @@ export default function CustomerFixedFares({ gstRate }: { gstRate: number }) {
                         {!f.active && <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">Paused</span>}
                       </p>
                       <p className="text-[12px] text-gray-500 truncate">{f.pickup} → {f.dropoff}</p>
-                      <p className="text-[11px] text-gray-400">{TIER_NAMES[f.tier] ?? f.tier} · {daysLabel(f.weekdays)}</p>
+                      <p className="text-[11px] text-gray-400">{TIER_NAMES[f.tier] ?? f.tier} · {daysLabel(f.weekdays)} · {timeLabel(f.pickupTime, f.timeWindowMin)}</p>
                     </div>
                     <div className="text-[12px] text-right shrink-0">
                       <p className="text-gray-500">{money(f.fare)} + GST {money(gst)}</p>
@@ -214,7 +228,7 @@ export default function CustomerFixedFares({ gstRate }: { gstRate: number }) {
                     <div className="flex gap-2 shrink-0">
                       <button disabled={busyId === f.id} onClick={() => {
                         setError(null);
-                        setDraft({ id: f.id, userId: f.userId, label: f.label, pickup: f.pickup, dropoff: f.dropoff, tier: f.tier, fare: f.fare.toFixed(2), weekdays: f.weekdays });
+                        setDraft({ id: f.id, userId: f.userId, label: f.label, pickup: f.pickup, dropoff: f.dropoff, tier: f.tier, fare: f.fare.toFixed(2), weekdays: f.weekdays, pickupTime: f.pickupTime ?? "", timeWindowMin: String(f.timeWindowMin) });
                       }}
                         className="no-hover-fx px-3 py-1.5 rounded-lg border border-gray-200 text-[12px] font-semibold text-gray-700">Edit</button>
                       <button disabled={busyId === f.id} onClick={() => toggleActive(f)}
@@ -344,6 +358,28 @@ function FixedFareForm({ draft, setDraft, clients, gstRate, saving, onSave, onCa
             );
           })}
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div>
+          <label className={labelCls}>Pickup time</label>
+          <input className={inputCls} type="time" value={draft.pickupTime} onChange={e => set("pickupTime", e.target.value)} />
+        </div>
+        <div>
+          <label className={labelCls}>Allowed early / late</label>
+          <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-3 py-2 focus-within:border-[#131936]">
+            <span className="text-[13px] text-gray-400">±</span>
+            <input type="number" step="5" min={0} max={180} value={draft.timeWindowMin} disabled={!draft.pickupTime}
+              onChange={e => set("timeWindowMin", e.target.value)}
+              className="flex-1 text-[13px] text-gray-800 font-medium focus:outline-none bg-transparent w-full" />
+            <span className="text-[13px] text-gray-400">min</span>
+          </div>
+        </div>
+        <p className="col-span-2 md:col-span-1 self-end text-[11px] text-gray-400 pb-2">
+          {draft.pickupTime
+            ? `Agreed fare applies to pickups ${timeLabel(draft.pickupTime, parseInt(draft.timeWindowMin || "0", 10))} (Winnipeg time). Outside that, normal pricing.`
+            : "No pickup time: the agreed fare applies at any time on the chosen days."}
+        </p>
       </div>
 
       {valid && (
