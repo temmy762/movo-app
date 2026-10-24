@@ -34,16 +34,56 @@ async function send(endpoint: string, p256dh: string, auth: string, payload: Pus
   }
 }
 
+/* ── Mobile apps (Expo push service → FCM / APNs) ──────────────────────────
+   Every web-push send below also reaches the owner's phones. Failures never
+   affect the caller: if the DeviceToken table isn't migrated yet, or Expo is
+   down, the booking flow carries on as before. */
+const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
+
+async function sendToApps(where: { driverId?: { in: string[] } | string; userId?: string }, payload: PushPayload) {
+  try {
+    const devices = await prisma.deviceToken.findMany({ where, select: { token: true } });
+    if (!devices.length) return;
+    const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+    if (process.env.EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.EXPO_ACCESS_TOKEN}`;
+
+    for (let i = 0; i < devices.length; i += 100) {
+      const batch = devices.slice(i, i + 100);
+      const res = await fetch(EXPO_PUSH_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(batch.map((d) => ({
+          to: d.token,
+          title: payload.title,
+          body: payload.body,
+          data: payload.data ?? {},
+          sound: "default",
+          priority: "high",
+          channelId: "default",
+        }))),
+      });
+      const json = await res.json().catch(() => null) as { data?: { status: string; details?: { error?: string } }[] } | null;
+      /* Uninstalled app / revoked permission → forget the token */
+      const dead = (json?.data ?? [])
+        .map((t, idx) => (t.status === "error" && t.details?.error === "DeviceNotRegistered" ? batch[idx].token : null))
+        .filter((t): t is string => !!t);
+      if (dead.length) await prisma.deviceToken.deleteMany({ where: { token: { in: dead } } });
+    }
+  } catch (err) {
+    console.error("[push-apps]", err instanceof Error ? err.message : err);
+  }
+}
+
 /** Send to all subscriptions belonging to a driver */
 export async function pushToDriver(driverId: string, payload: PushPayload) {
   const subs = await prisma.pushSubscription.findMany({ where: { driverId } });
-  await Promise.allSettled(subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)));
+  await Promise.allSettled([...subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)), sendToApps({ driverId }, payload)]);
 }
 
 /** Send to all subscriptions belonging to a user (rider) */
 export async function pushToUser(userId: string, payload: PushPayload) {
   const subs = await prisma.pushSubscription.findMany({ where: { userId } });
-  await Promise.allSettled(subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)));
+  await Promise.allSettled([...subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)), sendToApps({ userId }, payload)]);
 }
 
 /** Send to ALL online drivers with a matching tier (for new booking alerts) */
@@ -61,7 +101,7 @@ export async function pushToOnlineDriversByTier(tier: string | null, payload: Pu
   const subs = await prisma.pushSubscription.findMany({
     where: { driverId: { in: driverIds } },
   });
-  await Promise.allSettled(subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)));
+  await Promise.allSettled([...subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)), sendToApps({ driverId: { in: driverIds } }, payload)]);
 }
 
 /** Send to ALL approved drivers with a matching tier — including OFFLINE ones.
@@ -80,5 +120,5 @@ export async function pushToAllDriversByTier(tier: string | null, payload: PushP
   const subs = await prisma.pushSubscription.findMany({
     where: { driverId: { in: driverIds } },
   });
-  await Promise.allSettled(subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)));
+  await Promise.allSettled([...subs.map(s => send(s.endpoint, s.p256dh, s.auth, payload)), sendToApps({ driverId: { in: driverIds } }, payload)]);
 }

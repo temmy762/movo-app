@@ -515,6 +515,22 @@ model BookingMessage {
 
 // ─── Web Push Subscriptions ───────────────────────────────────────────────────
 
+/* Mobile app push tokens (Expo push service → FCM / APNs). Web browsers keep
+   using PushSubscription (web-push). */
+model DeviceToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  platform  String
+  app       String
+  userId    String?
+  driverId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([driverId])
+}
+
 model PushSubscription {
   id        String   @id @default(cuid())
   endpoint  String   @unique

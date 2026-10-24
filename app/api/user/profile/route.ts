@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, buildClearCookieHeader } from "@/lib/session";
+import { randomBytes } from "crypto";
+import Stripe from "stripe";
 import { toE164 } from "@/lib/sms";
 
 export async function GET(req: NextRequest) {
@@ -103,5 +105,63 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "These details are already linked to another account" }, { status: 409 });
     }
     return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE — the customer deletes their own account (required by the App Store
+ * and Google Play). Body: { confirm: "DELETE" }.
+ * Personal details are erased and sign-in is disabled; ride and payment
+ * records are kept (anonymised account) for tax and accounting.
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getSession(req);
+    if (!session?.userId || session.role !== "USER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { confirm } = await req.json().catch(() => ({}));
+    if (confirm !== "DELETE") {
+      return NextResponse.json({ error: "Please confirm account deletion." }, { status: 400 });
+    }
+
+    const active = await prisma.booking.count({
+      where: { userId: session.userId, status: { in: ["PENDING", "CONFIRMED"] } },
+    });
+    if (active) {
+      return NextResponse.json(
+        { error: "You have an upcoming or active ride. Please complete or cancel it before deleting your account." },
+        { status: 409 },
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { stripeCustomerId: true } });
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: session.userId },
+        data: {
+          firstName: "Deleted", lastName: "User",
+          email: null, phone: null, googleId: null,
+          title: null, company: null, street: null, postCode: null, city: null, country: null,
+          password: randomBytes(32).toString("hex"),
+          stripeCustomerId: null,
+        },
+      }),
+      prisma.session.deleteMany({ where: { userId: session.userId } }),
+      prisma.deviceToken.deleteMany({ where: { userId: session.userId } }),
+      prisma.pushSubscription.deleteMany({ where: { userId: session.userId } }),
+    ]);
+
+    /* Saved cards live on the Stripe customer — remove it (payments stay on record in Stripe) */
+    if (user?.stripeCustomerId && process.env.STRIPE_SECRET_KEY) {
+      await new Stripe(process.env.STRIPE_SECRET_KEY).customers.del(user.stripeCustomerId)
+        .catch((e) => console.error("[user-delete] stripe customer", e?.message));
+    }
+
+    return NextResponse.json({ ok: true }, { headers: { "Set-Cookie": buildClearCookieHeader() } });
+  } catch (e) {
+    console.error("[user-delete]", e);
+    return NextResponse.json({ error: "Couldn't delete your account. Please contact Movo support." }, { status: 500 });
   }
 }

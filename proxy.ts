@@ -24,6 +24,7 @@ const PUBLIC_ROUTES = [
   "/driver/onboarding/login",
   "/driver/onboarding/register",
   "/driver/onboarding/type",
+  "/app-return",
   "/api",
   "/_next",
   "/images",

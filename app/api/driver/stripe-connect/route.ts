@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, isMobileClient } from "@/lib/session";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-04-22.dahlia",
@@ -108,10 +108,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    /* The chauffeur app opens Stripe in an in-app browser; Stripe only accepts
+       https links, so it returns via /app-return, which hands over to the app */
+    const back = isMobileClient(req)
+      ? `${BASE_URL}/app-return?to=banking&connect=`
+      : `${BASE_URL}/driver/home/profile/banking?connect=`;
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${BASE_URL}/driver/home/profile/banking?connect=refresh`,
-      return_url:  `${BASE_URL}/driver/home/profile/banking?connect=success`,
+      refresh_url: `${back}refresh`,
+      return_url:  `${back}success`,
       type: "account_onboarding",
     });
 
