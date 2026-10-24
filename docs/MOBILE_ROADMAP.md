@@ -224,7 +224,9 @@ Each item is built, run through `npm run build`, and pushed to master as usual. 
 The estimates assume one developer (me) with Daniel reviewing. Store review time is extra.
 
 **Phase 0: Foundations (week 1)**
-- [ ] Backend B1–B5, B8, B9 in `movo-web` (B3 socket auth first: it's also a live security fix)
+- [x] Backend B1–B5, B7–B10 in `movo-web` (2026-10-24, commits df85e9d + d65ee69). Push goes out through `lib/webpush.ts`, which now sends to both web-push and the apps.
+- [ ] Apply migration `20261024_device_tokens` on production
+- [ ] B6 (PaymentSheet) and B12 (universal links) are deferred to Phase 3 (customer app)
 - [ ] Create the `movo-mobile` monorepo, Expo apps, EAS projects, bundle IDs
 - [ ] `packages/shared` + `sync-shared` script
 - [ ] `packages/api` client + socket wrapper
