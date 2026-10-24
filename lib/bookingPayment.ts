@@ -58,6 +58,10 @@ export async function verifyBookingPayment(opts: {
   if (quote.tier !== normalizeTier(opts.tier)) {
     return { ok: false, status: 400, error: "Fare quote does not match this service" };
   }
+  /* A customer's agreed fare can't be used from another account */
+  if (quote.userId && quote.userId !== opts.userId) {
+    return { ok: false, status: 403, error: "This fare quote belongs to another account" };
+  }
 
   let intent: Stripe.PaymentIntent;
   try {

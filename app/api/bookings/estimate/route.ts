@@ -5,6 +5,8 @@ import { signFareQuote } from "@/lib/fareQuote";
 import { AIRPORT_TRANSFER_ENABLED, HOURLY_CHARTER_ENABLED } from "@/lib/launchConfig";
 import { getSafeRideSettings, getSafeRideServiceRates, priceSafeRide } from "@/lib/safeRide";
 import { routeLeg, routeViaResult, routeLegResult } from "@/lib/routing";
+import { getSession } from "@/lib/session";
+import { findFixedFare, fixedFareAmounts } from "@/lib/customerFixedFare";
 
 /* Prefer a dedicated server key: NEXT_PUBLIC_* keys are often HTTP-referrer
    restricted for the browser, which makes server-side Distance Matrix calls
@@ -164,6 +166,32 @@ export async function GET(req: NextRequest) {
       freeWaitingMinutes, waitingRatePerMin,
       stops, stopAddresses, isAirport,
     };
+
+    /* A customer's agreed fare for a regular route (admin → Pricing → Customer
+       fixed fares) replaces the metered price. Plain A→B trips only. */
+    if (!isHourly && !isAirport && !stops && dropoff) {
+      const session = await getSession(req).catch(() => null);
+      if (session?.role === "USER" && session.userId) {
+        const requested = new Date(searchParams.get("pickupTime") ?? "");
+        const pickupAt  = isNaN(requested.getTime()) ? new Date() : requested;
+        const fixed = await findFixedFare({ userId: session.userId, tier, pickup, dropoff, pickupAt })
+          .catch(e => { console.error("[estimate] fixed fare lookup failed", e); return null; });
+        if (fixed) {
+          const amounts = fixedFareAmounts(fixed.fare, gstRate);
+          const leg = await routeLeg(pickup, dropoff);
+          const quote = signFareQuote({
+            pickup, dropoff, tier, ...amounts, stops: [],
+            userId: session.userId, fixedFareId: fixed.id,
+          });
+          return NextResponse.json({
+            ...amounts, quote,
+            distanceKm: leg ? +leg.km.toFixed(2) : null, durationMin: leg?.min ?? null,
+            estimateBasis: "fixed", fixedFare: { label: fixed.label },
+            ...meta,
+          });
+        }
+      }
+    }
 
     /* Hourly charter: fare = configured hourly rate × booked hours (min-hours enforced) */
     if (isHourly) {

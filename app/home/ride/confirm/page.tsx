@@ -35,6 +35,8 @@ type FareEstimate = {
   /* Stop addresses this price includes (echoed by the server, signed in the quote) */
   stopAddresses?: string[];
   hourly?: { rate: number; billedHours: number; minHours: number };
+  /* This customer's agreed price for a regular route (no service fee) */
+  fixedFare?: { label: string };
   /* Server-signed price — booking creation only trusts amounts inside it */
   quote: string;
 };
@@ -340,7 +342,7 @@ function ConfirmPayContent() {
     /* Reset payment intent so a fresh one is created for the new fare */
     setClientSecret(null);
     setIntentId(null);
-    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}${stopList.map(a => `&stop=${encodeURIComponent(a)}`).join("")}&isAirport=${!isCare && airportPickup}${!isCare && mode === "hourly" ? "&mode=hourly" : ""}${isCare && scheduledAt ? `&pickupTime=${encodeURIComponent(scheduledAt)}` : ""}`;
+    const url = `/api/bookings/estimate?pickup=${encodeURIComponent(pickup)}&dropoff=${encodeURIComponent(dropoff)}&tier=${encodeURIComponent(resolvedTier)}${stopList.map(a => `&stop=${encodeURIComponent(a)}`).join("")}&isAirport=${!isCare && airportPickup}${!isCare && mode === "hourly" ? "&mode=hourly" : ""}${scheduledAt ? `&pickupTime=${encodeURIComponent(scheduledAt)}` : ""}`;
     fetch(url)
       .then((r) => r.json())
       .then((d) => {
@@ -674,8 +676,11 @@ function ConfirmPayContent() {
                     <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">+${estimate!.airportFee.toFixed(2)}</span>
                   </div>
                 )}
-                {/* Safe Ride is all-inclusive — no separate service fee */}
-                {!isCare && (
+                {estimate?.fixedFare && (
+                  <p className="text-[12px] font-semibold text-[#131936]">Your agreed fare · {estimate.fixedFare.label}</p>
+                )}
+                {/* Safe Ride and agreed fares are all-inclusive — no separate service fee */}
+                {!isCare && !estimate?.fixedFare && (
                   <div className="flex justify-between items-center">
                     <span className="text-[13px] md:text-[14px] text-gray-600">Service Fee</span>
                     <span className="text-[13px] md:text-[14px] text-gray-900 font-medium">{estimate ? `$${estimate.serviceFee.toFixed(2)}` : "—"}</span>

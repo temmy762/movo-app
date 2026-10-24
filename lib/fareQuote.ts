@@ -29,6 +29,9 @@ export type FareQuote = {
     chauffeurPayout: number;
     snapshot: Record<string, unknown>;
   };
+  /* Customer fixed fare: the quote is that customer's price only */
+  userId?: string;
+  fixedFareId?: string;
   exp: number;
 };
 

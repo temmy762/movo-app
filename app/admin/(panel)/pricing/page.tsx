@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import CustomerFixedFares from "./CustomerFixedFares";
 
 type TierConfig = {
   id: string; tier: string; name: string;
@@ -209,6 +210,8 @@ export default function PricingPage() {
             />
           </div>
         </div>
+
+        <CustomerFixedFares gstRate={global.gstRate} />
 
         {/* Safe Ride pricing engine */}
         {(() => {

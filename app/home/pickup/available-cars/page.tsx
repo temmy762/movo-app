@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { IN_CITY_RIDES_ENABLED, allowedBookingMode } from "@/lib/launchConfig";
+import { winnipegDateTime } from "@/lib/winnipegTime";
 
 const TIER_IMAGES: Record<string, string> = {
   classic: "/images/tiers/standard.png",
@@ -61,6 +62,9 @@ function AvailableCarsContent() {
       tiers.map(t => {
         const p = new URLSearchParams({ pickup, dropoff, tier: t });
         if (mode === "hourly") p.set("mode", "hourly");
+        /* Customer fixed fares depend on the pickup day */
+        const at = date && time ? winnipegDateTime(date, time) : null;
+        if (at) p.set("pickupTime", at.toISOString());
         return fetch(`/api/bookings/estimate?${p.toString()}`)
           .then(r => (r.ok ? r.json() : null))
           .then(d => (d?.total != null ? ([t, d] as const) : null))
@@ -75,7 +79,7 @@ function AvailableCarsContent() {
       setTierEstimates(next);
     });
     return () => { stale = true; };
-  }, [pickup, dropoff, mode, isCare]);
+  }, [pickup, dropoff, mode, isCare, date, time]);
 
   const anyEstimate = tierEstimates.classic ?? tierEstimates.premium ?? tierEstimates.black;
 
