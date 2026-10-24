@@ -40,7 +40,7 @@ Stripe, Resend, Twilio). Update this file as decisions change.
 |---|---|---|
 | Framework | **Expo (React Native) + TypeScript**, managed workflow with dev builds | One codebase for iOS and Android. EAS Build makes iOS builds possible from Windows. |
 | Navigation | **expo-router** (file-based) | Mirrors the Next.js App Router folder structure, so screens map 1:1 to web pages |
-| Styling | **NativeWind** (Tailwind for RN) | Reuses the web's Tailwind classes and brand tokens |
+| Styling | **StyleSheet + `@movo/ui` tokens** (NativeWind dropped at Phase 0) | Tokens mirror globals.css one-to-one. Avoids NativeWind's Babel/Reanimated setup on a brand-new SDK; can be added later without changing screens' look |
 | Server state | **TanStack Query** | Caching, retry and refetch-on-focus replace the web's `useEffect` + fetch + polling |
 | Local state | **Zustand** | Session, online toggle, active ride |
 | Realtime | **socket.io-client**, path `/api/socketio` | Same server and same events as the web |
@@ -57,7 +57,7 @@ Stripe, Resend, Twilio). Update this file as decisions change.
 | Crash reporting | Sentry (sentry-expo) | Production visibility |
 | Builds and updates | **EAS Build, EAS Submit, EAS Update (OTA)** | Store builds from Windows, plus quick JS fixes without store review |
 
-Pin exact versions when the project is created and record them here. Use the latest stable Expo SDK at that time.
+Pinned at creation (2026-10-24): **Expo SDK 58**, React Native 0.88, React 19.3, expo-router 58, TypeScript 6.0. Exact versions are in `movo-mobile/apps/chauffeur/package.json`.
 
 ---
 
@@ -227,10 +227,12 @@ The estimates assume one developer (me) with Daniel reviewing. Store review time
 - [x] Backend B1–B5, B7–B10 in `movo-web` (2026-10-24, commits df85e9d + d65ee69). Push goes out through `lib/webpush.ts`, which now sends to both web-push and the apps.
 - [ ] Apply migration `20261024_device_tokens` on production
 - [ ] B6 (PaymentSheet) and B12 (universal links) are deferred to Phase 3 (customer app)
-- [ ] Create the `movo-mobile` monorepo, Expo apps, EAS projects, bundle IDs
-- [ ] `packages/shared` + `sync-shared` script
-- [ ] `packages/api` client + socket wrapper
-- [ ] `packages/ui` tokens + core components (Button, Card, BottomSheet, Input, StatusBadge, MapView, Toast)
+- [x] Create the `movo-mobile` monorepo + chauffeur app (`com.movoprive.chauffeur`, scheme `movochauffeur`), 2026-10-24, github.com/temmy762/movo-mobile. Customer app is scaffolded in Phase 3.
+- [ ] EAS projects (needs Movo's Expo account or Daniel's; Apple/Google accounts from Movo)
+- [x] `packages/shared` + `sync-shared` script (also generates Prisma enums; `npm run check-shared` flags drift)
+- [x] `packages/api` client + socket wrapper (auth, app config, push endpoints so far; the rest are added per screen)
+- [x] `packages/ui` tokens + Button, Card, Input, StatusBadge, MovoText
+- [ ] BottomSheet, MapView, Toast (Phase 1, with react-native-maps)
 - [ ] Dev builds running on a physical Android device and an iPhone (via EAS)
 
 **Phase 1: Chauffeur app MVP (weeks 2–4)**
