@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { createSession, buildSetCookieHeader } from "@/lib/session";
+import { createSession, buildSetCookieHeader, sessionDaysFor, mobileToken } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,10 +25,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const token = await createSession(user.role, user.id);
+    const token = await createSession(user.role, user.id, undefined, sessionDaysFor(req));
 
     return NextResponse.json(
-      { user: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role } },
+      { user: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role }, ...mobileToken(req, token) },
       {
         status: 200,
         headers: { "Set-Cookie": buildSetCookieHeader(token) },

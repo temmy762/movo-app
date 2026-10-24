@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createSession, buildSetCookieHeader } from "@/lib/session";
+import { createSession, buildSetCookieHeader, sessionDaysFor, mobileToken } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
 import { toE164 } from "@/lib/sms";
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const token = await createSession("DRIVER", undefined, driver.id);
+    const token = await createSession("DRIVER", undefined, driver.id, sessionDaysFor(req));
 
     // Send welcome email (non-blocking)
     sendNotification({
@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
           email: driver.email,
           status: driver.status,
         },
+        ...mobileToken(req, token),
       },
       {
         status: 201,

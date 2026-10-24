@@ -10,7 +10,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { lat, lng, heading } = await req.json();
+    /* Web sends one point; the mobile app's background task may send a
+       batch `{ points: [{ lat, lng, timestamp }] }` — only the newest counts */
+    const body = await req.json();
+    const point = Array.isArray(body?.points)
+      ? [...body.points].sort((a, b) => (Number(a?.timestamp) || 0) - (Number(b?.timestamp) || 0)).pop()
+      : body;
+    const { lat, lng } = point ?? {};
     if (typeof lat !== "number" || typeof lng !== "number") {
       return NextResponse.json({ error: "lat and lng required" }, { status: 400 });
     }

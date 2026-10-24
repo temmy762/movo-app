@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { createSession, buildSetCookieHeader } from "@/lib/session";
+import { createSession, buildSetCookieHeader, sessionDaysFor, mobileToken } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "This chauffeur account has been closed. Please contact Movo support." }, { status: 403 });
     }
 
-    const token = await createSession("DRIVER", undefined, driver.id);
+    const token = await createSession("DRIVER", undefined, driver.id, sessionDaysFor(req));
 
     return NextResponse.json(
       {
@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
           email: driver.email,
           status: driver.status,
         },
+        ...mobileToken(req, token),
       },
       {
         status: 200,

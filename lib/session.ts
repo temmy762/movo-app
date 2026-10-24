@@ -20,14 +20,34 @@ export function buildClearCookieHeader(): string {
 
 // ─── Token creation ───────────────────────────────────────────────────────────
 
+// ─── Mobile apps ──────────────────────────────────────────────────────────────
+/* The native apps can't hold an HttpOnly cookie: they send
+   `X-Movo-Client: mobile`, get the token in the JSON body, keep it in secure
+   storage and send it back as `Authorization: Bearer <token>`. */
+const MOBILE_SESSION_DURATION_DAYS = 90;
+
+export function isMobileClient(req: NextRequest): boolean {
+  return req.headers.get("x-movo-client") === "mobile";
+}
+
+export function sessionDaysFor(req: NextRequest): number {
+  return isMobileClient(req) ? MOBILE_SESSION_DURATION_DAYS : SESSION_DURATION_DAYS;
+}
+
+/** `{ token }` for the mobile apps, nothing for the web (cookie only). */
+export function mobileToken(req: NextRequest, token: string): { token?: string } {
+  return isMobileClient(req) ? { token } : {};
+}
+
 export async function createSession(
   role: Role,
   userId?: string,
-  driverId?: string
+  driverId?: string,
+  days: number = SESSION_DURATION_DAYS
 ): Promise<string> {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(
-    Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000
+    Date.now() + days * 24 * 60 * 60 * 1000
   );
 
   await prisma.session.create({
@@ -83,7 +103,7 @@ export async function deleteSession(token: string): Promise<void> {
 
 // ─── Internals ────────────────────────────────────────────────────────────────
 
-function resolveToken(req: NextRequest): string | null {
+export function resolveToken(req: NextRequest): string | null {
   const cookie = req.cookies.get(SESSION_COOKIE)?.value;
   if (cookie) return cookie;
 

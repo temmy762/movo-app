@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createSession, buildSetCookieHeader } from "@/lib/session";
+import { createSession, buildSetCookieHeader, sessionDaysFor, mobileToken } from "@/lib/session";
 import { sendNotification } from "@/lib/notifications";
 import { toE164 } from "@/lib/sms";
 import { recordConsent } from "@/lib/legalConsent";
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const token = await createSession("USER", user.id);
+    const token = await createSession("USER", user.id, undefined, sessionDaysFor(req));
 
     recordConsent(req, { userId: user.id, documentTypes: ["PRIVACY_POLICY", "TERMS"] })
       .catch((e) => console.error("[register] consent record failed:", e));
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     }).catch((e) => console.error("[register] welcome email failed:", e));
 
     return NextResponse.json(
-      { user: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role } },
+      { user: { id: user.id, firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role }, ...mobileToken(req, token) },
       {
         status: 201,
         headers: { "Set-Cookie": buildSetCookieHeader(token) },

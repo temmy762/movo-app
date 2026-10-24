@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteSession, buildClearCookieHeader } from "@/lib/session";
+import { deleteSession, buildClearCookieHeader, resolveToken } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
-  const token = req.cookies.get("movo_session")?.value;
+  /* Cookie (web) or Bearer token (mobile apps) */
+  const token = resolveToken(req);
   if (token) await deleteSession(token);
 
   return NextResponse.json(

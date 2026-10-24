@@ -30,14 +30,28 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     console.log(`[socket] client connected: ${socket.id}`);
-    /* Client tells us who they are so we add them to the right rooms */
-    socket.on("join", ({ role, id, bookingId, tier }) => {
-      if (role === "driver" && id)  socket.join(`driver:${id}`);
-      if (role === "user"   && id)  socket.join(`user:${id}`);
-      if (role === "admin")         socket.join("admin");
-      if (bookingId)                socket.join(`booking:${bookingId}`);
-      if (tier)                     socket.join(`tier:${tier}`);
-      console.log(`[socket] join: ${socket.id} → role=${role} id=${id ?? "-"} tier=${tier ?? "-"} booking=${bookingId ?? "-"}`);
+    /* Rooms are granted by the caller's session (web cookie, or the mobile
+       apps' token in `auth.token`) — never by what the client claims. The
+       client's role/id are ignored; /api/socket/authorize decides. */
+    socket.on("join", async (opts = {}) => {
+      const { bookingId, tier } = opts || {};
+      try {
+        const headers = { "Content-Type": "application/json" };
+        const cookie = socket.handshake.headers.cookie;
+        const token = socket.handshake.auth && socket.handshake.auth.token;
+        if (cookie) headers.cookie = cookie;
+        if (token)  headers.authorization = `Bearer ${token}`;
+        const res = await fetch(`http://127.0.0.1:${port}/api/socket/authorize`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ bookingId, tier }),
+        });
+        const { rooms = [] } = await res.json();
+        rooms.forEach((r) => socket.join(r));
+        console.log(`[socket] join: ${socket.id} → ${rooms.join(", ") || "(none)"}`);
+      } catch (e) {
+        console.error("[socket] join authorize failed:", e && e.message);
+      }
     });
 
     socket.on("leave_booking", ({ bookingId }) => {
